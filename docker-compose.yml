@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  tmd-web:
+    container_name: tmd-web-container
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3005:3005" # Host Port : Container Port
+    environment:
+      # ตั้งค่า Port ภายใน Container
+      - PORT=3005
+      - HOSTNAME=0.0.0.0
+      # DGA Config (ใส่ค่าจริงตรงนี้ หรือจะให้ดึงจากไฟล์ .env ก็ได้)
+      - DGA_API_URL=https://api.egov.go.th/ws/dga/czp/uat/v1/core/shield/data/deproc
+      - DGA_AUTH_URL=https://api.egov.go.th/ws/auth/validate
+      # แนะนำให้อ่านค่าจากไฟล์ .env เพื่อความปลอดภัย
+      - DGA_CONSUMER_KEY=${DGA_CONSUMER_KEY}
+      - DGA_CONSUMER_SECRET=${DGA_CONSUMER_SECRET}
+      - DGA_AGENT_ID=${DGA_AGENT_ID}
+    # เรียกใช้ไฟล์ .env.local เพื่อดึง Key ลับ
+    env_file:
+      - .env.local
