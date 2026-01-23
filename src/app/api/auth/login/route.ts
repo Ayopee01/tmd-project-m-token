@@ -11,7 +11,6 @@ export async function POST(request: Request) {
     }
 
     // --- STEP 1: Get Access Token (Authentication API) ---
-    // อ้างอิงภาพ: image_db09bc.png และ image_db0998.png
     const authParams = new URLSearchParams({
         ConsumerSecret: process.env.DGA_CONSUMER_SECRET || '',
         AgentID: mToken // เอกสารแนะนำให้ใช้ mToken เป็น AgentID สำหรับ tracking
@@ -35,7 +34,6 @@ export async function POST(request: Request) {
     const accessToken = authData.Result; // ได้ Token มาแล้ว
 
     // --- STEP 2: Get User Profile (Deproc API) ---
-    // อ้างอิงภาพ: image_db63cd.png
     const deprocRes = await fetch(process.env.DGA_DEPROC_URL || '', {
       method: 'POST',
       headers: {

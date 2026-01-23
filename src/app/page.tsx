@@ -1,18 +1,20 @@
-// src/app/landing/page.tsx
 'use client';
 
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 
+// หน้า Landing Page สำหรับทดสอบการ Login กับ DGA
 function LoginContent() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState('Waiting for credentials...');
   const [userData, setUserData] = useState<any>(null);
 
+  // ดึง appId และ mToken จาก URL แล้วทำการ Login อัตโนมัติ
   useEffect(() => {
     const appId = searchParams.get('appId');
     const mToken = searchParams.get('mToken');
 
+    // ถ้ามีทั้ง appId และ mToken ให้ทำการ Login
     if (appId && mToken) {
       handleLogin(appId, mToken);
     } else {
@@ -24,13 +26,14 @@ function LoginContent() {
     try {
       setStatus('Authenticating with DGA...');
       
-      // *** แก้ไขตรงนี้: เติม /test2 นำหน้า API ***
+      // เรียก API ที่เราสร้างไว้ใน /api/auth/login
       const res = await fetch('/test2/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ appId, mToken }),
       });
 
+      // รับผลลัพธ์จาก API
       const data = await res.json();
 
       if (data.success) {
