@@ -1,65 +1,84 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+
+// หน้า Landing Page สำหรับทดสอบการ Login กับ DGA
+function LoginContent() {
+  const searchParams = useSearchParams();
+  const [status, setStatus] = useState('Waiting for credentials...');
+  const [userData, setUserData] = useState<any>(null);
+
+  // ดึง appId และ mToken จาก URL แล้วทำการ Login อัตโนมัติ
+  useEffect(() => {
+    const appId = searchParams.get('appId');
+    const mToken = searchParams.get('mToken');
+
+    // ถ้ามีทั้ง appId และ mToken ให้ทำการ Login
+    if (appId && mToken) {
+      handleLogin(appId, mToken);
+    } else {
+      setStatus('No credentials (appId, mToken) found in URL.');
+    }
+  }, [searchParams]);
+
+  const handleLogin = async (appId: string, mToken: string) => {
+    try {
+      setStatus('Authenticating with DGA...');
+      
+      // เรียก API ที่เราสร้างไว้ใน /api/auth/login
+      const res = await fetch('/test2/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appId, mToken }),
+      });
+
+      // รับผลลัพธ์จาก API
+      const data = await res.json();
+
+      if (data.success) {
+        setStatus('Login Successful!');
+        setUserData(data.user);
+      } else {
+        setStatus(`Error: ${data.error}`);
+      }
+    } catch (err) {
+      setStatus('Network Error');
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="p-8 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6 text-blue-800">DGA Login Test (/test2)</h1>
+      
+      <div className={`p-4 rounded-lg mb-6 ${userData ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}`}>
+        Status: <strong>{status}</strong>
+      </div>
+
+      {userData && (
+        <div className="border border-gray-300 p-6 rounded-lg shadow-sm bg-white">
+          <h2 className="text-xl font-bold mb-4 border-b pb-2">User Profile</h2>
+          <div className="grid grid-cols-1 gap-2 text-sm">
+             {/* แสดงข้อมูลบางส่วน */}
+            <p><span className="font-semibold w-32 inline-block">Citizen ID:</span> {userData.citizenId}</p>
+            <p><span className="font-semibold w-32 inline-block">Name:</span> {userData.firstName} {userData.lastName}</p>
+          </div>
+          <div className="mt-4 pt-4 border-t">
+             <p className="text-xs text-gray-500">Raw Data:</p>
+             <pre className="text-xs bg-gray-50 p-2 mt-1 overflow-x-auto rounded">
+               {JSON.stringify(userData, null, 2)}
+             </pre>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      )}
     </div>
+  );
+}
+
+export default function LandingPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
