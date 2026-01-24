@@ -62,8 +62,8 @@ export async function POST(request: Request) {
     async function pushNotification({
       accessToken,
       appId,
-      userId,   // CZPUserId ตามคู่มือ
-      message,  // ข้อความแจ้งเตือน
+      userId,
+      message,
     }: {
       accessToken: string;
       appId: string;
@@ -81,37 +81,30 @@ export async function POST(request: Request) {
         headers: {
           'Content-Type': 'application/json',
           'Consumer-Key': consumerKey,
-          Token: accessToken, // AccessToken จาก GDX Authentication (STEP 4)
+          Token: accessToken,
         },
         body: JSON.stringify({
           appId,
-          data: [{ message, userId }],
-          // ไม่ส่ง sendDateTime = ส่งทันที
+          message,
+          userId,
         }),
       });
 
-      // กันกรณีปลายทางไม่ตอบ JSON
       const text = await res.text();
       let data: any;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = { raw: text };
-      }
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
 
-      if (!res.ok) {
-        throw new Error(`Notification API failed (${res.status}): ${text.slice(0, 200)}`);
-      }
-
+      if (!res.ok) throw new Error(`Notification API failed (${res.status}): ${text.slice(0, 200)}`);
       return data;
     }
 
     // ✅ เรียกใช้ Notification หลัง login + ได้ profile แล้ว (ส่วนใหม่)
     const profile = userData.result;
 
-    const czpUserId =
-      profile?.CZPUserId ?? // กรณี key เป็น CZPUserId
-      profile?.CzpUserId ?? // กรณี key เป็น CzpUserId
+    // ตามคู่มือ: userId ได้จากผล deproc
+    const userId =
+      profile?.userId ??
+      profile?.UserId ??
       null;
 
     let notification: any = null;
@@ -119,21 +112,16 @@ export async function POST(request: Request) {
 
     // ส่งแจ้งเตือน “แบบไม่ทำให้ Login ล้ม”
     // (ถ้าต้องการให้ล้มเมื่อแจ้งเตือนล้ม ให้เอา try/catch นี้ออก)
-    try {
-      if (czpUserId) {
-        notification = await pushNotification({
-          accessToken,
-          appId,
-          userId: String(czpUserId),
-          message: 'เข้าสู่ระบบสำเร็จ',
-        });
-      } else {
-        notificationError = 'Missing CZPUserId (cannot send notification)';
-        console.warn(notificationError);
-      }
-    } catch (e: any) {
-      notificationError = e?.message || 'Notification failed';
-      console.error('Notification Failed:', notificationError);
+    if (userId) {
+      notification = await pushNotification({
+        accessToken,
+        appId,
+        userId: String(userId),
+        message: 'เข้าสู่ระบบสำเร็จ',
+      });
+    } else {
+      notificationError = 'Missing userId from Deproc (cannot send notification)';
+      console.warn(notificationError);
     }
 
     // ส่งข้อมูล User กลับไปให้ Frontend แสดงผล
