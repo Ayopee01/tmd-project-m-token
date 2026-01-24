@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     // สร้างส่วนประกอบของ Params
     const authParams = new URLSearchParams({
       ConsumerSecret: process.env.DGA_CONSUMER_SECRET || '',
-      AgentID: mToken // ใช้ mToken เป็นค่า AgentID //สำหรับทดสอบ process.env.DGA_AGENT_ID || ''
+      AgentID: mToken // ใช้ mToken เป็นค่า AgentID
     });
 
     // เรียก API DEPROC เพื่อขอรับ Token ประกอบด้วย Params (ConsumerSecret,AgentID) และ Headers (Consumer-Key)
