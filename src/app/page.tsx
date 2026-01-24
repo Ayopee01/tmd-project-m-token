@@ -26,7 +26,7 @@ function LoginContent() {
     try {
       setStatus('Authenticating with DGA...');
       
-      // เรียก API ที่เราสร้างไว้ใน /api/auth/login /test2
+      // เรียก API จาก Route /api/auth/login
       const res = await fetch('api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
