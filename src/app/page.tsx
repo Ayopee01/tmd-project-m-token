@@ -6,10 +6,17 @@ import { useSearchParams } from 'next/navigation';
 // หน้า Landing Page สำหรับทดสอบการ Login กับ DGA
 function LoginContent() {
   const searchParams = useSearchParams();
+
   const [status, setStatus] = useState('Waiting for credentials...');
   const [userData, setUserData] = useState<any>(null);
 
-  // ✅ ยิง Login ครั้งแรกที่เข้าหน้านี้และมี appId+mToken (ไม่กันยิงซ้ำ)
+  // ✅ NEW: เก็บ log/response เพื่อแสดงบน UI
+  const [loginHttp, setLoginHttp] = useState<{ ok: boolean; status: number } | null>(null);
+  const [notifyHttp, setNotifyHttp] = useState<{ ok: boolean; status: number } | null>(null);
+  const [loginRaw, setLoginRaw] = useState<any>(null);
+  const [notifyRaw, setNotifyRaw] = useState<any>(null);
+  const [notifyDebug, setNotifyDebug] = useState<any[] | null>(null);
+
   useEffect(() => {
     const appId = searchParams.get('appId');
     const mToken = searchParams.get('mToken');
@@ -26,8 +33,16 @@ function LoginContent() {
   const handleLogin = async (appId: string, mToken: string) => {
     try {
       setStatus('Authenticating with DGA...');
+      setUserData(null);
 
-      // basePath = /test2 → เรียก API ใต้ /test2
+      // reset logs
+      setLoginHttp(null);
+      setNotifyHttp(null);
+      setLoginRaw(null);
+      setNotifyRaw(null);
+      setNotifyDebug(null);
+
+      // ✅ basePath = /test2 → เรียก API ใต้ /test2
       const res = await fetch('/test2/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -36,8 +51,11 @@ function LoginContent() {
 
       const data = await res.json().catch(() => ({}));
 
+      setLoginHttp({ ok: res.ok, status: res.status });
+      setLoginRaw(data);
+
       if (!res.ok || !data?.success) {
-        setStatus(`Error: ${data?.error || data?.message || res.status}`);
+        setStatus(`Login Error: ${data?.error || data?.message || res.status}`);
         return;
       }
 
@@ -55,7 +73,9 @@ function LoginContent() {
         return;
       }
 
-      // ยิง notification route (ที่คุณมีอยู่แล้ว: src/app/api/auth/notification/route.ts)
+      setStatus('Login OK. Sending notification...');
+
+      // ✅ ยิง notification route
       const nRes = await fetch('/test2/api/auth/notification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -63,13 +83,18 @@ function LoginContent() {
           appId,
           userId: String(userId),
           message: 'เข้าสู่ระบบสำเร็จ',
-          mToken, // ✅ NEW: ส่ง mToken ไปให้ backend ใช้เป็น AgentID
+          mToken, // ใช้เป็น AgentID ฝั่ง backend
         }),
       });
+
       const nData = await nRes.json().catch(() => ({}));
 
+      setNotifyHttp({ ok: nRes.ok, status: nRes.status });
+      setNotifyRaw(nData);
+      setNotifyDebug(Array.isArray(nData?.debug) ? nData.debug : null);
+
       if (!nRes.ok || nData?.success === false) {
-        setStatus(`Login Successful! แต่แจ้งเตือนล้ม: ${nData?.message || nData?.error || nRes.status}`);
+        setStatus(`Notification Failed: ${nData?.message || nData?.error || nRes.status}`);
       } else {
         setStatus('Login Successful! (Notification sent)');
       }
@@ -83,10 +108,42 @@ function LoginContent() {
       <h1 className="text-2xl font-bold mb-6 text-blue-800">DGA Login Test (/test2)</h1>
 
       <div
-        className={`p-4 rounded-lg mb-6 ${userData ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
-          }`}
+        className={`p-4 rounded-lg mb-6 ${
+          userData ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
+        }`}
       >
         Status: <strong>{status}</strong>
+      </div>
+
+      {/* ✅ NEW: แสดงผล HTTP status แบบอ่านง่าย */}
+      <div className="mb-6 grid grid-cols-1 gap-3 text-sm">
+        <div className="border rounded p-3 bg-white">
+          <div className="font-semibold">Login Call</div>
+          <div>
+            HTTP:{' '}
+            {loginHttp ? (
+              <span className={loginHttp.ok ? 'text-green-700' : 'text-red-700'}>
+                {loginHttp.status} {loginHttp.ok ? '(OK)' : '(FAIL)'}
+              </span>
+            ) : (
+              '-'
+            )}
+          </div>
+        </div>
+
+        <div className="border rounded p-3 bg-white">
+          <div className="font-semibold">Notification Call</div>
+          <div>
+            HTTP:{' '}
+            {notifyHttp ? (
+              <span className={notifyHttp.ok ? 'text-green-700' : 'text-red-700'}>
+                {notifyHttp.status} {notifyHttp.ok ? '(OK)' : '(FAIL)'}
+              </span>
+            ) : (
+              '-'
+            )}
+          </div>
+        </div>
       </div>
 
       {userData && (
@@ -102,13 +159,37 @@ function LoginContent() {
           </div>
 
           <div className="mt-4 pt-4 border-t">
-            <p className="text-xs text-gray-500">Raw Data:</p>
+            <p className="text-xs text-gray-500">Raw User Data:</p>
             <pre className="text-xs bg-gray-50 p-2 mt-1 overflow-x-auto rounded">
               {JSON.stringify(userData, null, 2)}
             </pre>
           </div>
         </div>
       )}
+
+      {/* ✅ NEW: แสดง Log/Debug ที่ได้จาก backend */}
+      <div className="mt-6 border border-gray-200 rounded p-4 bg-white">
+        <h3 className="font-bold mb-2">Debug Panel</h3>
+
+        <div className="text-sm font-semibold mt-3">Login Response</div>
+        <pre className="text-xs bg-gray-50 p-2 mt-1 overflow-x-auto rounded">
+          {JSON.stringify(loginRaw, null, 2)}
+        </pre>
+
+        <div className="text-sm font-semibold mt-4">Notification Response</div>
+        <pre className="text-xs bg-gray-50 p-2 mt-1 overflow-x-auto rounded">
+          {JSON.stringify(notifyRaw, null, 2)}
+        </pre>
+
+        {notifyDebug && (
+          <>
+            <div className="text-sm font-semibold mt-4">Notification Debug Steps</div>
+            <pre className="text-xs bg-gray-50 p-2 mt-1 overflow-x-auto rounded">
+              {JSON.stringify(notifyDebug, null, 2)}
+            </pre>
+          </>
+        )}
+      </div>
     </div>
   );
 }
