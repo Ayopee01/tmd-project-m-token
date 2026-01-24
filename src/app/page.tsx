@@ -1,5 +1,5 @@
 'use client';
-
+import React from 'react'
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 
@@ -75,10 +75,12 @@ function LoginContent() {
   );
 }
 
-export default function LandingPage() {
+function page() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <LoginContent />
     </Suspense>
   );
 }
+
+export default page

@@ -3,8 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { BurgerIcon } from "@/app/components/Icons";
-import { useCzpAuth } from "@/app/hooks/useCzpAuth";
+import { BurgerIcon } from "app/components/Icons";
+import { useCzpAuth } from "app/hooks/useCzpAuth";
 import { FaUserCircle } from "react-icons/fa";
 
 type Props = {

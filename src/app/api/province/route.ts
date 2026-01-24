@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import type { NominatimResponse, ProvinceFail, ProvinceResponse } from "@/app/types/tmd";
-import { buildNominatimUrl, normalizeProvinceThai, pickProvinceThai ,  } from "@/app/lib/province";
+import type { NominatimResponse, ProvinceFail, ProvinceResponse } from "app/types/tmd";
+import { buildNominatimUrl, normalizeProvinceThai, pickProvinceThai ,  } from "app/lib/province";
 
 export const revalidate = 86400; // 1 day (route cache)
 

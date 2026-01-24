@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { FaUserCircle } from "react-icons/fa";
-import { useCzpAuth } from "@/app/hooks/useCzpAuth";
+import { useCzpAuth } from "app/hooks/useCzpAuth";
 
 type Props = { open: boolean; onClose: () => void };
 
