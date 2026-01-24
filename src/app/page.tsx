@@ -9,7 +9,7 @@ function LoginContent() {
   const [status, setStatus] = useState('Waiting for credentials...');
   const [userData, setUserData] = useState<any>(null);
 
-  // ดึง appId และ mToken จาก URL แล้วทำการ Login อัตโนมัติ
+  // ดึง appId และ mToken จาก URL Params
   useEffect(() => {
     const appId = searchParams.get('appId');
     const mToken = searchParams.get('mToken');
@@ -26,8 +26,8 @@ function LoginContent() {
     try {
       setStatus('Authenticating with DGA...');
       
-      // เรียก API ที่เราสร้างไว้ใน /api/auth/login
-      const res = await fetch('/test2/api/auth/login', {
+      // เรียก API ที่เราสร้างไว้ใน /api/auth/login /test2
+      const res = await fetch('api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ appId, mToken }),

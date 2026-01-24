@@ -1,4 +1,3 @@
-// src/app/api/auth/login/route.ts
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
@@ -10,54 +9,59 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing appId or mToken' }, { status: 400 });
     }
 
-    // --- STEP 1: Get Access Token (Authentication API) ---
+    // --- STEP 3: API GDX Authentication ---
+    // สร้างส่วนประกอบของ Params
     const authParams = new URLSearchParams({
-        ConsumerSecret: process.env.DGA_CONSUMER_SECRET || '',
-        AgentID: mToken // เอกสารแนะนำให้ใช้ mToken เป็น AgentID สำหรับ tracking
+      ConsumerSecret: process.env.DGA_CONSUMER_SECRET || '',
+      AgentID: mToken // ใช้ mToken เป็นค่า AgentID //สำหรับทดสอบ process.env.DGA_AGENT_ID || ''
     });
 
-    const authRes = await fetch(`${process.env.DGA_AUTH_URL}?${authParams}`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Consumer-Key': process.env.DGA_CONSUMER_KEY || ''
-        }
+    // เรียก API DEPROC เพื่อขอรับ Token ประกอบด้วย Params (ConsumerSecret,AgentID) และ Headers (Consumer-Key)
+    const authRes = await fetch(`${process.env.GDX_AUTH_URL}?${authParams}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Consumer-Key': process.env.DGA_CONSUMER_KEY || '' // Consumer-Key
+      }
     });
 
+    // รับผลลัพธ์จากการขอ Token
     const authData = await authRes.json();
-    
+
     if (!authRes.ok || !authData.Result) {
-        console.error('Auth Failed:', authData);
-        return NextResponse.json({ error: 'DGA Authentication Failed' }, { status: 401 });
+      console.error('Auth Failed:', authData);
+      return NextResponse.json({ error: 'STEP 3 : GDX Authentication Failed' }, { status: 401 });
     }
 
-    const accessToken = authData.Result; // ได้ Token มาแล้ว
+    // --- STEP 4: Response Token ---
+    const accessToken = authData.Result;
 
-    // --- STEP 2: Get User Profile (Deproc API) ---
-    const deprocRes = await fetch(process.env.DGA_DEPROC_URL || '', {
+    // --- STEP 5: Get User Profile (Deproc API) ---
+    const deprocRes = await fetch(process.env.DEPROC_API_URL || '', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Consumer-Key': process.env.DGA_CONSUMER_KEY || '',
-        'Token': accessToken // ใช้ Token ที่ได้จาก Step 1
+        'Consumer-Key': process.env.DGA_CONSUMER_KEY || '', // Consumer-Key
+        'Token': accessToken // Token ที่ได้จาก STEP 4
       },
       body: JSON.stringify({
-        AppId: appId,
-        MToken: mToken
+        AppId: appId, // AppId
+        MToken: mToken // MToken
       }),
     });
 
+    // รับผลลัพธ์จาก Deproc API
     const userData = await deprocRes.json();
 
     if (!deprocRes.ok) {
-        console.error('Deproc Failed:', userData);
-        return NextResponse.json({ error: userData.message || 'Failed to fetch user data' }, { status: deprocRes.status });
+      console.error('Deproc Failed:', userData);
+      return NextResponse.json({ error: userData.message || 'STEP 5: Failed to fetch user data' }, { status: deprocRes.status });
     }
 
     // ส่งข้อมูล User กลับไปให้ Frontend แสดงผล
-    return NextResponse.json({ 
-      success: true, 
-      user: userData.result 
+    return NextResponse.json({
+      success: true,
+      user: userData.result
     });
 
   } catch (error) {

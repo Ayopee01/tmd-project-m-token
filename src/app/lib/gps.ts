@@ -3,7 +3,7 @@ import type {
   DashboardResponse,
   DailyForecast,
   ProvinceResponse,
-} from "app/types/tmd";
+} from "src/app/types/tmd";
 
 export const DASHBOARD_ROUTE = "/api/dashboard"; // เส้นทาง API DASHBOARD
 export const REVERSE_ROUTE = "/api/province"; // เส้นทาง API แปลงพิกัดเป็นจังหวัด
