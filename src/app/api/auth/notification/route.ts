@@ -15,21 +15,20 @@ export async function POST(request: Request) {
     debug.push({ step: 'input', ok: true, appId: !!appId, userId: !!userId, message: !!message, mToken: !!mToken });
 
     if (!appId || !userId || !message || !mToken) {
-      debug.push({ step: 'validate', ok: false, error: 'Missing fields' });
       return NextResponse.json(
         { success: false, message: 'Missing appId or userId or message or mToken', debug },
         { status: 400 }
       );
     }
 
-    // STEP 1: GDX Authentication (AgentID = mToken)
+    // STEP 1: ขอ AccessToken (GDX Authentication) โดยใช้ AgentID = mToken
     const authParams = new URLSearchParams({
       ConsumerSecret: process.env.DGA_CONSUMER_SECRET || '',
       AgentID: mToken,
     });
 
     const authUrl = `${process.env.GDX_AUTH_URL}?${authParams}`;
-    debug.push({ step: 'auth_request', url: authUrl, hasConsumerKey: !!process.env.DGA_CONSUMER_KEY, hasSecret: !!process.env.DGA_CONSUMER_SECRET });
+    debug.push({ step: 'auth_request', url: authUrl });
 
     const authRes = await fetch(authUrl, {
       method: 'GET',
@@ -47,23 +46,23 @@ export async function POST(request: Request) {
 
     if (!authRes.ok || !authData?.Result) {
       return NextResponse.json(
-        { success: false, message: 'GDX Authentication Failed (notify)', auth: authData, debug },
+        { success: false, message: 'GDX Authentication Failed (notify)', detail: authData, debug },
         { status: 401 }
       );
     }
 
     const accessToken = authData.Result;
 
-    // STEP 2: Notification Push
+    // STEP 2: ยิง Notification API (ตามคู่มือ: ต้องมี data[])
     const url = process.env.NOTIFICATION_API_URL || '';
-    debug.push({ step: 'notify_request', url, hasUrl: !!url });
-
     if (!url) {
       return NextResponse.json(
         { success: false, message: 'Missing NOTIFICATION_API_URL', debug },
         { status: 500 }
       );
     }
+
+    debug.push({ step: 'notify_request', url });
 
     const notifyRes = await fetch(url, {
       method: 'POST',
@@ -72,24 +71,32 @@ export async function POST(request: Request) {
         'Consumer-Key': process.env.DGA_CONSUMER_KEY || '',
         Token: accessToken,
       },
-      body: JSON.stringify({ appId, userId, message }),
+      body: JSON.stringify({
+        appId,
+        data: [{ message, userId }], // ✅ FIX: ตามคู่มือ
+        // sendDateTime: null (ไม่ต้องส่ง = ส่งทันที)
+      }),
     });
 
     const notifyText = await notifyRes.text();
     let notifyData: any;
     try { notifyData = JSON.parse(notifyText); } catch { notifyData = { raw: notifyText }; }
 
-    debug.push({
-      step: 'notify_response',
-      ok: notifyRes.ok,
-      status: notifyRes.status,
-      bodyPreview: notifyText.slice(0, 500),
-    });
+    debug.push({ step: 'notify_response', ok: notifyRes.ok, status: notifyRes.status, bodyPreview: notifyText.slice(0, 500) });
 
-    if (!notifyRes.ok) {
+    // ✅ FIX: เช็ค messageCode ด้วย (API อาจตอบ 200 แต่ messageCode != 200)
+    const messageCode = notifyData?.messageCode;
+    const okByBiz = messageCode === 200;
+
+    if (!notifyRes.ok || !okByBiz) {
       return NextResponse.json(
-        { success: false, message: 'Notification API Failed', detail: notifyData, debug },
-        { status: notifyRes.status }
+        {
+          success: false,
+          message: `Notification rejected (messageCode=${messageCode})`,
+          detail: notifyData,
+          debug,
+        },
+        { status: 400 }
       );
     }
 
