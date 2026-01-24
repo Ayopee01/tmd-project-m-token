@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useEffect, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 // หน้า Landing Page สำหรับทดสอบการ Login กับ DGA
@@ -9,9 +9,7 @@ function LoginContent() {
   const [status, setStatus] = useState('Waiting for credentials...');
   const [userData, setUserData] = useState<any>(null);
 
-  // กันยิงซ้ำในรอบ mount (React StrictMode/ re-render)
-  const didAutoLoginRef = useRef(false);
-
+  // ✅ ยิง Login ครั้งแรกที่เข้าหน้านี้และมี appId+mToken (ไม่กันยิงซ้ำ)
   useEffect(() => {
     const appId = searchParams.get('appId');
     const mToken = searchParams.get('mToken');
@@ -20,20 +18,6 @@ function LoginContent() {
       setStatus('No credentials (appId, mToken) found in URL.');
       return;
     }
-
-    // กันยิงซ้ำใน component lifecycle
-    if (didAutoLoginRef.current) return;
-
-    // กันยิงซ้ำใน 1 session (กรณี StrictMode ทำ effect ซ้ำ)
-    const sessionKey = `dga_autologin_done:${appId}:${mToken}`;
-    if (sessionStorage.getItem(sessionKey) === '1') {
-      didAutoLoginRef.current = true;
-      setStatus('Already authenticated in this session.');
-      return;
-    }
-
-    didAutoLoginRef.current = true;
-    sessionStorage.setItem(sessionKey, '1');
 
     void handleLogin(appId, mToken);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -79,15 +63,13 @@ function LoginContent() {
           appId,
           userId: String(userId),
           message: 'เข้าสู่ระบบสำเร็จ',
+          mToken, // ✅ NEW: ส่ง mToken ไปให้ backend ใช้เป็น AgentID
         }),
       });
-
       const nData = await nRes.json().catch(() => ({}));
 
       if (!nRes.ok || nData?.success === false) {
-        setStatus(
-          `Login Successful! แต่แจ้งเตือนล้ม: ${nData?.message || nData?.error || nRes.status}`
-        );
+        setStatus(`Login Successful! แต่แจ้งเตือนล้ม: ${nData?.message || nData?.error || nRes.status}`);
       } else {
         setStatus('Login Successful! (Notification sent)');
       }
@@ -101,9 +83,8 @@ function LoginContent() {
       <h1 className="text-2xl font-bold mb-6 text-blue-800">DGA Login Test (/test2)</h1>
 
       <div
-        className={`p-4 rounded-lg mb-6 ${
-          userData ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
-        }`}
+        className={`p-4 rounded-lg mb-6 ${userData ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
+          }`}
       >
         Status: <strong>{status}</strong>
       </div>
@@ -113,12 +94,10 @@ function LoginContent() {
           <h2 className="text-xl font-bold mb-4 border-b pb-2">User Profile</h2>
           <div className="grid grid-cols-1 gap-2 text-sm">
             <p>
-              <span className="font-semibold w-32 inline-block">Citizen ID:</span>{' '}
-              {userData.citizenId}
+              <span className="font-semibold w-32 inline-block">Citizen ID:</span> {userData.citizenId}
             </p>
             <p>
-              <span className="font-semibold w-32 inline-block">Name:</span> {userData.firstName}{' '}
-              {userData.lastName}
+              <span className="font-semibold w-32 inline-block">Name:</span> {userData.firstName} {userData.lastName}
             </p>
           </div>
 
