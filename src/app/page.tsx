@@ -10,13 +10,7 @@ function LoginContent() {
   const [status, setStatus] = useState('Waiting for credentials...');
   const [userData, setUserData] = useState<any>(null);
 
-  // ✅ NEW: เก็บ log/response เพื่อแสดงบน UI
-  const [loginHttp, setLoginHttp] = useState<{ ok: boolean; status: number } | null>(null);
-  const [notifyHttp, setNotifyHttp] = useState<{ ok: boolean; status: number } | null>(null);
-  const [loginRaw, setLoginRaw] = useState<any>(null);
-  const [notifyRaw, setNotifyRaw] = useState<any>(null);
-  const [notifyDebug, setNotifyDebug] = useState<any[] | null>(null);
-
+  // รับค่า appId, mToken จาก URL Params (Query String)
   useEffect(() => {
     const appId = searchParams.get('appId');
     const mToken = searchParams.get('mToken');
@@ -26,8 +20,8 @@ function LoginContent() {
       return;
     }
 
+    // เรียกฟังก์ชัน Login
     void handleLogin(appId, mToken);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const handleLogin = async (appId: string, mToken: string) => {
@@ -35,33 +29,24 @@ function LoginContent() {
       setStatus('Authenticating with DGA...');
       setUserData(null);
 
-      // reset logs
-      setLoginHttp(null);
-      setNotifyHttp(null);
-      setLoginRaw(null);
-      setNotifyRaw(null);
-      setNotifyDebug(null);
-
-      // ✅ basePath = /test2 → เรียก API ใต้ /test2
+      // เรียก Route Login จาก api/auth/login
       const res = await fetch('api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appId, mToken }),
+        body: JSON.stringify({ appId, mToken }), // ส่ง appId, mToken
       });
 
       const data = await res.json().catch(() => ({}));
-
-      setLoginHttp({ ok: res.ok, status: res.status });
-      setLoginRaw(data);
 
       if (!res.ok || !data?.success) {
         setStatus(`Login Error: ${data?.error || data?.message || res.status}`);
         return;
       }
 
+      // Login สำเร็จ ได้ user data
       setUserData(data.user);
 
-      // หา userId ที่ถูกต้องสำหรับ notification
+      // หา userId จาก user data ใช้ในการ notification
       const userId =
         data.user?.userId;
 
@@ -69,10 +54,9 @@ function LoginContent() {
         setStatus('Login Successful! แต่ไม่พบ userId สำหรับส่งแจ้งเตือน');
         return;
       }
-
       setStatus('Login OK. Sending notification...');
 
-      // ✅ ยิง notification route
+      // เรียก Route Notification จาก api/auth/notification
       const nRes = await fetch('api/auth/notification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -80,15 +64,10 @@ function LoginContent() {
           appId,
           userId: String(userId),
           message: 'เข้าสู่ระบบสำเร็จ',
-          mToken, // ใช้เป็น AgentID ฝั่ง backend
         }),
       });
 
       const nData = await nRes.json().catch(() => ({}));
-
-      setNotifyHttp({ ok: nRes.ok, status: nRes.status });
-      setNotifyRaw(nData);
-      setNotifyDebug(Array.isArray(nData?.debug) ? nData.debug : null);
 
       if (!nRes.ok || nData?.success === false) {
         setStatus(`Notification Failed: ${nData?.message || nData?.error || nRes.status}`);
@@ -105,9 +84,8 @@ function LoginContent() {
       <h1 className="text-2xl font-bold mb-6 text-blue-800">DGA Login Test</h1>
 
       <div
-        className={`p-4 rounded-lg mb-6 ${
-          userData ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
-        }`}
+        className={`p-4 rounded-lg mb-6 ${userData ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
+          }`}
       >
         Status: <strong>{status}</strong>
       </div>
