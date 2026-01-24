@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
-  const debug: any[] = [];
 
   try {
     const body = await request.json();
@@ -12,11 +11,9 @@ export async function POST(request: Request) {
       mToken?: string;
     };
 
-    debug.push({ step: 'input', ok: true, appId: !!appId, userId: !!userId, message: !!message, mToken: !!mToken });
-
     if (!appId || !userId || !message || !mToken) {
       return NextResponse.json(
-        { success: false, message: 'Missing appId or userId or message or mToken', debug },
+        { success: false, message: 'Missing appId or userId or message or mToken'},
         { status: 400 }
       );
     }
@@ -28,7 +25,6 @@ export async function POST(request: Request) {
     });
 
     const authUrl = `${process.env.GDX_AUTH_URL}?${authParams}`;
-    debug.push({ step: 'auth_request', url: authUrl });
 
     const authRes = await fetch(authUrl, {
       method: 'GET',
@@ -42,11 +38,9 @@ export async function POST(request: Request) {
     let authData: any;
     try { authData = JSON.parse(authText); } catch { authData = { raw: authText }; }
 
-    debug.push({ step: 'auth_response', ok: authRes.ok, status: authRes.status, bodyPreview: authText.slice(0, 200) });
-
     if (!authRes.ok || !authData?.Result) {
       return NextResponse.json(
-        { success: false, message: 'GDX Authentication Failed (notify)', detail: authData, debug },
+        { success: false, message: 'GDX Authentication Failed (notify)', detail: authData },
         { status: 401 }
       );
     }
@@ -57,12 +51,10 @@ export async function POST(request: Request) {
     const url = process.env.NOTIFICATION_API_URL || '';
     if (!url) {
       return NextResponse.json(
-        { success: false, message: 'Missing NOTIFICATION_API_URL', debug },
+        { success: false, message: 'Missing NOTIFICATION_API_URL' },
         { status: 500 }
       );
     }
-
-    debug.push({ step: 'notify_request', url });
 
     const notifyRes = await fetch(url, {
       method: 'POST',
@@ -82,8 +74,6 @@ export async function POST(request: Request) {
     let notifyData: any;
     try { notifyData = JSON.parse(notifyText); } catch { notifyData = { raw: notifyText }; }
 
-    debug.push({ step: 'notify_response', ok: notifyRes.ok, status: notifyRes.status, bodyPreview: notifyText.slice(0, 500) });
-
     // ✅ FIX: เช็ค messageCode ด้วย (API อาจตอบ 200 แต่ messageCode != 200)
     const messageCode = notifyData?.messageCode;
     const okByBiz = messageCode === 200;
@@ -94,15 +84,13 @@ export async function POST(request: Request) {
           success: false,
           message: `Notification rejected (messageCode=${messageCode})`,
           detail: notifyData,
-          debug,
         },
         { status: 400 }
       );
     }
 
-    return NextResponse.json({ success: true, result: notifyData, debug });
-  } catch (error: any) {
-    debug.push({ step: 'catch', ok: false, error: error?.message || String(error) });
-    return NextResponse.json({ success: false, message: 'Internal Server Error', debug }, { status: 500 });
+    return NextResponse.json({ success: true, result: notifyData });
+  } catch (error: any) {;
+    return NextResponse.json({ success: false, message: 'Internal Server Error'}, { status: 500 });
   }
 }
