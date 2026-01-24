@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     // สร้างส่วนประกอบของ Params
     const authParams = new URLSearchParams({
       ConsumerSecret: process.env.DGA_CONSUMER_SECRET || '',
-      AgentID: mToken // ใช้ mToken เป็นค่า AgentID
+      AgentID: mToken // ใช้ mToken เป็นค่า AgentID 
     });
 
     // เรียก API DEPROC เพื่อขอรับ Token ประกอบด้วย Params (ConsumerSecret,AgentID) และ Headers (Consumer-Key)
@@ -58,78 +58,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: userData.message || 'STEP 5: Failed to fetch user data' }, { status: deprocRes.status });
     }
 
-    // --- STEP 6: Notification Push ---
-    async function pushNotification({
-      accessToken,
-      appId,
-      userId,
-      message,
-    }: {
-      accessToken: string;
-      appId: string;
-      userId: string;
-      message: string;
-    }) {
-      const url = process.env.NOTIFICATION_API_URL || '';
-      const consumerKey = process.env.DGA_CONSUMER_KEY || '';
-
-      if (!url) throw new Error('Missing NOTIFICATION_API_URL');
-      if (!consumerKey) throw new Error('Missing DGA_CONSUMER_KEY');
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Consumer-Key': consumerKey,
-          Token: accessToken,
-        },
-        body: JSON.stringify({
-          appId,
-          message,
-          userId,
-        }),
-      });
-
-      const text = await res.text();
-      let data: any;
-      try { data = JSON.parse(text); } catch { data = { raw: text }; }
-
-      if (!res.ok) throw new Error(`Notification API failed (${res.status}): ${text.slice(0, 200)}`);
-      return data;
-    }
-
-    // ✅ เรียกใช้ Notification หลัง login + ได้ profile แล้ว (ส่วนใหม่)
-    const profile = userData.result;
-
-    // ตามคู่มือ: userId ได้จากผล deproc
-    const userId =
-      profile?.userId ??
-      profile?.UserId ??
-      null;
-
-    let notification: any = null;
-    let notificationError: string | null = null;
-
-    // ส่งแจ้งเตือน “แบบไม่ทำให้ Login ล้ม”
-    // (ถ้าต้องการให้ล้มเมื่อแจ้งเตือนล้ม ให้เอา try/catch นี้ออก)
-    if (userId) {
-      notification = await pushNotification({
-        accessToken,
-        appId,
-        userId: String(userId),
-        message: 'เข้าสู่ระบบสำเร็จ',
-      });
-    } else {
-      notificationError = 'Missing userId from Deproc (cannot send notification)';
-      console.warn(notificationError);
-    }
-
     // ส่งข้อมูล User กลับไปให้ Frontend แสดงผล
     return NextResponse.json({
       success: true,
-      user: profile,
-      notification,        // ผลลัพธ์จาก Notification API (ถ้าส่งสำเร็จ)
-      notificationError,   // เหตุผลกรณีส่งไม่สำเร็จ (ไว้ debug)
+      user: userData.result
     });
 
   } catch (error) {
