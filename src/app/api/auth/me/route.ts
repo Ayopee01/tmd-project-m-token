@@ -5,15 +5,16 @@ import type { MeResponseBody, SessionUser } from '@/app/types/auth';
 const COOKIE_NAME = 'dga_session'; // ถ้าคุณใช้ชื่ออื่นให้แก้ตรงนี้
 
 export async function GET() {
-  const raw = cookies().get(COOKIE_NAME)?.value;
+  const cookieStore = await cookies(); // ✅ สำคัญ: cookies() เป็น async ใน Next 16.1+
+  const raw = cookieStore.get(COOKIE_NAME)?.value;
 
   if (!raw) {
     const body: MeResponseBody = { success: false, message: 'Not authenticated' };
     return NextResponse.json(body, { status: 401 });
   }
 
-  // ✅ NOTE: ตรงนี้สมมติว่า cookie เก็บ JSON ของ user แบบ minimal
-  // ถ้าคุณใช้ signed cookie ให้เปลี่ยนเป็น readSessionValue(...) ตามที่ทำไว้
+  // NOTE: สมมติว่า cookie เก็บ JSON ของ user แบบ minimal
+  // ถ้าคุณใช้ signed/encrypted cookie ให้เปลี่ยนเป็นฟังก์ชัน decode ของคุณ
   let user: SessionUser | null = null;
   try {
     user = JSON.parse(raw) as SessionUser;
