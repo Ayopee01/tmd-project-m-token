@@ -40,7 +40,8 @@ function QueryString() {
       sessionStorage.setItem(loginKey, 'done');
 
       // 1) Function เรียก Route Login จาก /api/auth/login
-      const res = await fetch('/api/auth/login', {
+      // test2 ใช้ชั่วคราวในระหว่างพัฒนา
+      const res = await fetch('/test2/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ appId, mToken }),
@@ -74,7 +75,8 @@ function QueryString() {
       sessionStorage.setItem(notiKey, 'sent');
 
       // 2) Notification เรียก Route Login จาก /api/auth/notification
-      const nRes = await fetch('/api/auth/notification', {
+      // test2 ใช้ชั่วคราวในระหว่างพัฒนา
+      const nRes = await fetch('/test2/api/auth/notification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
