@@ -24,7 +24,7 @@ export default function Navbar({ onOpenMenu }: Props) {
   const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
 
   return (
-    <nav className="sticky top-0 z-30 border-b border-gray-200 bg-white/90 backdrop-blur dark:border-gray-700 dark:bg-gray-900/80">
+    <nav className="sticky top-0 z-30 border-b border-gray-200/80 bg-white/90 backdrop-blur shadow-lg">
       <div className="flex h-18 w-full items-center justify-between px-4 md:h-22">
         {/* Left: Brand/Logo */}
         <Link href="/" className="flex items-center gap-3 h-full">
@@ -44,65 +44,80 @@ export default function Navbar({ onOpenMenu }: Props) {
         <div className="hidden items-center gap-8 xl:flex">
           <Link
             href="/landing/daily"
-            className={`group relative px-1 py-2 text-sm font-medium transition-colors
-            ${isActivePath(pathname, '/landing/daily')
-                ? 'text-indigo-600 dark:text-indigo-400'
-                : 'text-gray-700 hover:text-indigo-600 dark:text-gray-200 dark:hover:text-indigo-400'
-              }`}
+            className={`group relative px-1 py-2 font-normal text-base leading-6 tracking-normal transition-colors text-gray-900`}
           >
             พยากรณ์อากาศประจำวัน
-            <span className="absolute left-0 -bottom-1 h-[3px] w-full origin-left scale-x-0 rounded-full bg-indigo-600 transition-transform duration-500 ease-out group-hover:scale-x-100 dark:bg-indigo-400" />
+            <span
+              className={`absolute left-0 -bottom-3 h-[4px] w-full origin-left bg-emerald-600
+              transition-transform duration-500 ease-out
+              ${isActivePath(pathname, "/landing/daily")
+                  ? "scale-x-100"
+                  : "scale-x-0 group-hover:scale-x-100"
+                }`}
+            />
           </Link>
 
           <Link
             href="/landing/map"
-            className={`group relative px-1 py-2 text-sm font-medium transition-colors
-            ${isActivePath(pathname, '/landing/map')
-                ? 'text-indigo-600 dark:text-indigo-400'
-                : 'text-gray-700 hover:text-indigo-600 dark:text-gray-200 dark:hover:text-indigo-400'
-              }`}
+            className={`group relative px-1 py-2 font-normal text-base leading-6 tracking-normal transition-colors text-gray-900`}
           >
             แผนที่อากาศพื้นผิว
-            <span className="absolute left-0 -bottom-1 h-[3px] w-full origin-left scale-x-0 rounded-full bg-indigo-600 transition-transform duration-500 ease-out group-hover:scale-x-100 dark:bg-indigo-400" />
+            <span
+              className={`absolute left-0 -bottom-3 h-[4px] w-full origin-left rounded-full bg-emerald-600
+              transition-transform duration-500 ease-out
+              ${isActivePath(pathname, "/landing/map")
+                  ? "scale-x-100"
+                  : "scale-x-0 group-hover:scale-x-100"
+                }`}
+            />
           </Link>
 
           <Link
             href="/landing/week"
-            className={`group relative px-1 py-2 text-sm font-medium transition-colors
-            ${isActivePath(pathname, '/landing/week')
-                ? 'text-indigo-600 dark:text-indigo-400'
-                : 'text-gray-700 hover:text-indigo-600 dark:text-gray-200 dark:hover:text-indigo-400'
-              }`}
+            className={`group relative px-1 py-2 font-normal text-base leading-6 tracking-normal transition-colors text-gray-900`}
           >
             สรุปลักษณะอากาศรายสัปดาห์
-            <span className="absolute left-0 -bottom-1 h-[3px] w-full origin-left scale-x-0 rounded-full bg-indigo-600 transition-transform duration-500 ease-out group-hover:scale-x-100 dark:bg-indigo-400" />
+            <span
+              className={`absolute left-0 -bottom-3 h-[4px] w-full origin-left rounded-full bg-emerald-600
+              transition-transform duration-500 ease-out
+              ${isActivePath(pathname, "/landing/week")
+                  ? "scale-x-100"
+                  : "scale-x-0 group-hover:scale-x-100"
+                }`}
+            />
           </Link>
 
           <Link
             href="/landing/monthly"
-            className={`group relative px-1 py-2 text-sm font-medium transition-colors
-            ${isActivePath(pathname, '/landing/monthly')
-                ? 'text-indigo-600 dark:text-indigo-400'
-                : 'text-gray-700 hover:text-indigo-600 dark:text-gray-200 dark:hover:text-indigo-400'
-              }`}
+            className={`group relative px-1 py-2 font-normal text-base leading-6 tracking-normal transition-colors text-gray-900`}
           >
             สรุปลักษณะอากาศรายเดือน
-            <span className="absolute left-0 -bottom-1 h-[3px] w-full origin-left scale-x-0 rounded-full bg-indigo-600 transition-transform duration-500 ease-out group-hover:scale-x-100 dark:bg-indigo-400" />
+            <span
+              className={`absolute left-0 -bottom-3 h-[4px] w-full origin-left rounded-full bg-emerald-600
+              transition-transform duration-500 ease-out
+              ${isActivePath(pathname, "/landing/monthly")
+                  ? "scale-x-100"
+                  : "scale-x-0 group-hover:scale-x-100"
+                }`}
+            />
           </Link>
 
           <Link
             href="/landing/agroforecast"
-            className={`group relative px-1 py-2 text-sm font-medium transition-colors
-            ${isActivePath(pathname, '/landing/agroforecast')
-                ? 'text-indigo-600 dark:text-indigo-400'
-                : 'text-gray-700 hover:text-indigo-600 dark:text-gray-200 dark:hover:text-indigo-400'
-              }`}
+            className={`group relative px-1 py-2 font-normal text-base leading-6 tracking-normal transition-colors text-gray-900`}
           >
             พยากรณ์อากาศเพื่อการเกษตรราย 7 วัน
-            <span className="absolute left-0 -bottom-1 h-[3px] w-full origin-left scale-x-0 rounded-full bg-indigo-600 transition-transform duration-500 ease-out group-hover:scale-x-100 dark:bg-indigo-400" />
+            <span
+              className={`absolute left-0 -bottom-3 h-[4px] w-full origin-left rounded-full bg-emerald-600
+              transition-transform duration-500 ease-out
+              ${isActivePath(pathname, "/landing/agroforecast")
+                  ? "scale-x-100"
+                  : "scale-x-0 group-hover:scale-x-100"
+                }`}
+            />
           </Link>
         </div>
-
+        
         {/* Right: User + Mobile hamburger */}
         <div className="flex items-center gap-3">
           {/* ✅ User (ขวาสุด) */}

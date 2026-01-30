@@ -10,6 +10,13 @@ import {
   toDDMMYYYY,
 } from "@/app/lib/gps";
 
+/** dd/mm/yyyy -> timestamp */
+const ddmmyyyyToTime = (s: string) => {
+  const [dd, mm, yyyy] = (s ?? "").split("/").map((x) => Number(x));
+  if (!dd || !mm || !yyyy) return Number.POSITIVE_INFINITY;
+  return new Date(yyyy, mm - 1, dd).getTime();
+};
+
 export default function Forecast7DaysPage() {
   const [loading, setLoading] = useState(true);
   const [gpsLoading, setGpsLoading] = useState(false);
@@ -21,9 +28,10 @@ export default function Forecast7DaysPage() {
   const [provinceData, setProvinceData] = useState<ProvinceForecast | null>(null);
 
   const [selectedProvinceKey, setSelectedProvinceKey] = useState("");
-
-  // ✅ กัน hydration mismatch: คำนวณ "วันนี้" หลัง mount
   const [todayStr, setTodayStr] = useState("");
+
+  // ✅ เลือกวันจากการ์ด
+  const [selectedIdx, setSelectedIdx] = useState(0);
 
   // ✅ ถ้าผู้ใช้เปลี่ยนเอง จะไม่ให้ GPS override
   const userChangedRef = useRef(false);
@@ -96,154 +104,238 @@ export default function Forecast7DaysPage() {
     [provinceIndex]
   );
 
+  // ✅ เรียงวันที่ให้ถูกก่อน แล้วค่อย rotate ให้ “วันนี้” อยู่หน้าแรก
   const sevenDaysForShow = useMemo(() => {
     const list = provinceData?.sevenDays ?? [];
-    return todayStr ? rotateToToday(list, todayStr) : list;
+    const sorted = [...list].sort(
+      (a, b) => ddmmyyyyToTime(a.forecastDate) - ddmmyyyyToTime(b.forecastDate)
+    );
+    return todayStr ? rotateToToday(sorted, todayStr) : sorted;
   }, [provinceData, todayStr]);
 
-  return (
-    <div className="min-h-screen bg-white">
-      <div className="mx-auto max-w-6xl px-4 py-6">
-        <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">พยากรณ์อากาศล่วงหน้า 7 วัน (รายจังหวัด)</h1>
+  // ✅ เมื่อข้อมูลเปลี่ยน ให้เลือกการ์ดตัวแรก (วันนี้) เสมอ
+  useEffect(() => {
+    if (!sevenDaysForShow.length) return;
+    setSelectedIdx(0);
+  }, [sevenDaysForShow]);
 
-            <p className="text-sm text-gray-600">
-              วันที่ของเครื่องวันนี้: <span className="font-medium">{todayStr || "-"}</span>
+  const selectedDay = sevenDaysForShow[selectedIdx] ?? sevenDaysForShow[0];
+
+  return (
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-sky-200 via-sky-100 to-pink-100">
+      {/* soft clouds */}
+      <div className="pointer-events-none absolute -bottom-36 left-1/2 h-80 w-[1200px] -translate-x-1/2 rounded-[999px] bg-white/70 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-52 left-1/2 h-96 w-[1400px] -translate-x-1/2 rounded-[999px] bg-white/50 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 left-1/2 h-48 w-[1000px] -translate-x-1/2 rounded-[999px] bg-white/60 blur-2xl" />
+
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        {/* Top bar */}
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-semibold text-slate-900">
+              อุตุนิยมวิทยาและแผ่นดินไหว
+            </h1>
+
+            <div className="text-xs text-slate-700/70">
+              วันนี้: <span className="font-medium text-slate-900">{todayStr || "-"}</span>
               {lastBuildDate ? (
                 <>
-                  {" • "}อัปเดตล่าสุด: <span className="font-medium">{lastBuildDate}</span>
+                  {" · "}อัปเดตล่าสุด:{" "}
+                  <span className="font-medium text-slate-900">{lastBuildDate}</span>
                 </>
               ) : null}
-            </p>
+            </div>
 
             {gpsNote ? (
-              <p className="mt-1 text-sm text-gray-500">
+              <div className="text-xs text-slate-700/70">
                 {gpsLoading ? "📍 " : "✅ "}
                 {gpsNote}
-              </p>
+              </div>
             ) : null}
           </div>
 
-          <div className="w-full sm:w-[380px]">
-            <label className="mb-1 block text-sm font-medium text-gray-700">เลือกจังหวัด</label>
+          {/* Province select */}
+          <div className="w-full sm:w-[360px]">
+            <label className="sr-only">เลือกจังหวัด</label>
+            <div className="relative">
+              <select
+                className="w-full appearance-none rounded-full border border-white/40 bg-white/35 px-4 py-2.5 pr-10 text-sm text-slate-900 shadow-sm backdrop-blur
+                           focus:outline-none focus:ring-2 focus:ring-white/70 disabled:opacity-60"
+                value={selectedProvinceKey}
+                onChange={(e) => {
+                  userChangedRef.current = true;
+                  const v = e.target.value;
+                  setSelectedProvinceKey(v);
+                  localStorage.setItem(STORAGE_KEY, v);
+                  loadProvince(v);
+                }}
+                disabled={loading || provinceOptions.length === 0}
+              >
+                {provinceOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
 
-            <select
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2"
-              value={selectedProvinceKey}
-              onChange={(e) => {
-                userChangedRef.current = true;
-
-                const v = e.target.value;
-                setSelectedProvinceKey(v);
-                localStorage.setItem(STORAGE_KEY, v);
-                loadProvince(v);
-              }}
-              disabled={loading || provinceOptions.length === 0}
-            >
-              {provinceOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-700/70">
+                ▼
+              </div>
+            </div>
           </div>
         </header>
 
-        <div className="mt-6">
+        {/* Main */}
+        <div className="mt-10">
           {loading ? (
-            <div className="rounded-xl border p-4 text-gray-700">กำลังโหลดข้อมูล...</div>
+            <div className="mx-auto max-w-3xl rounded-3xl border border-white/40 bg-white/35 p-6 shadow-sm backdrop-blur">
+              <div className="animate-pulse space-y-4">
+                <div className="h-5 w-40 rounded bg-white/60" />
+                <div className="h-3 w-72 rounded bg-white/50" />
+                <div className="h-24 w-full rounded-2xl bg-white/40" />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div className="h-28 rounded-2xl bg-white/40" />
+                  <div className="h-28 rounded-2xl bg-white/40" />
+                  <div className="h-28 rounded-2xl bg-white/40" />
+                </div>
+              </div>
+            </div>
           ) : error ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+            <div className="mx-auto max-w-xl rounded-3xl border border-red-200/60 bg-white/60 p-6 text-red-700 shadow-sm backdrop-blur">
               โหลดข้อมูลไม่สำเร็จ: {error}
             </div>
           ) : !provinceData ? (
-            <div className="rounded-xl border p-4 text-gray-700">ไม่พบข้อมูลจังหวัด</div>
+            <div className="mx-auto max-w-xl rounded-3xl border border-white/40 bg-white/35 p-6 text-slate-900 shadow-sm backdrop-blur">
+              ไม่พบข้อมูลจังหวัด
+            </div>
           ) : (
-            <>
-              <div className="mb-4 rounded-xl border p-4">
-                <div className="text-lg font-semibold">
-                  {provinceData.provinceNameThai}{" "}
-                  <span className="text-gray-500">({provinceData.provinceNameEnglish})</span>
-                </div>
-                <div className="text-sm text-gray-600">
-                  แสดงผล 7 วัน (จะยก “วันนี้” ขึ้นมาก่อนอัตโนมัติ ถ้ามี)
+            <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
+              {/* Title + selected date */}
+              <div className="text-base font-semibold text-slate-900">
+                {provinceData.provinceNameThai}
+              </div>
+              <div className="mt-1 text-xs text-slate-700/70">
+                วันที่ที่เลือก:{" "}
+                <span className="font-medium text-slate-900">
+                  {selectedDay?.forecastDate ?? "-"}
+                </span>
+                {todayStr && selectedDay?.forecastDate === todayStr ? (
+                  <span className="ml-2 rounded-full bg-white/60 px-2 py-0.5 text-[11px] text-slate-800 shadow-sm">
+                    วันนี้
+                  </span>
+                ) : null}
+              </div>
+
+              {/* Description */}
+              <div className="mt-3 flex items-center justify-center gap-2 text-sm text-slate-700/80">
+                <span className="inline-flex h-2.5 w-2.5 rounded-full bg-yellow-400 shadow-sm" />
+                <span className="max-w-[85vw] truncate">
+                  {selectedDay?.descriptionThai ?? "-"}
+                </span>
+              </div>
+
+              {/* Big temperature */}
+              <div className="mt-7 rounded-[28px] border border-white/40 bg-white/30 px-8 py-7 shadow-sm backdrop-blur">
+                <div className="flex items-center justify-center gap-10">
+                  <div className="flex flex-col items-center">
+                    <div className="text-7xl font-light tracking-tight text-slate-800">
+                      {selectedDay?.maxTempC ?? "-"}°
+                    </div>
+                    <div className="text-6xl font-light tracking-tight text-slate-700/80">
+                      {selectedDay?.minTempC ?? "-"}°
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-2 text-slate-700/70">
+                    <span className="text-sm leading-none">▲</span>
+                    <span className="text-sm leading-none">▼</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {sevenDaysForShow.map((d) => {
-                  const isToday = todayStr && d.forecastDate === todayStr;
+              {/* Mini stats */}
+              <div className="mt-8 grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="rounded-2xl border border-white/40 bg-white/35 p-5 shadow-sm backdrop-blur">
+                  <div className="text-2xl">💨</div>
+                  <div className="mt-2 text-sm text-slate-700/80">ความเร็วลม</div>
+                  <div className="mt-1 text-base font-semibold text-slate-900">
+                    {selectedDay?.windSpeedKmh ?? "-"} km/h
+                  </div>
+                </div>
 
-                  return (
-                    <div
-                      key={`${provinceData.provinceNameThai}-${d.forecastDate}`}
-                      className={[
-                        "rounded-2xl border p-4 shadow-sm",
-                        isToday ? "border-black" : "border-gray-200",
-                      ].join(" ")}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="text-base font-semibold">
+                <div className="rounded-2xl border border-white/40 bg-white/35 p-5 shadow-sm backdrop-blur">
+                  <div className="text-2xl">🌧️</div>
+                  <div className="mt-2 text-sm text-slate-700/80">โอกาสฝน</div>
+                  <div className="mt-1 text-base font-semibold text-slate-900">
+                    {selectedDay?.percentRainCover ?? "-"}%
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/40 bg-white/35 p-5 shadow-sm backdrop-blur">
+                  <div className="text-2xl">🧭</div>
+                  <div className="mt-2 text-sm text-slate-700/80">ทิศทางลม</div>
+                  <div className="mt-1 text-base font-semibold text-slate-900">
+                    {selectedDay?.windDirectionDeg ?? "-"}°
+                  </div>
+                </div>
+              </div>
+
+              {/* 7 days cards */}
+              <div className="mt-10 w-full">
+                <div className="text-sm text-slate-800/80">
+                  อุณหภูมิสูงสุด-ต่ำสุด ล่วงหน้า 7 วัน (กดเพื่อดูรายละเอียด)
+                </div>
+
+                <div
+                  className="mt-4 overflow-x-auto pb-2
+                             [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  <div className="mx-auto flex w-max gap-3 snap-x snap-mandatory px-1">
+                    {sevenDaysForShow.map((d, idx) => {
+                      const isActive = idx === selectedIdx;
+                      const isToday = todayStr && d.forecastDate === todayStr;
+
+                      return (
+                        <button
+                          key={`${provinceData.provinceNameThai}-${d.forecastDate}`}
+                          type="button"
+                          onClick={() => setSelectedIdx(idx)}
+                          className={[
+                            "snap-start min-w-[104px] rounded-2xl border px-4 py-3 text-center shadow-sm backdrop-blur transition",
+                            "focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80",
+                            isActive
+                              ? "border-slate-900/25 bg-white/70 ring-1 ring-white/40"
+                              : "border-white/40 bg-white/35 hover:bg-white/55",
+                          ].join(" ")}
+                          aria-label={`เลือกวันที่ ${d.forecastDate}`}
+                        >
+                          <div className="text-xs text-slate-700/80">
                             {d.forecastDate}
                             {isToday ? (
-                              <span className="ml-2 rounded-full bg-black px-2 py-0.5 text-xs text-white">
-                                วันนี้
-                              </span>
+                              <span className="ml-1 text-[10px] text-slate-900/70">• วันนี้</span>
                             ) : null}
                           </div>
 
-                          <div className="text-sm text-gray-600 break-words">
-                            {d.descriptionThai ?? "-"}
-                            {d.descriptionEnglish ? (
-                              <span className="text-gray-400"> ({d.descriptionEnglish})</span>
-                            ) : null}
+                          <div className="mt-2 text-lg font-semibold text-slate-900">
+                            {d.maxTempC ?? "-"}°
                           </div>
-                        </div>
-
-                        <div className="text-right">
-                          <div className="text-sm text-gray-500">ฝน(%)</div>
-                          <div className="text-lg font-semibold">{d.percentRainCover ?? "-"}</div>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                        <div className="rounded-xl bg-gray-50 p-3">
-                          <div className="text-gray-500">อุณหภูมิสูงสุด</div>
-                          <div className="text-lg font-semibold">{d.maxTempC ?? "-"}°C</div>
-                        </div>
-
-                        <div className="rounded-xl bg-gray-50 p-3">
-                          <div className="text-gray-500">อุณหภูมิต่ำสุด</div>
-                          <div className="text-lg font-semibold">{d.minTempC ?? "-"}°C</div>
-                        </div>
-
-                        <div className="rounded-xl bg-gray-50 p-3">
-                          <div className="text-gray-500">ทิศทางลม</div>
-                          <div className="text-lg font-semibold">{d.windDirectionDeg ?? "-"}°</div>
-                        </div>
-
-                        <div className="rounded-xl bg-gray-50 p-3">
-                          <div className="text-gray-500">ความเร็วลม</div>
-                          <div className="text-lg font-semibold">{d.windSpeedKmh ?? "-"} km/h</div>
-                        </div>
-                      </div>
-
-                      {(d.temperatureThai || d.temperatureEnglish) && (
-                        <div className="mt-3 text-sm text-gray-600">
-                          ระดับอุณหภูมิ:{" "}
-                          <span className="font-medium">{d.temperatureThai ?? "-"}</span>{" "}
-                          {d.temperatureEnglish ? (
-                            <span className="text-gray-400">({d.temperatureEnglish})</span>
-                          ) : null}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                          <div className="text-sm text-slate-700/80">
+                            {d.minTempC ?? "-"}°
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
-            </>
+
+              {/* Optional English */}
+              {selectedDay?.descriptionEnglish ? (
+                <div className="mt-4 max-w-xl text-xs text-slate-700/60">
+                  {selectedDay.descriptionEnglish}
+                </div>
+              ) : null}
+            </div>
           )}
         </div>
       </div>
