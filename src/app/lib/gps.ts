@@ -5,6 +5,7 @@ import type {
   ProvinceResponse,
 } from "src/app/types/tmd";
 
+// test2 ใช้ชั่วคราวในระหว่างพัฒนา
 export const DASHBOARD_ROUTE = "/test2/api/dashboard"; // เส้นทาง API DASHBOARD
 export const REVERSE_ROUTE = "/test2/api/province"; // เส้นทาง API แปลงพิกัดเป็นจังหวัด
 export const STORAGE_KEY = "tmd_selected_province"; // เก็บจังหวัดที่เลือกใน localStorage
