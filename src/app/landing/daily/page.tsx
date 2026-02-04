@@ -1,9 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { FiDownload, FiPlus, FiX } from "react-icons/fi";
 
-const DAILY_API_ROUTE = "/test2/api/daily"; // 👈 เปลี่ยนตาม route จริงของคุณถ้าไม่ใช่ /api/daily
+
+const DAILY_API_ROUTE = "/test2/api/daily";
 
 type DailyForecastItem = {
   title: string;
@@ -31,7 +33,7 @@ type DailyForecastResponse = {
 function parseContentDate(raw: string): Date | null {
   if (!raw) return null;
   // "2026-01-30 12:00:00.0000000" -> "2026-01-30T12:00:00"
-  const cleaned = raw.trim().replace(" ", "T").replace(/\.\d+$/, ""); // ตัด .0000000 ออก
+  const cleaned = raw.trim().replace(" ", "T").replace(/\.\d+$/, "");
   const d = new Date(cleaned);
   return Number.isNaN(d.getTime()) ? null : d;
 }
@@ -164,8 +166,8 @@ export default function DailyForecastPage() {
 
   const headerDateText = issueDate
     ? `${thaiTime(issueDate)} น. • ${thaiDate(issueDate)} • ${thaiWeekday(
-        issueDate
-      )}`
+      issueDate
+    )}`
     : selected.contentdate;
 
   const hasGeneral = Boolean((selected.general_climate ?? "").trim());
@@ -178,26 +180,27 @@ export default function DailyForecastPage() {
     ?.toString();
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-6">
+    <main>
       {/* Header */}
-      <section className="rounded-2xl bg-white/90 p-6 shadow-sm ring-1 ring-black/5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-xl font-semibold text-gray-900">
+      <section className="bg-[url('/test2/bg_top.png')] bg-no-repeat bg-right-top bg-contain min-h-60 border-b border-solid border-gray-200">
+        <div className="mx-auto max-w-7xl px-4 py-6">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-3xl font-medium text-gray-900">
               ข่าวพยากรณ์อากาศประจำวัน
             </h1>
-
-            {/* ✅ description เป็นตัวหลัก + กดอ่านเพิ่มเติมเพื่อสลับเป็น general_climate */}
-            <div className="mt-1">
+            {/* Detail ส่วนอ่านเพิ่มเติม */}
+            {/* pr-20 */}
+            <div className="mt-1 lg:pr-20">
               <p
                 className={[
-                  "text-sm text-gray-600 whitespace-pre-line",
+                  "text-sm text-gray-800 whitespace-pre-line",
                   showGeneral ? "" : "line-clamp-2",
                 ].join(" ")}
               >
                 {headerMainText}
               </p>
 
+              {/* Button อ่านเพิ่มเติม */}
               {hasGeneral ? (
                 <button
                   type="button"
@@ -208,90 +211,71 @@ export default function DailyForecastPage() {
                 </button>
               ) : null}
             </div>
-
-            <div className="mt-3 text-sm text-gray-700">
-              <span className="font-medium">{selected.title.trim()}</span>
-              <span className="ml-2 text-gray-500">{headerDateText}</span>
-            </div>
           </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {/* <button
-              onClick={load}
-              className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50"
-              title="รีเฟรชข้อมูล"
-            >
-              รีเฟรช
-            </button> */}
-
-            {selected.pdf_url ? (
-              <a
-                href={selected.pdf_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          {/* Selector ว/ด/ป-เวลา & Button ดาวน์โหลดเอกสาร*/}
+          <div className="flex flex-col gap-2 mt-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <select
+                value={selectedKey}
+                onChange={(e) => setSelectedKey(e.target.value)}
+                className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none"
               >
-                ดาวน์โหลดเอกสาร (PDF)
-              </a>
-            ) : null}
-          </div>
-        </div>
-
-        {/* Selector */}
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">เลือกรอบประกาศ</label>
-            <select
-              value={selectedKey}
-              onChange={(e) => setSelectedKey(e.target.value)}
-              className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none"
-            >
-              {items.map((it) => {
-                const d = parseContentDate(it.contentdate);
-                const label = d
-                  ? `${thaiTime(d)} น. • ${thaiDate(d)}`
-                  : it.contentdate;
-                return (
-                  <option key={it.contentdate} value={it.contentdate}>
-                    {label}
-                  </option>
-                );
-              })}
-            </select>
+                {items.map((it) => {
+                  const d = parseContentDate(it.contentdate);
+                  const label = d
+                    ? `${thaiTime(d)} น. • ${thaiDate(d)}`
+                    : it.contentdate;
+                  return (
+                    <option key={it.contentdate} value={it.contentdate}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+            <div>
+              {selected.pdf_url ? (
+                <button
+                  type="button"
+                  //คำสั่งเปิด PDF ใน Tab ใหม่
+                  onClick={() => window.open(selected.pdf_url, "_blank", "noopener,noreferrer")}
+                  className="flex items-center border border-emerald-600 bg-white rounded-lg px-3 py-3 gap-2 cursor-pointer
+                  transition duration-150 hover:bg-emerald-50 active:bg-emerald-100">
+                  <FiDownload className="h-6 w-6 text-emerald-600" aria-hidden="true" />
+                  <span className="text-sm leading-none font-semibold text-emerald-600 w-30">ดาวน์โหลดเอกสาร</span>
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
       </section>
 
       {/* Infographic */}
-      <section className="mt-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
+      <section className="mx-auto max-w-7xl px-4 py-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-base font-semibold text-gray-900">
+          <h2 className="text-lg font-medium text-gray-900">
             พยากรณ์อากาศประจำวันแบบอินโฟกราฟิก
             {issueDate ? ` - ${thaiDate(issueDate)}` : ""}
           </h2>
-
-          {/* {selected.infographic_url ? (
-            <a
-              href={selected.infographic_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-medium text-emerald-700 hover:text-emerald-800"
-            >
-              ดูภาพขนาดจริง / ดาวน์โหลด
-            </a>
-          ) : null} */}
         </div>
 
         {selected.infographic_url ? (
           <div className="mt-4 flex justify-center">
-            <div className="relative w-full max-w-sm overflow-hidden rounded-xl ring-1 ring-black/5">
-              <Image
-                src={selected.infographic_url}
-                alt="Daily forecast infographic"
-                width={900}
-                height={1200}
-                className="h-auto w-full"
-              />
+            <div className="flex flex-col items-center gap-2">
+              <div className="shadow-xl">
+                <Image
+                  src={selected.infographic_url}
+                  alt="Daily forecast infographic"
+                  width={900}
+                  height={1200}
+                  className="h-auto w-full"
+                />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">
+                  รูปภาพ:พยากรณ์อากาศประจำวัน
+                </p>
+              </div>
             </div>
           </div>
         ) : (
@@ -299,38 +283,60 @@ export default function DailyForecastPage() {
         )}
       </section>
 
-      {/* Accordions */}
-      <section className="mt-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
+      {/* Detail */}
+      <section className="mx-auto max-w-7xl px-4 py-6">
         <h2 className="text-base font-semibold text-gray-900">
-          รายละเอียดพยากรณ์อากาศ
+          พยากรณ์อากาศรายภาค - 00:00 น. วันนี้ ถึง 00:00 น. วันพรุ่งนี้
         </h2>
-
+        {/* Card Column */}
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {SECTIONS.map(({ key, label }) => {
             const value = String(selected[key] ?? "").trim();
             if (!value) return null;
 
+            {/* Card */ }
             return (
               <details
                 key={String(key)}
-                className="group rounded-xl border border-gray-200 bg-white p-3 shadow-sm"
+                className="
+                group relative overflow-hidden rounded-xl bg-white p-4 shadow-sm
+                border border-gray-200
+                transition-[border-color]
+                group-open:border-gray-200
+                before:absolute before:left-0 before:top-0 before:h-[3px] before:w-full
+                before:bg-emerald-600
+                before:opacity-0 before:transition-opacity
+                group-open:before:opacity-100
+                "
               >
-                <summary className="flex cursor-pointer list-none items-start justify-between gap-3">
+                <summary
+                  className="flex cursor-pointer list-none items-start justify-between gap-3
+                [&::-webkit-details-marker]:hidden
+                "
+                >
                   <div className="min-w-0">
-                    <div className="text-sm font-medium text-gray-900">
+                    <div className="text-base font-semibold text-gray-900 group-open:text-emerald-600">
                       {label}
                     </div>
-                    <div className="mt-1 truncate text-xs text-gray-500">
+
+                    {/* subtitle เฉพาะตอนปิด */}
+                    <div className="mt-2 truncate text-sm text-gray-500 group-open:hidden">
                       {shortText(value, 140)}
                     </div>
                   </div>
 
-                  <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 text-gray-700 transition-transform group-open:rotate-45">
-                    +
+                  {/* icon ปิดเป็น + / เปิดเป็น x */}
+                  <span className="mt-1 inline-flex h-6 w-6 items-center justify-center">
+                    {/* ตอนปิด: + สีเทาเข้ม */}
+                    <FiPlus className="h-5 w-5 text-gray-700 group-open:hidden" aria-hidden="true" />
+
+                    {/* ตอนเปิด: x สีเขียว */}
+                    <FiX className="hidden h-5 w-5 text-emerald-600 group-open:block" aria-hidden="true" />
                   </span>
                 </summary>
 
-                <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+                {/* content เฉพาะตอนเปิด */}
+                <div className="mt-2 hidden whitespace-pre-wrap text-sm leading-relaxed text-gray-500 group-open:block">
                   {value}
                 </div>
               </details>

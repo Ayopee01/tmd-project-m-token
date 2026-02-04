@@ -30,7 +30,7 @@ export default function Navbar({ onOpenMenu }: Props) {
         <Link href="/" className="flex items-center gap-3 h-full">
           <span className="relative h-full w-36 sm:w-40 md:w-42">
             <Image
-              src="/logo.png"
+              src="/test2/logo.png"
               alt="Logo"
               fill
               priority

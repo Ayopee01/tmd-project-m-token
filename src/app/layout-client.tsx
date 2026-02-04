@@ -6,8 +6,6 @@ import Navbar from "@/app/components/Navbar";
 import DrawerMenu from "@/app/components/DrawerMenu";
 import QueryString from "@/app/components/QueryString";
 import { AuthProvider } from "@/app/hooks/auth-hook";
-import { Inter } from "next/font/google";
-const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayoutClient({ children }: { children: React.ReactNode }) {
     const [open, setOpen] = useState(false);

@@ -1,11 +1,25 @@
 // app/layout.tsx
 import "./globals.css";
+import { Inter, Noto_Sans_Thai } from "next/font/google";
 import LayoutClient from "./layout-client";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const notoThai = Noto_Sans_Thai({
+  subsets: ["thai"],
+  variable: "--font-thai",
+  weight: ["400", "700"],
+  display: "swap",
+});
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="th">
-      <body>
+      <body className={`${inter.variable} ${notoThai.variable} antialiased`}>
         <LayoutClient>{children}</LayoutClient>
       </body>
     </html>
