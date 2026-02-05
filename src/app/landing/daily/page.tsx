@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
-import { FiDownload, FiPlus, FiX } from "react-icons/fi";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FiDownload, FiPlus, FiX, FiCalendar, FiChevronDown } from "react-icons/fi";
 
 
 const DAILY_API_ROUTE = "/test2/api/daily";
@@ -29,6 +29,8 @@ type DailyForecastResponse = {
   data: DailyForecastItem[];
   message?: string;
 };
+
+
 
 function parseContentDate(raw: string): Date | null {
   if (!raw) return null;
@@ -64,7 +66,7 @@ function shortText(s: string, max = 140): string {
   return t.slice(0, max).trimEnd() + "…";
 }
 
-// ✅ ตัด general_climate ออกจาก Accordion เพื่อไม่ให้ซ้ำกับส่วนหัว
+// ตัด general_climate ออกจาก Accordion เพื่อไม่ให้ซ้ำกับส่วนหัว
 const SECTIONS: Array<{ key: keyof DailyForecastItem; label: string }> = [
   { key: "north", label: "ภาคเหนือ" },
   { key: "northeast", label: "ภาคตะวันออกเฉียงเหนือ" },
@@ -83,6 +85,33 @@ export default function DailyForecastPage() {
 
   // ✅ สลับข้อความ: default โชว์ description, กดอ่านเพิ่มเติมจะโชว์ general_climate แทน
   const [showGeneral, setShowGeneral] = useState(false);
+  // มาใหม่
+  const [dateOpen, setDateOpen] = useState(false);
+  const dateWrapRef = useRef<HTMLDivElement | null>(null);
+
+  const selectedLabel = useMemo(() => {
+    const it = items.find((x) => x.contentdate === selectedKey);
+    if (!it) return "";
+    const d = parseContentDate(it.contentdate);
+    return d ? `${thaiDate(d)} ${thaiTime(d)} น.` : it.contentdate;
+  }, [items, selectedKey]);
+
+  useEffect(() => {
+    const onMouseDown = (e: MouseEvent) => {
+      if (!dateWrapRef.current) return;
+      if (!dateWrapRef.current.contains(e.target as Node)) setDateOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDateOpen(false);
+    };
+
+    document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
 
   async function load() {
     setLoading(true);
@@ -182,18 +211,17 @@ export default function DailyForecastPage() {
   return (
     <main>
       {/* Header */}
-      <section className="bg-[url('/test2/bg_top.png')] bg-no-repeat bg-right-top bg-contain min-h-60 border-b border-solid border-gray-200">
+      <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-right-top bg-contain min-h-60 border-b border-solid border-gray-200">
         <div className="mx-auto max-w-7xl px-4 py-6">
           <div className="flex flex-col gap-1">
             <h1 className="text-3xl font-medium text-gray-900">
               ข่าวพยากรณ์อากาศประจำวัน
             </h1>
             {/* Detail ส่วนอ่านเพิ่มเติม */}
-            {/* pr-20 */}
             <div className="mt-1 lg:pr-20">
               <p
                 className={[
-                  "text-sm text-gray-800 whitespace-pre-line",
+                  "text-base text-gray-800 whitespace-pre-line",
                   showGeneral ? "" : "line-clamp-2",
                 ].join(" ")}
               >
@@ -212,37 +240,87 @@ export default function DailyForecastPage() {
               ) : null}
             </div>
           </div>
-          {/* Selector ว/ด/ป-เวลา & Button ดาวน์โหลดเอกสาร*/}
+
+          {/* DateTime & Download PDF*/}
           <div className="flex flex-col gap-2 mt-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <select
-                value={selectedKey}
-                onChange={(e) => setSelectedKey(e.target.value)}
-                className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none"
+            <div ref={dateWrapRef} className="relative w-full max-w-sm">
+              {/* Calendar icon */}
+              <FiCalendar className="pointer-events-none absolute left-5 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-900" />
+              {/* Trigger */}
+              <button
+                type="button"
+                onClick={() => setDateOpen((v) => !v)}
+                aria-expanded={dateOpen}
+                className="flex py-3 w-full items-center justify-between
+                cursor-pointer rounded-lg border border-gray-300 bg-white
+                px-5 text-left text-sm font-medium text-gray-900 outline-none
+                focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               >
-                {items.map((it) => {
-                  const d = parseContentDate(it.contentdate);
-                  const label = d
-                    ? `${thaiTime(d)} น. • ${thaiDate(d)}`
-                    : it.contentdate;
-                  return (
-                    <option key={it.contentdate} value={it.contentdate}>
-                      {label}
-                    </option>
-                  );
-                })}
-              </select>
+                <span className="flex items-center justify-start gap-4 min-w-0">
+                  <FiCalendar className="h-6 w-6 shrink-0 text-gray-900" />
+                  <span className="block truncate">{selectedLabel}</span>
+                </span>
+
+                <FiChevronDown
+                  className={`h-6 w-6 shrink-0 text-gray-500 transition-transform
+                  ${dateOpen ? "rotate-180" : ""}`}
+                  aria-hidden="true"
+                />
+              </button>
+
+
+              {/* Dropdown panel */}
+              {dateOpen && (
+                <div className="absolute left-0 top-full z-50 mt-2 w-full">
+                  <div className="overflow-hidden texrounded-lg border border-gray-300 bg-white shadow-lg">
+                    <div className="max-h-[420px] overflow-auto py-2">
+                      {items.map((it) => {
+                        const d = parseContentDate(it.contentdate);
+                        const label = d ? `${thaiDate(d)} ${thaiTime(d)} น.` : it.contentdate;
+                        const active = it.contentdate === selectedKey;
+
+                        return (
+                          <button
+                            key={it.contentdate}
+                            type="button"
+                            onClick={() => {
+                              setSelectedKey(it.contentdate);
+                              setDateOpen(false);
+                            }}
+                            className={[
+                              "w-full text-left px-5 py-3 text-sm font-medium",
+                              active
+                                ? "bg-emerald-600 text-white"
+                                : "text-gray-900 hover:bg-gray-50",
+                            ].join(" ")}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
+
             <div>
               {selected.pdf_url ? (
                 <button
                   type="button"
-                  //คำสั่งเปิด PDF ใน Tab ใหม่
                   onClick={() => window.open(selected.pdf_url, "_blank", "noopener,noreferrer")}
-                  className="flex items-center border border-emerald-600 bg-white rounded-lg px-3 py-3 gap-2 cursor-pointer
-                  transition duration-150 hover:bg-emerald-50 active:bg-emerald-100">
-                  <FiDownload className="h-6 w-6 text-emerald-600" aria-hidden="true" />
-                  <span className="text-sm leading-none font-semibold text-emerald-600 w-30">ดาวน์โหลดเอกสาร</span>
+                  className="group flex items-center gap-2
+                  rounded-lg border border-emerald-600 bg-white px-3 py-3
+                  cursor-pointer transition duration-150
+                  hover:bg-emerald-700 active:bg-emerald-800"
+                >
+                  <FiDownload
+                    className="h-6 w-6 text-emerald-600 transition-colors group-hover:text-gray-100 group-active:text-gray-100"
+                    aria-hidden="true"
+                  />
+                  <span className="text-sm leading-none font-semibold text-emerald-600 transition-colors group-hover:text-gray-100 group-active:text-gray-100">
+                    ดาวน์โหลดเอกสาร
+                  </span>
                 </button>
               ) : null}
             </div>
@@ -253,7 +331,7 @@ export default function DailyForecastPage() {
       {/* Infographic */}
       <section className="mx-auto max-w-7xl px-4 py-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-medium text-gray-900">
+          <h2 className="text-xl font-medium text-gray-900">
             พยากรณ์อากาศประจำวันแบบอินโฟกราฟิก
             {issueDate ? ` - ${thaiDate(issueDate)}` : ""}
           </h2>
@@ -285,11 +363,11 @@ export default function DailyForecastPage() {
 
       {/* Detail */}
       <section className="mx-auto max-w-7xl px-4 py-6">
-        <h2 className="text-base font-semibold text-gray-900">
+        <h2 className="text-xl font-medium text-gray-900">
           พยากรณ์อากาศรายภาค - 00:00 น. วันนี้ ถึง 00:00 น. วันพรุ่งนี้
         </h2>
         {/* Card Column */}
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <div className="mt-8 grid gap-3 md:grid-cols-2">
           {SECTIONS.map(({ key, label }) => {
             const value = String(selected[key] ?? "").trim();
             if (!value) return null;
@@ -306,13 +384,11 @@ export default function DailyForecastPage() {
                 before:absolute before:left-0 before:top-0 before:h-[3px] before:w-full
                 before:bg-emerald-600
                 before:opacity-0 before:transition-opacity
-                group-open:before:opacity-100
-                "
+                group-open:before:opacity-100"
               >
                 <summary
                   className="flex cursor-pointer list-none items-start justify-between gap-3
-                [&::-webkit-details-marker]:hidden
-                "
+                [&::-webkit-details-marker]:hidden"
                 >
                   <div className="min-w-0">
                     <div className="text-base font-semibold text-gray-900 group-open:text-emerald-600">

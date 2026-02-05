@@ -1,5 +1,4 @@
 "use client";
-
 import Image from "next/image";
 import React, { useEffect, useMemo, useState } from "react";
 
@@ -7,7 +6,7 @@ import React, { useEffect, useMemo, useState } from "react";
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/test2";
 
 /** ✅ ปรับให้ตรงกับ route ของคุณ */
-const UPPER_WIND_API_ROUTE = "/test2/api/map";
+const UPPER_WIND_API_ROUTE = `${BASE_PATH}/api/map`;
 
 /** ---- Types ---- */
 type UpperWindItem = {
@@ -76,7 +75,6 @@ function clean(s: string): string {
 }
 
 function levelLabel(key: UpperWindKey): string {
-  // ใช้สำหรับ dropdown "แผนที่ลมชั้นบนระดับต่างๆ"
   const map: Record<UpperWindKey, string> = {
     UpperWind925hPa: "ระดับ 925 hPa",
     UpperWind850hPa: "ระดับ 850 hPa",
@@ -89,7 +87,6 @@ function levelLabel(key: UpperWindKey): string {
 }
 
 function levelShort(key: UpperWindKey): string {
-  // ให้เหมือน “แท็บ/การ์ดเล็ก” ในภาพ (ถ้าคุณจะต่อยอดทำแถวการ์ดได้)
   const map: Record<UpperWindKey, string> = {
     UpperWind925hPa: "925",
     UpperWind850hPa: "850",
@@ -131,7 +128,7 @@ export default function UpperWindMapPage() {
 
   // dropdown state
   const [selectedLevel, setSelectedLevel] = useState<UpperWindKey>("UpperWind925hPa");
-  const [selectedTimeKey, setSelectedTimeKey] = useState<string>(""); // ใช้ contentdate เป็น key
+  const [selectedTimeKey, setSelectedTimeKey] = useState<string>("");
   const [applied, setApplied] = useState<{ level: UpperWindKey; timeKey: string } | null>(null);
 
   async function load() {
@@ -167,7 +164,7 @@ export default function UpperWindMapPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ทำ options: ระดับที่มีข้อมูลจริง
+  // ระดับที่มีข้อมูลจริง
   const availableLevels = useMemo(() => {
     const d = raw?.data ?? {};
     const all: UpperWindKey[] = [
@@ -181,7 +178,7 @@ export default function UpperWindMapPage() {
     return all.filter((k) => !!d[k]?.url);
   }, [raw]);
 
-  // ทำ options เวลา: เอาเวลาของแต่ละระดับทั้งหมด (unique) เพื่อ dropdown กลางแบบในรูป
+  // เวลา (unique) จากทุกระดับ
   const timeOptions = useMemo(() => {
     const d = raw?.data ?? {};
     const times = new Map<string, Date>();
@@ -193,13 +190,12 @@ export default function UpperWindMapPage() {
       if (dt) times.set(it.contentdate, dt);
     }
 
-    // เรียงใหม่ -> เก่า
     return Array.from(times.entries())
       .sort((a, b) => b[1].getTime() - a[1].getTime())
       .map(([key, date]) => ({ key, label: thaiDateTime(date) }));
   }, [raw]);
 
-  // เมื่อเปลี่ยน level ให้ sync เวลา (เลือกเวลาของ level นั้น ถ้าไม่มี ใช้เวลาแรกใน dropdown)
+  // เมื่อเปลี่ยน level ให้ sync เวลา (เลือกเวลาของ level นั้น ถ้าไม่มี ใช้เวลาแรก)
   useEffect(() => {
     const it = raw?.data?.[selectedLevel];
     if (it?.contentdate) setSelectedTimeKey(it.contentdate);
@@ -211,14 +207,20 @@ export default function UpperWindMapPage() {
   const shown = useMemo(() => {
     if (!raw?.data) return null;
     const level = applied?.level ?? selectedLevel;
-
-    // ✅ โดยปกติ API ของคุณ 1 level มี 1 ภาพ/เวลา
-    // ถ้าต้องการกรองตามเวลา (กรณีอนาคตมีหลายเวลา/level) — ตอนนี้จะ fallback เป็นของ level นั้น
-    const item = raw.data[level];
-    return item ?? null;
+    return raw.data[level] ?? null;
   }, [raw, applied, selectedLevel]);
 
   const shownDate = shown?.contentdate ? parseContentDate(shown.contentdate) : null;
+
+  // กัน url ที่เป็น path ให้มี basePath
+  const shownUrl = useMemo(() => {
+    const u = shown?.url ?? "";
+    if (!u) return "";
+    if (u.startsWith("http://") || u.startsWith("https://")) return u;
+    if (u.startsWith(BASE_PATH + "/")) return u;
+    if (u.startsWith("/")) return `${BASE_PATH}${u}`;
+    return `${BASE_PATH}/${u}`;
+  }, [shown?.url]);
 
   if (loading) {
     return (
@@ -242,9 +244,7 @@ export default function UpperWindMapPage() {
       <main className="min-h-screen bg-gray-50">
         <div className="mx-auto max-w-6xl px-6 py-8">
           <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h1 className="text-xl font-semibold text-gray-900">
-              แผนที่ลมชั้นบนระดับต่างๆ
-            </h1>
+            <h1 className="text-xl font-semibold text-gray-900">แผนที่ลมชั้นบนระดับต่างๆ</h1>
             <p className="mt-2 text-sm text-red-600">{error || "ไม่พบข้อมูล"}</p>
             <button
               onClick={load}
@@ -259,35 +259,45 @@ export default function UpperWindMapPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-6xl px-6 py-8">
-        {/* ===== Header (เหมือนภาพ) ===== */}
-        <section className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <main className="min-h-screen bg-white">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        {/* ===== Header ===== */}
+        <section className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white">
           {/* bg map-ish */}
           <div className="pointer-events-none absolute inset-0">
-            <div className="absolute right-[-180px] top-[-140px] h-[520px] w-[520px] rounded-full bg-gray-200/60 blur-3xl" />
-            <div className="absolute right-[140px] top-[10px] h-[320px] w-[320px] rounded-full bg-gray-300/40 blur-3xl" />
+            <div className="absolute right-[-220px] top-[-160px] h-[560px] w-[560px] rounded-full bg-gray-200/50 blur-3xl" />
+            <div className="absolute right-[80px] top-[10px] h-[340px] w-[340px] rounded-full bg-gray-300/30 blur-3xl" />
             <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/80" />
           </div>
 
-          <div className="relative px-6 py-5">
-            <h1 className="text-2xl font-semibold text-gray-900">
+          <div className="relative px-4 py-4 sm:px-6 sm:py-5">
+            <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl">
               แผนที่ลมชั้นบนระดับต่างๆ
             </h1>
+            <p className="mt-1 text-sm text-gray-600">แผนที่ลมชั้นบนจาก TMD</p>
 
-            <p className="mt-1 text-sm text-gray-600">
-              แผนที่ลมชั้นบนจาก TMD
-            </p>
-
-            {/* Controls row */}
-            <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
+            {/* Controls */}
+            {/* Mobile:
+                - แถว 1: ระดับ (เต็มบรรทัด)
+                - แถว 2: เวลา (กินที่เหลือ) + ปุ่ม (ชิดขวา)
+               Desktop:
+                - อยู่แถวเดียว: level | time | button
+            */}
+            <div className="mt-4 grid gap-3 md:grid-cols-[240px_1fr_auto] md:items-center">
               {/* Select: level */}
-              <div className="relative w-full md:max-w-xs">
+              <div className="relative w-full">
                 <label className="sr-only">เลือกระดับ</label>
                 <select
                   value={selectedLevel}
                   onChange={(e) => setSelectedLevel(e.target.value as UpperWindKey)}
-                  className="h-10 w-full appearance-none rounded-xl border border-gray-200 bg-white px-3 pr-10 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none"
+                  className="
+                    h-10 w-full appearance-none
+                    rounded-lg border border-gray-200 bg-white
+                    px-3 pr-10
+                    text-sm font-medium text-gray-900
+                    outline-none
+                    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100
+                  "
                 >
                   {availableLevels.map((k) => (
                     <option key={k} value={k}>
@@ -300,82 +310,72 @@ export default function UpperWindMapPage() {
                 </span>
               </div>
 
-              {/* Select: time */}
-              <div className="relative w-full md:max-w-sm">
-                <label className="sr-only">เลือกเวลา</label>
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                  <IconCalendar className="h-5 w-5" />
-                </span>
-                <select
-                  value={selectedTimeKey}
-                  onChange={(e) => setSelectedTimeKey(e.target.value)}
-                  className="h-10 w-full appearance-none rounded-xl border border-gray-200 bg-white pl-10 pr-10 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none"
-                >
-                  {timeOptions.map((t) => (
-                    <option key={t.key} value={t.key}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  <IconChevronDown className="h-5 w-5" />
-                </span>
-              </div>
+              {/* wrapper: mobile ให้ time+button อยู่แถวเดียวกัน / md ใช้ contents */}
+              <div className="grid grid-cols-[1fr_auto] items-center gap-2 md:contents">
+                {/* Select: time */}
+                <div className="relative w-full">
+                  <label className="sr-only">เลือกเวลา</label>
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    <IconCalendar className="h-5 w-5" />
+                  </span>
+                  <select
+                    value={selectedTimeKey}
+                    onChange={(e) => setSelectedTimeKey(e.target.value)}
+                    className="
+                      h-10 w-full appearance-none
+                      rounded-lg border border-gray-200 bg-white
+                      pl-10 pr-10
+                      text-sm font-medium text-gray-900
+                      outline-none
+                      focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100
+                    "
+                  >
+                    {timeOptions.map((t) => (
+                      <option key={t.key} value={t.key}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    <IconChevronDown className="h-5 w-5" />
+                  </span>
+                </div>
 
-              {/* Button: show */}
-              <button
-                onClick={() => setApplied({ level: selectedLevel, timeKey: selectedTimeKey })}
-                className="h-10 rounded-xl bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700 md:ml-1"
-              >
-                แสดงแผนที่
-              </button>
+                {/* Button: show */}
+                <button
+                  onClick={() => setApplied({ level: selectedLevel, timeKey: selectedTimeKey })}
+                  className="
+                    h-10 shrink-0
+                    rounded-lg bg-emerald-600 px-4
+                    text-sm font-semibold text-white
+                    hover:bg-emerald-700
+                  "
+                >
+                  แสดงแผนที่
+                </button>
+              </div>
             </div>
           </div>
 
           <div className="h-px w-full bg-gray-100" />
         </section>
 
-        {/* ===== Title row (เหมือนภาพมีบรรทัดหัวข้อใต้ header) ===== */}
+        {/* ===== Title (บรรทัดเดียวตามตัวอย่าง) ===== */}
         <section className="mt-6">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-lg font-semibold text-gray-900">
-                {clean(shown.title || shown.alt || `แผนที่ลมชั้นบน ${levelShort(selectedLevel)}`)}
-              </div>
-              <div className="mt-1 text-sm text-gray-500">
-                {shownDate ? thaiDateTime(shownDate) : shown.contentdate}
-              </div>
-            </div>
-
-            {/* ปุ่มซ้าย/ขวา (เหมือนในภาพ) — ตอนนี้ยังไม่ทำเปลี่ยนภาพ เพราะ API มี 1 ภาพต่อระดับ */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-                title="ก่อนหน้า"
-                disabled
-              >
-                ‹
-              </button>
-              <button
-                type="button"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-                title="ถัดไป"
-                disabled
-              >
-                ›
-              </button>
-            </div>
+          <div className="text-base font-semibold text-gray-900 sm:text-lg">
+            {clean(shown.title || shown.alt || `แผนที่ลมชั้นบน ${levelShort(selectedLevel)}`)}
+            {" - "}
+            {shownDate ? thaiDateTime(shownDate) : clean(shown.contentdate)}
           </div>
         </section>
 
-        {/* ===== Image area ===== */}
-        <section className="mt-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-          {shown.url ? (
+        {/* ===== Image area (ไม่มีการ์ด/กรอบหนา) ===== */}
+        <section className="mt-4">
+          {shownUrl ? (
             <div className="flex justify-center">
-              <div className="relative w-full max-w-4xl overflow-hidden rounded-xl bg-white">
+              <div className="w-full max-w-[520px]">
                 <Image
-                  src={shown.url}
+                  src={shownUrl}
                   alt={shown.alt || shown.title || "Upper wind map"}
                   width={1600}
                   height={1000}
@@ -389,37 +389,12 @@ export default function UpperWindMapPage() {
           )}
         </section>
 
-        {/* ===== Optional: แถบการ์ดระดับ (ถ้าคุณอยากให้เหมือนมีรายการด้านบนใต้หัวข้อ) ===== */}
-        <section className="mt-4">
-          <div className="flex flex-wrap gap-2">
-            {availableLevels.map((k) => {
-              const active = (applied?.level ?? selectedLevel) === k;
-              return (
-                <button
-                  key={k}
-                  onClick={() => {
-                    setSelectedLevel(k);
-                    const it = raw.data[k];
-                    const key = it?.contentdate ?? selectedTimeKey;
-                    setSelectedTimeKey(key);
-                    setApplied({ level: k, timeKey: key });
-                  }}
-                  className={[
-                    "rounded-xl border px-3 py-2 text-left text-sm transition",
-                    active
-                      ? "border-emerald-600 bg-emerald-600 text-white"
-                      : "border-gray-200 bg-gray-50 text-gray-900 hover:bg-gray-100",
-                  ].join(" ")}
-                >
-                  <div className="font-medium">{levelShort(k)}</div>
-                  <div className="text-xs opacity-80">
-                    {raw.data[k]?.contentdate ? clean(raw.data[k]!.contentdate) : "—"}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        {/* ข้อความใต้รูป (มาจาก API) */}
+        {shownUrl && clean(shown.description) ? (
+          <p className="mt-6 text-center text-xs text-gray-500">
+            {clean(shown.description)}
+          </p>
+        ) : null}
       </div>
     </main>
   );

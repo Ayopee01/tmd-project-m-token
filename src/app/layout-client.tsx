@@ -4,6 +4,7 @@
 import { useState, Suspense } from "react";
 import Navbar from "@/app/components/Navbar";
 import DrawerMenu from "@/app/components/DrawerMenu";
+import Footer from "./components/Footer";   
 import QueryString from "@/app/components/QueryString";
 import { AuthProvider } from "@/app/hooks/auth-hook";
 
@@ -19,6 +20,7 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
             <Navbar onOpenMenu={() => setOpen(true)} />
             <DrawerMenu open={open} onClose={() => setOpen(false)} />
             {children}
+            <Footer />
         </AuthProvider>
     );
 }
