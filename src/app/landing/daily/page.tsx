@@ -1,9 +1,8 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { FiDownload, FiPlus, FiX, FiCalendar, FiChevronDown } from "react-icons/fi";
-
+import ZoomableImage from "@/app/components/ZoomableImage";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { FiDownload, FiPlus, FiCalendar, FiChevronDown } from "react-icons/fi";
 
 const DAILY_API_ROUTE = "/test2/api/daily";
 
@@ -30,11 +29,8 @@ type DailyForecastResponse = {
   message?: string;
 };
 
-
-
 function parseContentDate(raw: string): Date | null {
   if (!raw) return null;
-  // "2026-01-30 12:00:00.0000000" -> "2026-01-30T12:00:00"
   const cleaned = raw.trim().replace(" ", "T").replace(/\.\d+$/, "");
   const d = new Date(cleaned);
   return Number.isNaN(d.getTime()) ? null : d;
@@ -56,17 +52,12 @@ function thaiTime(d: Date): string {
   });
 }
 
-function thaiWeekday(d: Date): string {
-  return d.toLocaleDateString("th-TH", { weekday: "long" });
-}
-
 function shortText(s: string, max = 140): string {
   const t = (s ?? "").trim().replace(/\s+/g, " ");
   if (t.length <= max) return t;
   return t.slice(0, max).trimEnd() + "…";
 }
 
-// ตัด general_climate ออกจาก Accordion เพื่อไม่ให้ซ้ำกับส่วนหัว
 const SECTIONS: Array<{ key: keyof DailyForecastItem; label: string }> = [
   { key: "north", label: "ภาคเหนือ" },
   { key: "northeast", label: "ภาคตะวันออกเฉียงเหนือ" },
@@ -83,35 +74,15 @@ export default function DailyForecastPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ สลับข้อความ: default โชว์ description, กดอ่านเพิ่มเติมจะโชว์ general_climate แทน
+  // ✅ อ่านเพิ่มเติม (เฟด/สไลด์)
   const [showGeneral, setShowGeneral] = useState(false);
-  // มาใหม่
+
+  // dropdown รอบประกาศ
   const [dateOpen, setDateOpen] = useState(false);
   const dateWrapRef = useRef<HTMLDivElement | null>(null);
 
-  const selectedLabel = useMemo(() => {
-    const it = items.find((x) => x.contentdate === selectedKey);
-    if (!it) return "";
-    const d = parseContentDate(it.contentdate);
-    return d ? `${thaiDate(d)} ${thaiTime(d)} น.` : it.contentdate;
-  }, [items, selectedKey]);
-
-  useEffect(() => {
-    const onMouseDown = (e: MouseEvent) => {
-      if (!dateWrapRef.current) return;
-      if (!dateWrapRef.current.contains(e.target as Node)) setDateOpen(false);
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setDateOpen(false);
-    };
-
-    document.addEventListener("mousedown", onMouseDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", onMouseDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, []);
+  // accordion เปิดได้ทีละใบ
+  const [openSectionKey, setOpenSectionKey] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -120,9 +91,7 @@ export default function DailyForecastPage() {
       const res = await fetch(DAILY_API_ROUTE);
       const json = (await res.json()) as DailyForecastResponse;
 
-      if (!res.ok) {
-        throw new Error(`Request failed (${res.status})`);
-      }
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
       if (!json?.success || !Array.isArray(json.data)) {
         throw new Error(json?.message || "Bad response shape");
       }
@@ -148,16 +117,136 @@ export default function DailyForecastPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ปิด dropdown เมื่อคลิกนอก/กด ESC
+  useEffect(() => {
+    const onMouseDown = (e: MouseEvent) => {
+      if (!dateWrapRef.current) return;
+      if (!dateWrapRef.current.contains(e.target as Node)) setDateOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDateOpen(false);
+    };
+
+    document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
+
   const selected = useMemo(() => {
     return items.find((x) => x.contentdate === selectedKey) ?? items[0] ?? null;
   }, [items, selectedKey]);
 
-  // ✅ เปลี่ยนรอบประกาศแล้วให้กลับไปโชว์ description ก่อนเสมอ
+  const selectedLabel = useMemo(() => {
+    const it = items.find((x) => x.contentdate === selectedKey);
+    if (!it) return "";
+    const d = parseContentDate(it.contentdate);
+    return d ? `${thaiDate(d)} ${thaiTime(d)} น.` : it.contentdate;
+  }, [items, selectedKey]);
+
+  // เปลี่ยนรอบประกาศ: reset state
   useEffect(() => {
     setShowGeneral(false);
+    setOpenSectionKey(null);
   }, [selectedKey]);
 
   const issueDate = selected ? parseContentDate(selected.contentdate) : null;
+  const hasGeneral = Boolean((selected?.general_climate ?? "").trim());
+
+  const previewText = (selected?.description ?? "").trim();
+  const detailText = ((selected?.general_climate ?? "").trim() || previewText).trim();
+
+  // ✅ render การ์ด (คลิกทั้งใบเพื่อเปิด/ปิด)
+  const renderCard = (section: { key: keyof DailyForecastItem; label: string }) => {
+    if (!selected) return null;
+
+    const { key, label } = section;
+    const value = String(selected[key] ?? "").trim();
+    if (!value) return null;
+
+    const id = String(key);
+    const isOpen = openSectionKey === id;
+
+    const toggle = () => setOpenSectionKey((prev) => (prev === id ? null : id));
+
+    return (
+      <div
+        key={id}
+        role="button"
+        tabIndex={0}
+        aria-expanded={isOpen}
+        aria-controls={`detail-${id}`}
+        onClick={toggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggle();
+          }
+        }}
+        className={[
+          "w-full min-w-0 cursor-pointer select-none",
+          "group relative overflow-hidden rounded-xl bg-white p-4 shadow-sm",
+          "border border-gray-200 transition-[border-color,box-shadow,background-color] duration-300 ease-in-out",
+          "hover:bg-gray-50",
+          "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-100",
+          isOpen ? "shadow-md" : "",
+          // แถบเขียวบนสุด
+          "before:content-[''] before:absolute before:left-0 before:top-0 before:h-[4px] before:w-full",
+          "before:bg-emerald-600 before:transition-opacity before:duration-300 before:ease-in-out",
+          isOpen ? "before:opacity-100" : "before:opacity-0",
+        ].join(" ")}
+      >
+        {/* Header area */}
+        <div className="flex w-full min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div
+              className={[
+                "text-base font-semibold transition-colors duration-300 ease-in-out",
+                isOpen ? "text-emerald-600" : "text-gray-900",
+              ].join(" ")}
+            >
+              {label}
+            </div>
+
+            {!isOpen ? (
+              <div className="mt-2 truncate text-sm text-gray-500">
+                {shortText(value, 140)}
+              </div>
+            ) : null}
+          </div>
+
+          <span className="mt-1 inline-flex h-8 w-8 shrink-0 items-center justify-center">
+            <FiPlus
+              className={[
+                "h-5 w-5 origin-center text-gray-700",
+                "transition-transform transition-colors duration-300 ease-in-out",
+                isOpen ? "rotate-45 text-emerald-600" : "",
+              ].join(" ")}
+              aria-hidden="true"
+            />
+          </span>
+        </div>
+
+        {/* Detail: เปิด/ปิดเฟด + ยืด/หด
+            ✅ stopPropagation เพื่อไม่ให้คลิกอ่านข้อความแล้วปิดทันที (ยังปิดได้โดยคลิกส่วนหัว/ขอบการ์ด) */}
+        <div
+          id={`detail-${id}`}
+          className={[
+            "grid transition-[grid-template-rows,opacity] duration-300 ease-in-out",
+            isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+          ].join(" ")}
+        >
+          <div className="overflow-hidden min-w-0 select-text">
+            <div className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-gray-500">
+              {value}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -193,60 +282,62 @@ export default function DailyForecastPage() {
     );
   }
 
-  const headerDateText = issueDate
-    ? `${thaiTime(issueDate)} น. • ${thaiDate(issueDate)} • ${thaiWeekday(
-      issueDate
-    )}`
-    : selected.contentdate;
-
-  const hasGeneral = Boolean((selected.general_climate ?? "").trim());
-
-  const headerMainText = (showGeneral && hasGeneral
-    ? selected.general_climate
-    : selected.description
-  )
-    ?.trim()
-    ?.toString();
-
   return (
     <main>
       {/* Header */}
       <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-right-top bg-contain min-h-60 border-b border-solid border-gray-200">
         <div className="mx-auto max-w-7xl px-4 py-6">
           <div className="flex flex-col gap-1">
-            <h1 className="text-3xl font-medium text-gray-900">
+            <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
               ข่าวพยากรณ์อากาศประจำวัน
             </h1>
-            {/* Detail ส่วนอ่านเพิ่มเติม */}
+
             <div className="mt-1 lg:pr-20">
-              <p
+              {/* description (โชว์เฉพาะตอนยังไม่กดอ่านเพิ่มเติม) */}
+              <div
                 className={[
-                  "text-base text-gray-800 whitespace-pre-line",
-                  showGeneral ? "" : "line-clamp-2",
+                  "grid transition-[grid-template-rows,opacity] duration-300 ease-in-out",
+                  showGeneral ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100",
                 ].join(" ")}
               >
-                {headerMainText}
-              </p>
+                <div className="overflow-hidden">
+                  <p className="text-sm text-gray-800 whitespace-pre-line line-clamp-2 sm:text-base">
+                    {(selected?.description ?? "").trim()}
+                  </p>
+                </div>
+              </div>
 
-              {/* Button อ่านเพิ่มเติม */}
+              {/* general_climate (โชว์เฉพาะตอนกดอ่านเพิ่มเติม) */}
+              <div
+                className={[
+                  "grid transition-[grid-template-rows,opacity,margin-top] duration-300 ease-in-out",
+                  showGeneral ? "grid-rows-[1fr] opacity-100 mt-0" : "grid-rows-[0fr] opacity-0 mt-0",
+                ].join(" ")}
+              >
+                <div className="overflow-hidden">
+                  <p className="text-sm text-gray-800 whitespace-pre-line sm:text-base">
+                    {(selected?.general_climate ?? "").trim()}
+                  </p>
+                </div>
+              </div>
+
               {hasGeneral ? (
                 <button
                   type="button"
                   onClick={() => setShowGeneral((v) => !v)}
-                  className="mt-2 text-sm font-medium text-emerald-700 hover:underline"
+                  className="cursor-pointer mt-2 text-sm font-semibold text-emerald-700 hover:underline"
                 >
-                  {showGeneral ? "แสดงคำอธิบายสั้น" : "อ่านเพิ่มเติม"}
+                  {showGeneral ? "ซ่อนรายละเอียด" : "อ่านเพิ่มเติม"}
                 </button>
               ) : null}
             </div>
           </div>
 
-          {/* DateTime & Download PDF*/}
+          {/* DateTime & Download PDF */}
           <div className="flex flex-col gap-2 mt-5 sm:flex-row sm:items-center sm:justify-between">
             <div ref={dateWrapRef} className="relative w-full max-w-sm">
-              {/* Calendar icon */}
               <FiCalendar className="pointer-events-none absolute left-5 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-900" />
-              {/* Trigger */}
+
               <button
                 type="button"
                 onClick={() => setDateOpen((v) => !v)}
@@ -262,21 +353,21 @@ export default function DailyForecastPage() {
                 </span>
 
                 <FiChevronDown
-                  className={`h-6 w-6 shrink-0 text-gray-500 transition-transform
-                  ${dateOpen ? "rotate-180" : ""}`}
+                  className={`h-6 w-6 shrink-0 text-gray-500 transition-transform ${dateOpen ? "rotate-180" : ""
+                    }`}
                   aria-hidden="true"
                 />
               </button>
 
-
-              {/* Dropdown panel */}
               {dateOpen && (
                 <div className="absolute left-0 top-full z-50 mt-2 w-full">
-                  <div className="overflow-hidden texrounded-lg border border-gray-300 bg-white shadow-lg">
+                  <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg">
                     <div className="max-h-[420px] overflow-auto py-2">
                       {items.map((it) => {
                         const d = parseContentDate(it.contentdate);
-                        const label = d ? `${thaiDate(d)} ${thaiTime(d)} น.` : it.contentdate;
+                        const label = d
+                          ? `${thaiDate(d)} ${thaiTime(d)} น.`
+                          : it.contentdate;
                         const active = it.contentdate === selectedKey;
 
                         return (
@@ -308,7 +399,9 @@ export default function DailyForecastPage() {
               {selected.pdf_url ? (
                 <button
                   type="button"
-                  onClick={() => window.open(selected.pdf_url, "_blank", "noopener,noreferrer")}
+                  onClick={() =>
+                    window.open(selected.pdf_url, "_blank", "noopener,noreferrer")
+                  }
                   className="group flex items-center gap-2
                   rounded-lg border border-emerald-600 bg-white px-3 py-3
                   cursor-pointer transition duration-150
@@ -331,9 +424,13 @@ export default function DailyForecastPage() {
       {/* Infographic */}
       <section className="mx-auto max-w-7xl px-4 py-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-xl font-medium text-gray-900">
-            พยากรณ์อากาศประจำวันแบบอินโฟกราฟิก
-            {issueDate ? ` - ${thaiDate(issueDate)}` : ""}
+          <h2 className="flex flex-wrap items-baseline gap-2 text-xl font-medium text-gray-900 sm:text-2xl">
+            <span>พยากรณ์อากาศประจำวันแบบอินโฟกราฟิก</span>
+            {issueDate ? (
+              <span className="whitespace-nowrap text-sm font-medium text-gray-600 sm:text-base">
+                - {thaiDate(issueDate)}
+              </span>
+            ) : null}
           </h2>
         </div>
 
@@ -341,7 +438,7 @@ export default function DailyForecastPage() {
           <div className="mt-4 flex justify-center">
             <div className="flex flex-col items-center gap-2">
               <div className="shadow-xl">
-                <Image
+                <ZoomableImage
                   src={selected.infographic_url}
                   alt="Daily forecast infographic"
                   width={900}
@@ -363,61 +460,27 @@ export default function DailyForecastPage() {
 
       {/* Detail */}
       <section className="mx-auto max-w-7xl px-4 py-6">
-        <h2 className="text-xl font-medium text-gray-900">
-          พยากรณ์อากาศรายภาค - 00:00 น. วันนี้ ถึง 00:00 น. วันพรุ่งนี้
+        <h2 className="flex flex-wrap items-baseline gap-2 text-xl font-medium text-gray-900 sm:text-2xl">
+          <span>พยากรณ์อากาศรายภาค</span>
+          <span className="whitespace-nowrap text-sm font-medium text-gray-600 sm:text-base">
+            - 00:00 น. วันนี้ ถึง 00:00 น. วันพรุ่งนี้
+          </span>
         </h2>
-        {/* Card Column */}
-        <div className="mt-8 grid gap-3 md:grid-cols-2">
-          {SECTIONS.map(({ key, label }) => {
-            const value = String(selected[key] ?? "").trim();
-            if (!value) return null;
 
-            {/* Card */ }
-            return (
-              <details
-                key={String(key)}
-                className="
-                group relative overflow-hidden rounded-xl bg-white p-4 shadow-sm
-                border border-gray-200
-                transition-[border-color]
-                group-open:border-gray-200
-                before:absolute before:left-0 before:top-0 before:h-[3px] before:w-full
-                before:bg-emerald-600
-                before:opacity-0 before:transition-opacity
-                group-open:before:opacity-100"
-              >
-                <summary
-                  className="flex cursor-pointer list-none items-start justify-between gap-3
-                [&::-webkit-details-marker]:hidden"
-                >
-                  <div className="min-w-0">
-                    <div className="text-base font-semibold text-gray-900 group-open:text-emerald-600">
-                      {label}
-                    </div>
+        {/* Mobile: 1 คอลัมน์ */}
+        <div className="mt-8 flex min-w-0 flex-col gap-3 md:hidden">
+          {SECTIONS.map(renderCard)}
+        </div>
 
-                    {/* subtitle เฉพาะตอนปิด */}
-                    <div className="mt-2 truncate text-sm text-gray-500 group-open:hidden">
-                      {shortText(value, 140)}
-                    </div>
-                  </div>
+        {/* Desktop: 2 คอลัมน์แยกสแต็ค (ไม่ดันกัน) */}
+        <div className="mt-8 hidden md:grid md:grid-cols-2 md:gap-3">
+          <div className="min-w-0 flex flex-col gap-3">
+            {SECTIONS.filter((_, i) => i % 2 === 0).map(renderCard)}
+          </div>
 
-                  {/* icon ปิดเป็น + / เปิดเป็น x */}
-                  <span className="mt-1 inline-flex h-6 w-6 items-center justify-center">
-                    {/* ตอนปิด: + สีเทาเข้ม */}
-                    <FiPlus className="h-5 w-5 text-gray-700 group-open:hidden" aria-hidden="true" />
-
-                    {/* ตอนเปิด: x สีเขียว */}
-                    <FiX className="hidden h-5 w-5 text-emerald-600 group-open:block" aria-hidden="true" />
-                  </span>
-                </summary>
-
-                {/* content เฉพาะตอนเปิด */}
-                <div className="mt-2 hidden whitespace-pre-wrap text-sm leading-relaxed text-gray-500 group-open:block">
-                  {value}
-                </div>
-              </details>
-            );
-          })}
+          <div className="min-w-0 flex flex-col gap-3">
+            {SECTIONS.filter((_, i) => i % 2 === 1).map(renderCard)}
+          </div>
         </div>
       </section>
     </main>

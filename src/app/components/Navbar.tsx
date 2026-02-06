@@ -28,16 +28,15 @@ export default function Navbar({ onOpenMenu }: Props) {
       <div className="flex h-18 w-full items-center justify-between px-4 md:h-22">
         {/* Left: Brand/Logo */}
         <Link href="/" className="flex items-center gap-3 h-full">
-          <span className="relative h-full w-36 sm:w-40 md:w-42">
+          <div className="relative h-full w-36 sm:w-40 md:w-42">
             <Image
               src="/test2/logo.png"
               alt="Logo"
               fill
               priority
               className="object-contain"
-              sizes="(max-width: 640px) 144px, (max-width: 768px) 160px, 256px"
             />
-          </span>
+          </div>
         </Link>
 
         {/* Center: Desktop menu */}
@@ -121,7 +120,7 @@ export default function Navbar({ onOpenMenu }: Props) {
         {/* Right: User + Mobile hamburger */}
         <div className="flex items-center gap-3">
           {/* ✅ User (ขวาสุด) */}
-          <div className="hidden xl:flex items-center gap-2 rounded-full border border-gray-200 bg-white/70 px-3 py-2 text-sm text-gray-700 shadow-sm dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-200">
+          <div className="hidden xl:flex items-center gap-2 rounded-full border border-gray-200 bg-white/70 px-3 py-2 text-sm text-gray-700 shadow-sm dark:border-gray-700">
             <FaUserCircle className="h-5 w-5" />
             <span className="max-w-[220px] truncate font-medium">
               {loading ? '...' : fullName || 'ผู้ใช้'}
@@ -129,12 +128,12 @@ export default function Navbar({ onOpenMenu }: Props) {
           </div>
 
           <button
-            className="cursor-pointer inline-flex h-11 w-11 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 xl:hidden"
+            className="cursor-pointer inline-flex h-11 w-11 items-center justify-center rounded-full xl:hidden"
             onClick={onOpenMenu}
             aria-label="Open Menu"
             type="button"
           >
-            <BurgerIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-gray-700 dark:text-gray-200" />
+            <BurgerIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-gray-500 hover:text-gray-700 transition duration-150" />
           </button>
         </div>
       </div>
