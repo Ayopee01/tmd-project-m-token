@@ -10,7 +10,6 @@ type Props = {
   width?: number;
   height?: number;
   className?: string;
-
   /** ถ้า true: จอใหญ่ก็คลิกที่รูปเพื่อซูมได้ (default: false) */
   clickAnywhereOnDesktop?: boolean;
 };
@@ -33,13 +32,8 @@ function ZoomableImage({
     const apply = () => setIsMdDown(mql.matches);
 
     apply();
-    if (typeof mql.addEventListener === "function") {
-      mql.addEventListener("change", apply);
-      return () => mql.removeEventListener("change", apply);
-    }
-    // Safari fallback
-    mql.addListener(apply);
-    return () => mql.removeListener(apply);
+    mql.addEventListener("change", apply);
+    return () => mql.removeEventListener("change", apply);
   }, []);
 
   const canClickAnywhere = useMemo(() => {
@@ -68,7 +62,7 @@ function ZoomableImage({
 
   return (
     <>
-      {/* img */}
+      {/* Image */}
       <div
         className={[
           "group relative shadow-xl",
@@ -80,11 +74,11 @@ function ZoomableImage({
         onKeyDown={
           canClickAnywhere
             ? (e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  setOpen(true);
-                }
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setOpen(true);
               }
+            }
             : undefined
         }
       >

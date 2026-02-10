@@ -5,7 +5,7 @@ import ZoomableImage from "@/app/components/ZoomableImage";
 import type { DailyForecastItem, DailyForecastResponse } from "@/app/types/daily";
 import { DAILY_SECTIONS } from "@/app/types/daily";
 
-const DAILY_API_ROUTE = "/test2/api/daily";
+const DAILY_API_ROUTE = `${process.env.NEXT_PUBLIC_API_ROUTE ?? "/test2"}/api/daily`;
 
 // Function
 function parseContentDate(raw: string): Date | null {
@@ -15,6 +15,7 @@ function parseContentDate(raw: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+// Function
 function thaiDate(d: Date): string {
   return d.toLocaleDateString("th-TH", {
     year: "numeric",
@@ -23,6 +24,7 @@ function thaiDate(d: Date): string {
   });
 }
 
+// Function
 function thaiTime(d: Date): string {
   return d.toLocaleTimeString("th-TH", {
     hour: "2-digit",
@@ -31,6 +33,7 @@ function thaiTime(d: Date): string {
   });
 }
 
+// Function
 function shortText(s: string, max = 140): string {
   const t = (s ?? "").trim().replace(/\s+/g, " ");
   if (t.length <= max) return t;
@@ -158,7 +161,7 @@ function DailyPage() {
           <div className="min-w-0">
             <div
               className={[
-                "text-base font-semibold transition-colors duration-300 ease-in-out",
+                "text-base font-semibold transition-all duration-300 ease-in-out",
                 isOpen ? "text-emerald-600" : "text-gray-900",
               ].join(" ")}
             >
@@ -175,9 +178,8 @@ function DailyPage() {
           <span className="mt-1 inline-flex h-8 w-8 shrink-0 items-center justify-center">
             <FiPlus
               className={[
-                "h-5 w-5 origin-center text-gray-700",
-                "transition-colors duration-300 ease-in-out",
-                isOpen ? "rotate-45 text-emerald-600" : "",
+                "h-5 w-5 origin-center transition-all duration-300 ease-in-out",
+                isOpen ? "rotate-45 text-emerald-600" : "text-gray-700",
               ].join(" ")}
               aria-hidden="true"
             />
@@ -220,7 +222,7 @@ function DailyPage() {
   {/* UI Error Section */ }
   if (error || !selected) {
     return (
-      <main>
+      <main className="min-h-screen bg-white">
         {/* Header (เหมือนตอนโหลดเสร็จ) */}
         <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
           <div className="mx-auto max-w-7xl px-4 py-6">
