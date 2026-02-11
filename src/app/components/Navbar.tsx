@@ -23,8 +23,9 @@ export default function Navbar({ onOpenMenu }: Props) {
 
   const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
 
+  // sticky 
   return (
-    <nav className="sticky top-0 z-30 border-b border-gray-200/80 bg-white/90 backdrop-blur shadow-lg">
+    <nav className="top-0 z-30 border-b border-gray-200/80 bg-white/90 backdrop-blur shadow-lg xl:sticky ">
       <div className="flex h-18 w-full items-center justify-between px-4 md:h-22">
         {/* Left: Brand/Logo */}
         <Link href="/" className="flex items-center gap-3 h-full">

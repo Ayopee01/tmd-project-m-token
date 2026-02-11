@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { DashboardOK, ProvinceForecast } from "@/app/types/tmd";
+import type { DashboardOK, ProvinceForecast } from "@/app/types/dashboard";
 import {
   STORAGE_KEY,
   fetchDashboard,

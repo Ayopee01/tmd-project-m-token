@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { XMLParser } from "fast-xml-parser";
-import type { DashboardFail, DashboardResponse } from "@/app/types/tmd";
+import type { DashboardFail, DashboardResponse } from "@/app/types/dashboard";
 import { buildDashboardResponse } from "@/app/lib/province";
 
 export const revalidate = 300;

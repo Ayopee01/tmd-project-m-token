@@ -3,7 +3,7 @@ import type {
   DashboardResponse,
   DailyForecast,
   ProvinceResponse,
-} from "src/app/types/tmd";
+} from "@/app/types/dashboard";
 
 // test2 ใช้ชั่วคราวในระหว่างพัฒนา
 export const DASHBOARD_ROUTE = "/test2/api/dashboard"; // เส้นทาง API DASHBOARD

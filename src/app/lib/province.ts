@@ -5,7 +5,7 @@ import type {
   JsonRecord,
   NormalizeProvinceOptions,
   NominatimResponse,
-} from "src/app/types/tmd";
+} from "@/app/types/dashboard";
 
 // เลือกชื่อจังหวัดจากผลลัพธ์ Nominatim
 export const pickProvinceThai = (data: NominatimResponse): string => {
