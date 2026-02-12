@@ -29,7 +29,7 @@ function txt(v: unknown) {
 function parseApiDate(raw: string): Date | null {
   const s = txt(raw);
   if (!s) return null;
-  
+
   // "2026-01-31 13:53:00.0000000" -> "2026-01-31T13:53:00"
   const isoLike = s.replace(" ", "T").replace(/\.\d+$/, "");
   const d = new Date(isoLike);
@@ -58,6 +58,10 @@ function MonthlyPage() {
   const [rows, setRows] = useState<Norm[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // month dropdown (mobile)
+  const [monthOpen, setMonthOpen] = useState(false);
+  const monthWrapRef = useRef<HTMLDivElement | null>(null);
 
   // selections
   const [yearBE, setYearBE] = useState<number>(0);
@@ -110,12 +114,19 @@ function MonthlyPage() {
   // ปิด dropdown เมื่อคลิกนอกกรอบ + Esc
   useEffect(() => {
     function onDown(e: MouseEvent) {
-      if (!yearWrapRef.current) return;
-      if (!yearWrapRef.current.contains(e.target as Node)) setYearOpen(false);
+      const t = e.target as Node;
+
+      if (yearWrapRef.current && !yearWrapRef.current.contains(t)) setYearOpen(false);
+      if (monthWrapRef.current && !monthWrapRef.current.contains(t)) setMonthOpen(false);
     }
+
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setYearOpen(false);
+      if (e.key === "Escape") {
+        setYearOpen(false);
+        setMonthOpen(false);
+      }
     }
+
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
     return () => {
@@ -224,8 +235,8 @@ function MonthlyPage() {
           </div>
 
           <div className="flex flex-col gap-2 mt-5 sm:flex-row sm:items-center sm:justify-between sm:mt-10">
-            {/* Year dropdown (custom) */}
-            <div ref={yearWrapRef} className="relative w-full max-w-sm">
+            {/* Year dropdown */}
+            <div ref={yearWrapRef} className="relative w-full sm:max-w-sm">
               <button
                 type="button"
                 onClick={() => setYearOpen((v) => !v)}
@@ -264,7 +275,7 @@ function MonthlyPage() {
                               setYearOpen(false);
                             }}
                             className={[
-                              "w-full text-left px-5 py-3 text-sm font-medium",
+                              "w-full text-left px-5 py-3 text-sm font-medium cursor-pointer",
                               active ? "bg-emerald-600 text-white" : "text-gray-700 hover:bg-gray-50",
                             ].join(" ")}
                           >
@@ -284,7 +295,7 @@ function MonthlyPage() {
                 <button
                   type="button"
                   onClick={() => window.open(selected.item.url, "_blank", "noopener,noreferrer")}
-                  className="group flex items-center gap-2
+                  className="group flex items-center gap-2 mt-2 sm:mt-0
                     rounded-lg border border-emerald-600 bg-white px-3 py-3
                     cursor-pointer transition duration-150
                     hover:bg-emerald-700 active:bg-emerald-800"
@@ -307,18 +318,58 @@ function MonthlyPage() {
       <section className="mx-auto max-w-7xl px-4 py-8">
         {/* Mobile month dropdown */}
         <div className="md:hidden">
-          <select
-            value={selectedKey}
-            onChange={(e) => setSelectedKey(e.target.value)}
-            className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700
-                       outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-          >
-            {monthsInYear.map((m) => (
-              <option key={m.key} value={m.key}>
-                {m.label}
-              </option>
-            ))}
-          </select>
+          <div ref={monthWrapRef} className="relative w-full">
+            <button
+              type="button"
+              onClick={() => setMonthOpen((v) => !v)}
+              aria-expanded={monthOpen}
+              className="flex py-3 w-full items-center justify-between
+        cursor-pointer rounded-lg border border-gray-300 bg-white
+        px-5 text-left text-sm font-medium text-gray-800 outline-none
+        focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            >
+              <span className="flex items-center justify-start gap-4 min-w-0">
+                <FiCalendar className="h-6 w-6 shrink-0 text-gray-800" />
+                <span className="block truncate">{monthLabel || "—"}</span>
+              </span>
+
+              <FiChevronDown
+                className={[
+                  "h-6 w-6 shrink-0 text-gray-500 transition-transform duration-300 ease-in-out",
+                  monthOpen ? "rotate-180" : "",
+                ].join(" ")}
+                aria-hidden="true"
+              />
+            </button>
+
+            {monthOpen && (
+              <div className="absolute left-0 top-full z-50 mt-2 w-full">
+                <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg">
+                  <div className="max-h-105 overflow-auto py-2">
+                    {monthsInYear.map((m) => {
+                      const active = m.key === selectedKey;
+                      return (
+                        <button
+                          key={m.key}
+                          type="button"
+                          onClick={() => {
+                            setSelectedKey(m.key);
+                            setMonthOpen(false);
+                          }}
+                          className={[
+                            "w-full text-left px-5 py-3 text-sm font-medium cursor-pointer",
+                            active ? "bg-emerald-600 text-white" : "text-gray-700 hover:bg-gray-50",
+                          ].join(" ")}
+                        >
+                          {m.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="mt-6 grid gap-4 md:grid-cols-[1fr_260px] md:items-start">

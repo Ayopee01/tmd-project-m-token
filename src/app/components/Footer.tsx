@@ -7,14 +7,16 @@ function Footer() {
       <div className='flex flex-col items-center bg-gray-100 py-8'>
         {/* Logo */}
         <div className="mb-8">
-          <Image
-            src="/test2/logo.png"
-            alt="Thai Meteorological Department"
-            width={100}
-            height={100}
-            className="object-contain h-9 w-auto"
-            priority={false}
-          />
+          <Link href="/">
+            <Image
+              src="/test2/logo.png"
+              alt="Thai Meteorological Department"
+              width={100}
+              height={100}
+              className="object-contain h-9 w-auto"
+              priority={false}
+            />
+          </Link>
         </div>
         {/* Menu */}
         <div className='flex flex-col flex-wrap gap-4 justify-center items-center text-gray-700 text-xs font-medium sm:flex-row '>

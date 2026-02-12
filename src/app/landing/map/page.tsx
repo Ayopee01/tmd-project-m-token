@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import ZoomableImage from "@/app/components/ZoomableImage";
-import { FiCalendar, FiChevronDown } from "react-icons/fi";
+import { FiCalendar, FiChevronDown, FiMap } from "react-icons/fi";
 import type { UpperWindItem, UpperWindResponse } from "@/app/types/map";
 
 const MAP_API_ROUTE = `${process.env.NEXT_PUBLIC_API_ROUTE ?? "/test2"}/api/map`;
@@ -117,6 +117,14 @@ function getTimeOptions(items: UpperWindItem[]) {
 }
 
 function MapPage() {
+  // type dropdown
+  const [typeOpen, setTypeOpen] = useState(false);
+  const typeWrapRef = useRef<HTMLDivElement | null>(null);
+
+  // date/time dropdown
+  const [timeOpen, setTimeOpen] = useState(false);
+  const timeWrapRef = useRef<HTMLDivElement | null>(null);
+
   const [raw, setRaw] = useState<UpperWindResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -154,6 +162,9 @@ function MapPage() {
       setSelectedTypeLabel(firstType);
       setSelectedTimeKey(firstTime);
       setApplied({ typeLabel: firstType, timeKey: firstTime });
+
+      setTypeOpen(false);
+      setTimeOpen(false);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -163,6 +174,30 @@ function MapPage() {
 
   useEffect(() => {
     load();
+  }, []);
+
+  // ปิด dropdown เมื่อคลิกนอกกรอบ + Esc
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      const t = e.target as Node;
+
+      if (typeWrapRef.current && !typeWrapRef.current.contains(t)) setTypeOpen(false);
+      if (timeWrapRef.current && !timeWrapRef.current.contains(t)) setTimeOpen(false);
+    }
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setTypeOpen(false);
+        setTimeOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
   }, []);
 
   const entries = useMemo(() => normalizeToEntries(raw?.data), [raw]);
@@ -187,10 +222,10 @@ function MapPage() {
     return map;
   }, [entries]);
 
-  const selectedItems = useMemo(() => itemsByTypeLabel.get(selectedTypeLabel) ?? [], [
-    itemsByTypeLabel,
-    selectedTypeLabel,
-  ]);
+  const selectedItems = useMemo(
+    () => itemsByTypeLabel.get(selectedTypeLabel) ?? [],
+    [itemsByTypeLabel, selectedTypeLabel]
+  );
 
   const timeOptions = useMemo(() => getTimeOptions(selectedItems), [selectedItems]);
 
@@ -201,17 +236,24 @@ function MapPage() {
     const items = itemsByTypeLabel.get(selectedTypeLabel) ?? [];
     if (!items.length) {
       setSelectedTimeKey("");
+      setTimeOpen(false);
       return;
     }
 
     const times = getTimeOptions(items);
     const has = times.some((t) => t.key === selectedTimeKey);
     if (!has) setSelectedTimeKey(times[0]?.key ?? (items[0]?.contentdate ?? ""));
+    setTimeOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTypeLabel]);
 
   const selectedHasData = selectedItems.length > 0;
-  const showTimeDropdown = timeOptions.length > 1;
+
+  // label สำหรับปุ่มเวลา (รองรับ 0/1/หลายตัวเลือก)
+  const selectedTimeLabel =
+    timeOptions.find((t) => t.key === selectedTimeKey)?.label ??
+    timeOptions[0]?.label ??
+    "-";
 
   // shown: อิงจาก applied (หลังกดปุ่ม) ถ้าไม่มีใช้ selected
   const shown = useMemo(() => {
@@ -237,7 +279,7 @@ function MapPage() {
 
   const appliedTimeLabel =
     appliedTimeOptions.find((t) => t.key === appliedTimeKey)?.label ??
-    (shownDate ? thaiDateTime(shownDate) : (shown?.contentdate ?? ""));
+    (shownDate ? thaiDateTime(shownDate) : shown?.contentdate ?? "");
 
   /** ===== Loading ===== */
   if (loading) {
@@ -268,17 +310,12 @@ function MapPage() {
         <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
           <div className="mx-auto max-w-7xl px-4 py-6">
             <div className="flex flex-col gap-1">
-              <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
-                แผนที่อากาศผิวพื้นระดับต่างๆ
-              </h1>
-              <p className="mt-1 text-sm font-medium text-gray-600 sm:text-base">
-                ไม่สามารถโหลดข้อมูลได้ในขณะนี้
-              </p>
+              <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">แผนที่อากาศผิวพื้นระดับต่างๆ</h1>
+              <p className="mt-1 text-sm font-medium text-gray-600 sm:text-base">ไม่สามารถโหลดข้อมูลได้ในขณะนี้</p>
             </div>
 
             <div className="mt-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
               <p className="text-sm font-semibold text-red-600">{error || "-"}</p>
-              {/* ไม่พบข้อมูล */}
               <button
                 type="button"
                 onClick={load}
@@ -300,83 +337,147 @@ function MapPage() {
       <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
         <div className="mx-auto max-w-7xl px-4 py-6">
           <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
-              แผนที่อากาศผิวพื้นระดับต่างๆ
-            </h1>
+            <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">แผนที่อากาศผิวพื้นระดับต่างๆ</h1>
 
             <p className="mt-1 text-sm font-medium text-gray-600 sm:text-base">
               <span className="flex flex-wrap items-baseline gap-x-2">
-                {/* หัวข้อแผนที่ */}
-                <span className="whitespace-nowrap">
-                  {appliedTypeLabel || "แผนที่"}
-                </span>
-
-                {/* วันเวลา */}
+                <span className="whitespace-nowrap">{appliedTypeLabel || "แผนที่"}</span>
                 {appliedTimeLabel ? (
-                  <span className="whitespace-nowrap text-gray-600">
-                    - {appliedTimeLabel}
-                  </span>
+                  <span className="whitespace-nowrap text-gray-600">- {appliedTimeLabel}</span>
                 ) : null}
               </span>
             </p>
           </div>
 
-          {/* Controls row */}
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:mt-10">
+          {/* Controls row (UI เหมือนตัวอย่าง) */}
+          <div className="flex flex-col gap-2 mt-5 sm:flex-row sm:items-center sm:justify-between sm:mt-10">
             {/* Type dropdown */}
-            <div className="relative w-full sm:w-80">
-              <select
-                value={selectedTypeLabel}
-                onChange={(e) => setSelectedTypeLabel(e.target.value)}
-                className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-white
-                px-4 pr-10 text-sm font-medium text-gray-800 outline-none
-                focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            <div ref={typeWrapRef} className="relative w-full max-w-sm">
+              <button
+                type="button"
+                onClick={() => {
+                  setTypeOpen((v) => !v);
+                  setTimeOpen(false);
+                }}
+                aria-expanded={typeOpen}
+                className="flex py-3 w-full items-center justify-between
+                  cursor-pointer rounded-lg border border-gray-300 bg-white
+                  px-5 text-left text-sm font-medium text-gray-800 outline-none
+                  focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               >
-                {Type_Menu.map((label) => {
-                  const has = (itemsByTypeLabel.get(label) ?? []).length > 0;
-                  return (
-                    <option key={label} value={label} disabled={!has}>
-                      {label}
-                    </option>
-                  );
-                })}
-              </select>
-              <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
+                <span className="flex items-center justify-start gap-4 min-w-0">
+                  <FiMap className="h-6 w-6 shrink-0 text-gray-800" />
+                  <span className="block truncate">{selectedTypeLabel || "—"}</span>
+                </span>
+
+                <FiChevronDown
+                  className={[
+                    "h-6 w-6 shrink-0 text-gray-500 transition-transform duration-300 ease-in-out",
+                    typeOpen ? "rotate-180" : "",
+                  ].join(" ")}
+                  aria-hidden="true"
+                />
+              </button>
+
+              {typeOpen && (
+                <div className="absolute left-0 top-full z-50 mt-2 w-full">
+                  <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg">
+                    <div className="max-h-105 overflow-auto py-2">
+                      {Type_Menu.map((label) => {
+                        const has = (itemsByTypeLabel.get(label) ?? []).length > 0;
+                        const active = label === selectedTypeLabel;
+
+                        return (
+                          <button
+                            key={label}
+                            type="button"
+                            disabled={!has}
+                            onClick={() => {
+                              if (!has) return;
+                              setSelectedTypeLabel(label);
+                              setTypeOpen(false);
+                              setTimeOpen(false);
+                            }}
+                            className={[
+                              "w-full text-left px-5 py-3 text-sm font-medium cursor-pointer",
+                              active ? "bg-emerald-600 text-white" : "text-gray-700 hover:bg-gray-50",
+                              !has ? "opacity-40 cursor-not-allowed hover:bg-white" : "",
+                            ].join(" ")}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Time dropdown */}
-            <div className="relative w-full sm:w-80">
-              {selectedHasData ? (
-                showTimeDropdown ? (
-                  <>
-                    <FiCalendar className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-700" />
-                    <select
-                      value={selectedTimeKey}
-                      onChange={(e) => setSelectedTimeKey(e.target.value)}
-                      className="
-                        h-11 w-full appearance-none rounded-lg border border-gray-300 bg-white
-                        pl-10 pr-10 text-sm font-medium text-gray-900 outline-none
-                        focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100
-                      "
-                    >
-                      {timeOptions.map((t) => (
-                        <option key={t.key} value={t.key}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
-                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
-                  </>
-                ) : (
-                  <div className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 flex items-center gap-2 text-sm font-medium text-gray-900 whitespace-nowrap">
-                    <FiCalendar className="h-5 w-5 text-gray-800" />
-                    <span className="text-gray-800">{timeOptions[0]?.label ?? "-"}</span>
+            {/* Date/Time dropdown (รองรับหลายวัน/หลายเวลา) */}
+            <div ref={timeWrapRef} className="relative w-full max-w-sm">
+              <button
+                type="button"
+                disabled={!selectedHasData}
+                onClick={() => {
+                  if (!selectedHasData) return;
+                  setTimeOpen((v) => !v);
+                  setTypeOpen(false);
+                }}
+                aria-expanded={timeOpen}
+                className={[
+                  "flex py-3 w-full items-center justify-between rounded-lg border bg-white px-5 text-left text-sm font-medium outline-none",
+                  selectedHasData
+                    ? "border-gray-300 text-gray-800 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 cursor-pointer"
+                    : "border-gray-200 text-gray-400 cursor-not-allowed",
+                ].join(" ")}
+              >
+                <span className="flex items-center justify-start gap-4 min-w-0">
+                  <FiCalendar
+                    className={[
+                      "h-6 w-6 shrink-0",
+                      selectedHasData ? "text-gray-800" : "text-gray-400",
+                    ].join(" ")}
+                  />
+                  <span className="block truncate">{selectedHasData ? selectedTimeLabel : "ไม่มีข้อมูล"}</span>
+                </span>
+
+                <FiChevronDown
+                  className={[
+                    "h-6 w-6 shrink-0 transition-transform duration-300 ease-in-out",
+                    selectedHasData ? "text-gray-500" : "text-gray-300",
+                    timeOpen ? "rotate-180" : "",
+                  ].join(" ")}
+                  aria-hidden="true"
+                />
+              </button>
+
+              {/* dropdown list: โชว์เมื่อมีข้อมูล และมีมากกว่า 1 ตัวเลือก (หรืออยากให้ 1 ตัวเลือกก็เปิดได้ ให้เอาเงื่อนไข timeOptions.length > 1 ออก) */}
+              {selectedHasData && timeOptions.length > 1 && timeOpen && (
+                <div className="absolute left-0 top-full z-50 mt-2 w-full">
+                  <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg">
+                    <div className="max-h-105 overflow-auto py-2">
+                      {timeOptions.map((t) => {
+                        const active = t.key === selectedTimeKey;
+                        return (
+                          <button
+                            key={t.key}
+                            type="button"
+                            onClick={() => {
+                              setSelectedTimeKey(t.key);
+                              setTimeOpen(false);
+                            }}
+                            className={[
+                              "w-full text-left px-5 py-3 text-sm font-medium cursor-pointer",
+                              active ? "bg-emerald-600 text-white" : "text-gray-700 hover:bg-gray-50",
+                            ].join(" ")}
+                          >
+                            {t.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                )
-              ) : (
-                <div className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 flex items-center gap-2 text-sm font-medium text-gray-400">
-                  <FiCalendar className="h-5 w-5 text-gray-400" />
-                  <span>ไม่มีข้อมูล</span>
                 </div>
               )}
             </div>
@@ -385,9 +486,13 @@ function MapPage() {
             <button
               type="button"
               disabled={!selectedHasData || !selectedTimeKey}
-              onClick={() => setApplied({ typeLabel: selectedTypeLabel, timeKey: selectedTimeKey })}
+              onClick={() => {
+                setApplied({ typeLabel: selectedTypeLabel, timeKey: selectedTimeKey });
+                setTypeOpen(false);
+                setTimeOpen(false);
+              }}
               className={[
-                "h-11 rounded-lg px-6 text-sm font-semibold text-white whitespace-nowrap",
+                "h-12 rounded-lg px-6 text-sm font-semibold text-white whitespace-nowrap cursor-pointer",
                 selectedHasData && selectedTimeKey
                   ? "bg-emerald-600 hover:bg-emerald-700"
                   : "bg-gray-300 cursor-not-allowed",
@@ -403,27 +508,15 @@ function MapPage() {
       <section className="mx-auto max-w-7xl px-4 py-3 sm:py-6">
         <div className="text-lg font-semibold text-gray-900 sm:text-2xl">
           <div className="flex flex-wrap items-baseline gap-x-2">
-            {/* หัวข้อ */}
-            <span className="">
-              {appliedTypeLabel || "แผนที่"}
-            </span>
-            {/* วันเวลา */}
-            {appliedTimeLabel ? (
-              <span className="text-sm font-medium text-gray-600">
-                {appliedTimeLabel}
-              </span>
-            ) : null}
+            <span>{appliedTypeLabel || "แผนที่"}</span>
+            {appliedTimeLabel ? <span className="text-sm font-medium text-gray-600">{appliedTimeLabel}</span> : null}
           </div>
         </div>
       </section>
 
-      {/* Description */}
-      {/* max-w-md text-center */}
+      {/* Description (mobile) */}
       <section className="mx-auto max-w-7xl px-4 py-3 sm:hidden">
-        <p className="mx-auto text-sm leading-relaxed text-gray-700">
-          {descText || "-"}
-          {/* ไม่พบข้อมูล */}
-        </p>
+        <p className="mx-auto text-sm leading-relaxed text-gray-700">{descText || "-"}</p>
       </section>
 
       {/* Image (Zoomable) */}
@@ -447,10 +540,9 @@ function MapPage() {
           <p className="text-center text-sm text-gray-600">ไม่พบรูปแผนที่</p>
         )}
 
-        {/* Description */}
+        {/* Description (desktop) */}
         <div className="hidden mx-auto mt-6 max-w-5xl border-t border-gray-100 pt-4 sm:block">
           <p className="text-center text-sm text-gray-700">{descText || "-"}</p>
-          {/* ไม่พบข้อมูล */}
         </div>
       </section>
     </main>

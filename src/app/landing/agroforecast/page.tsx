@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   FiCalendar,
   FiChevronDown,
@@ -11,8 +11,11 @@ import {
 
 import type { Agro7DaysItem, Agro7DaysResponse } from "@/app/types/agroforecast";
 
-const AGRO_API_ROUTE = `${process.env.NEXT_PUBLIC_API_ROUTE ?? "/test2"}/api/agroforecast`;
+const AGRO_API_ROUTE = `${
+  process.env.NEXT_PUBLIC_API_ROUTE ?? "/test2"
+}/api/agroforecast`;
 
+//กำหนดจำนวน Card ใน Page
 const PAGE_SIZE = 6;
 
 type YearFilter = "all" | `${number}`;
@@ -55,18 +58,22 @@ function pageTokens(current: number, total: number): Array<number | "…"> {
   return [1, "…", current - 1, current, current + 1, "…", last];
 }
 
-export default function AgroForecast7DaysPage() {
+function AgroforecastPage() {
   const [items, setItems] = useState<Agro7DaysItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   // Dropdown filter (ตาม Figma: เอกสารทั้งหมด + ปี)
   const [yearFilter, setYearFilter] = useState<YearFilter>("all");
 
-  // Pagination
-  const [page, setPage] = useState(1);
+  // Custom dropdown state
+  const [yearOpen, setYearOpen] = useState<boolean>(false);
+  const yearDropRef = useRef<HTMLDivElement | null>(null);
 
-  async function load() {
+  // Pagination
+  const [page, setPage] = useState<number>(1);
+
+  async function load(): Promise<void> {
     setLoading(true);
     setError(null);
 
@@ -87,6 +94,7 @@ export default function AgroForecast7DaysPage() {
 
       setItems(sorted);
       setYearFilter("all");
+      setYearOpen(false);
       setPage(1);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load");
@@ -99,7 +107,7 @@ export default function AgroForecast7DaysPage() {
     load();
   }, []);
 
-  const yearOptions = useMemo(() => {
+  const yearOptions = useMemo<number[]>(() => {
     const set = new Set<number>();
     for (const it of items) {
       const d = toDate(it.contentdate);
@@ -108,7 +116,7 @@ export default function AgroForecast7DaysPage() {
     return Array.from(set).sort((a, b) => b - a);
   }, [items]);
 
-  const filtered = useMemo(() => {
+  const filtered = useMemo<Agro7DaysItem[]>(() => {
     if (yearFilter === "all") return items;
     const y = Number(yearFilter);
     return items.filter((it) => {
@@ -124,10 +132,40 @@ export default function AgroForecast7DaysPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageSafe = Math.min(Math.max(1, page), totalPages);
 
-  const pageItems = useMemo(() => {
+  const pageItems = useMemo<Agro7DaysItem[]>(() => {
     const start = (pageSafe - 1) * PAGE_SIZE;
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, pageSafe]);
+
+  // Close dropdown when click outside / ESC (ไม่มี any)
+  useEffect(() => {
+    if (!yearOpen) return;
+
+    const onDown = (e: MouseEvent | TouchEvent): void => {
+      const el = yearDropRef.current;
+      if (!el) return;
+      const target = e.target;
+      if (target instanceof Node && !el.contains(target)) setYearOpen(false);
+    };
+
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") setYearOpen(false);
+    };
+
+    const touchOpts: AddEventListenerOptions = { passive: true };
+
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown, touchOpts);
+    document.addEventListener("keydown", onKey);
+
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown, touchOpts);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [yearOpen]);
+
+  const yearLabel = yearFilter === "all" ? "เอกสารทั้งหมด" : `ปี ${yearFilter}`;
 
   /** ===== Loading ===== */
   if (loading) {
@@ -161,7 +199,7 @@ export default function AgroForecast7DaysPage() {
         <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
           <div className="mx-auto max-w-7xl px-4 py-6">
             <div className="flex flex-col gap-1">
-              <h1 className="text-3xl font-medium text-gray-900">
+              <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
                 พยากรณ์อากาศเพื่อการเกษตรราย 7 วัน
               </h1>
               <p className="mt-1 text-sm text-gray-700 sm:text-base">
@@ -188,11 +226,11 @@ export default function AgroForecast7DaysPage() {
   /** ===== UI ===== */
   return (
     <main className="min-h-screen bg-white">
-      {/* Header (BG ตามตัวอย่าง) */}
+      {/* Header */}
       <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
         <div className="mx-auto max-w-7xl px-4 py-6">
           <div className="flex flex-col gap-1">
-            <h1 className="text-3xl font-medium text-gray-900">
+            <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
               พยากรณ์อากาศเพื่อการเกษตรราย 7 วัน
             </h1>
             <p className="mt-1 text-sm text-gray-700 sm:text-base">
@@ -200,33 +238,87 @@ export default function AgroForecast7DaysPage() {
             </p>
           </div>
 
-          {/* Filter */}
-          <div className="mt-6 w-full sm:mt-8">
-            <div className="relative w-full sm:max-w-md">
-              <FiCalendar className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-700" />
-              <select
-                value={yearFilter}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                  const v = e.target.value;
-                  setYearFilter(v === "all" ? "all" : (v as `${number}`));
-                }}
+          {/* Filter + Download (เหมือน UI ตัวอย่าง) */}
+          <div className="flex flex-col gap-2 mt-5 sm:flex-row sm:items-center sm:justify-between sm:mt-10">
+            {/* Year dropdown */}
+            <div ref={yearDropRef} className="relative w-full max-w-sm">
+              <button
+                type="button"
+                onClick={() => setYearOpen((v) => !v)}
+                aria-expanded={yearOpen}
+                aria-haspopup="listbox"
                 className="
-                  h-11 w-full appearance-none
-                  rounded-xl border border-gray-300 bg-white
-                  pl-12 pr-11
-                  text-sm font-medium text-gray-900
-                  shadow-sm outline-none
+                  flex py-3 w-full items-center justify-between
+                  cursor-pointer rounded-lg border border-gray-300 bg-white
+                  px-5 text-left text-sm font-medium text-gray-800 outline-none
                   focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100
                 "
               >
-                <option value="all">เอกสารทั้งหมด</option>
-                {yearOptions.map((y) => (
-                  <option key={y} value={String(y)}>
-                    ปี {y}
-                  </option>
-                ))}
-              </select>
-              <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
+                <span className="flex items-center justify-start gap-4 min-w-0">
+                  <FiCalendar className="h-6 w-6 shrink-0 text-gray-800" aria-hidden="true" />
+                  <span className="block truncate">{yearLabel || "—"}</span>
+                </span>
+
+                <FiChevronDown
+                  className={[
+                    "h-6 w-6 shrink-0 text-gray-500 transition-transform duration-300 ease-in-out",
+                    yearOpen ? "rotate-180" : "",
+                  ].join(" ")}
+                  aria-hidden="true"
+                />
+              </button>
+
+              {yearOpen && (
+                <div className="absolute left-0 top-full z-50 mt-2 w-full">
+                  <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg">
+                    <div className="max-h-105 overflow-auto py-2" role="listbox">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setYearFilter("all");
+                          setYearOpen(false);
+                        }}
+                        className={[
+                          "w-full cursor-pointer text-left px-5 py-3 text-sm font-medium",
+                          yearFilter === "all"
+                            ? "bg-emerald-600 text-white"
+                            : "text-gray-700 hover:bg-gray-50",
+                        ].join(" ")}
+                        role="option"
+                        aria-selected={yearFilter === "all"}
+                      >
+                        เอกสารทั้งหมด
+                      </button>
+
+                      {yearOptions.map((y) => {
+                        const value = String(y) as `${number}`;
+                        const active = yearFilter === value;
+
+                        return (
+                          <button
+                            key={y}
+                            type="button"
+                            onClick={() => {
+                              setYearFilter(value);
+                              setYearOpen(false);
+                            }}
+                            className={[
+                              "w-full cursor-pointer text-left px-5 py-3 text-sm font-medium",
+                              active
+                                ? "bg-emerald-600 text-white"
+                                : "text-gray-700 hover:bg-gray-50",
+                            ].join(" ")}
+                            role="option"
+                            aria-selected={active}
+                          >
+                            ปี {y}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -247,36 +339,60 @@ export default function AgroForecast7DaysPage() {
               return (
                 <div
                   key={`${it.contentdate}-${it.url}`}
-                  className="rounded-2xl bg-white shadow-sm ring-1 ring-black/5"
+                  className="h-full rounded-2xl bg-white shadow-sm ring-1 ring-black/5"
                 >
-                  <div className="p-5">
-                    {/* ✅ แก้ตรงนี้: Title ยาวแล้วตัดบรรทัด ไม่ดันปุ่ม */}
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <h3 className="flex-1 min-w-0 text-lg font-semibold leading-snug text-gray-900 break-words">
+                  <div className="flex h-full flex-col p-5">
+                    {/* ทำให้การ์ด 2 คอลัมน์ “เริ่มต้นเสมอ” (md+) */}
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <h3
+                        className="
+                          flex-1 min-w-0
+                          font-semibold leading-snug text-gray-900
+                          text-base lg:text-lg
+                          md:min-h-11 lg:min-h-13
+                          wrap-break-word
+                        "
+                      >
                         {titleOf(it)}
                       </h3>
 
+                      {/* ปุ่มดาวน์โหลด (เหมือน UI ตัวอย่าง + responsive <lg) */}
                       <a
                         href={it.url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="
-                          group inline-flex w-full shrink-0 items-center justify-center gap-2
-                          rounded-xl border border-emerald-600 bg-white
-                          px-4 py-3 text-sm font-semibold text-emerald-700
-                          transition
-                          hover:bg-emerald-700 hover:text-white
-                          sm:w-auto sm:min-w-[180px] sm:px-5 sm:py-2.5
+                          group flex w-full items-center justify-center gap-2
+                          rounded-lg border border-emerald-600 bg-white
+                          px-3 py-2 lg:px-3 lg:py-3
+                          cursor-pointer transition duration-150
+                          hover:bg-emerald-700 active:bg-emerald-800
+                          sm:w-auto sm:min-w-38
                           whitespace-nowrap
                         "
                       >
-                        <FiDownload className="h-5 w-5" aria-hidden="true" />
-                        ดาวน์โหลดเอกสาร
+                        <FiDownload
+                          className="
+                            h-5 w-5 lg:h-6 lg:w-6
+                            text-emerald-600 transition-colors
+                            group-hover:text-gray-100 group-active:text-gray-100
+                          "
+                          aria-hidden="true"
+                        />
+                        <span
+                          className="
+                            text-xs lg:text-sm leading-none font-semibold
+                            text-emerald-600 transition-colors
+                            group-hover:text-gray-100 group-active:text-gray-100
+                          "
+                        >
+                          ดาวน์โหลดเอกสาร
+                        </span>
                       </a>
                     </div>
 
                     <div className="mt-4 border-t border-gray-100 pt-3">
-                      <div className="flex flex-col gap-1 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex flex-col gap-1 text-xs text-gray-500 lg:text-sm sm:flex-row sm:items-center sm:justify-between">
                         <div>
                           อัปเดต:{" "}
                           <span className="font-medium text-gray-700">{updated}</span>
@@ -296,7 +412,7 @@ export default function AgroForecast7DaysPage() {
           </div>
         )}
 
-        {/* Pagination (ขวาล่างแบบ Figma) */}
+        {/* Pagination */}
         {totalPages > 1 ? (
           <nav className="mt-10 flex items-center justify-center gap-1 sm:justify-end">
             <button
@@ -354,3 +470,5 @@ export default function AgroForecast7DaysPage() {
     </main>
   );
 }
+
+export default AgroforecastPage;

@@ -347,7 +347,7 @@ function DailyPage() {
                               setDateOpen(false);
                             }}
                             className={[
-                              "w-full text-left px-5 py-3 text-sm font-medium",
+                              "w-full text-left px-5 py-3 text-sm font-medium cursor-pointer",
                               active ? "bg-emerald-600 text-white" : "text-gray-800 hover:bg-gray-50",
                             ].join(" ")}
                           >
