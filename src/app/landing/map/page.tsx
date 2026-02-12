@@ -81,10 +81,6 @@ function normalizeToEntries(
   return out;
 }
 
-/** จับคู่ “ประเภทจาก Type_Menu” กับ item ใน API (แบบง่ายตาม API ปัจจุบัน)
- * - API title/alt จะมี "ชื่อประเภท" อยู่ข้างใน เช่น "แผนที่ลมชั้นบนระดับ 925 hPa ...เวลา..."
- * - ดังนั้นใช้ includes ก็พอ
- */
 function isMatchType(menuLabel: string, entry: { apiKey: string; item: UpperWindItem }): boolean {
   const label = menuLabel;
   const title = entry.item.title ?? "";
@@ -120,7 +116,7 @@ function getTimeOptions(items: UpperWindItem[]) {
     .map(([key, date]) => ({ key, label: thaiDateTime(date) }));
 }
 
-export default function UpperWindMapPage() {
+function MapPage() {
   const [raw, setRaw] = useState<UpperWindResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -251,15 +247,15 @@ export default function UpperWindMapPage() {
           <div className="mx-auto max-w-7xl px-4 py-6">
             <div className="animate-pulse space-y-3">
               <div className="h-8 w-96 rounded bg-gray-200" />
-              <div className="h-5 w-[520px] rounded bg-gray-200" />
+              <div className="h-5 w-130 rounded bg-gray-200" />
               <div className="mt-4 h-11 w-full max-w-4xl rounded bg-gray-200" />
             </div>
           </div>
         </section>
 
         <section className="mx-auto max-w-7xl px-4 py-8">
-          <div className="mx-auto h-[520px] max-w-[520px] rounded bg-gray-200" />
-          <div className="mx-auto mt-6 h-4 w-[720px] max-w-full rounded bg-gray-200" />
+          <div className="mx-auto h-130 max-w-130 rounded bg-gray-200" />
+          <div className="mx-auto mt-6 h-4 w-180 max-w-full rounded bg-gray-200" />
         </section>
       </main>
     );
@@ -281,7 +277,8 @@ export default function UpperWindMapPage() {
             </div>
 
             <div className="mt-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
-              <p className="text-sm font-semibold text-red-600">{error || "ไม่พบข้อมูล"}</p>
+              <p className="text-sm font-semibold text-red-600">{error || "-"}</p>
+              {/* ไม่พบข้อมูล */}
               <button
                 type="button"
                 onClick={load}
@@ -325,14 +322,14 @@ export default function UpperWindMapPage() {
           </div>
 
           {/* Controls row */}
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:mt-10">
             {/* Type dropdown */}
             <div className="relative w-full sm:w-80">
               <select
                 value={selectedTypeLabel}
                 onChange={(e) => setSelectedTypeLabel(e.target.value)}
                 className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-white
-                px-4 pr-10 text-sm font-medium text-gray-900 outline-none
+                px-4 pr-10 text-sm font-medium text-gray-800 outline-none
                 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               >
                 {Type_Menu.map((label) => {
@@ -372,8 +369,8 @@ export default function UpperWindMapPage() {
                   </>
                 ) : (
                   <div className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 flex items-center gap-2 text-sm font-medium text-gray-900 whitespace-nowrap">
-                    <FiCalendar className="h-5 w-5 text-gray-700" />
-                    <span>{timeOptions[0]?.label ?? "-"}</span>
+                    <FiCalendar className="h-5 w-5 text-gray-800" />
+                    <span className="text-gray-800">{timeOptions[0]?.label ?? "-"}</span>
                   </div>
                 )
               ) : (
@@ -424,7 +421,8 @@ export default function UpperWindMapPage() {
       {/* max-w-md text-center */}
       <section className="mx-auto max-w-7xl px-4 py-3 sm:hidden">
         <p className="mx-auto text-sm leading-relaxed text-gray-700">
-          {descText || "ไม่พบข้อมูล"}
+          {descText || "-"}
+          {/* ไม่พบข้อมูล */}
         </p>
       </section>
 
@@ -432,7 +430,7 @@ export default function UpperWindMapPage() {
       <section className="mx-auto max-w-7xl px-4 pb-10">
         {imageSrc ? (
           <div className="flex justify-center">
-            <div className="w-full max-w-[520px]">
+            <div className="w-full max-w-130">
               <div className="shadow-xl">
                 <ZoomableImage
                   src={imageSrc}
@@ -451,9 +449,12 @@ export default function UpperWindMapPage() {
 
         {/* Description */}
         <div className="hidden mx-auto mt-6 max-w-5xl border-t border-gray-100 pt-4 sm:block">
-          <p className="text-center text-sm text-gray-700">{descText || "ไม่พบข้อมูล"}</p>
+          <p className="text-center text-sm text-gray-700">{descText || "-"}</p>
+          {/* ไม่พบข้อมูล */}
         </div>
       </section>
     </main>
   );
 }
+
+export default MapPage;

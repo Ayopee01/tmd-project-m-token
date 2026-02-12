@@ -30,7 +30,7 @@ function DrawerMenu({ open, onClose }: Props) {
 
   const fullName = useMemo(
     () => [user?.firstName].filter(Boolean).join(" ").trim(),
-    [user?.firstNameช]
+    [user?.firstName]
   );
 
   useEffect(() => {
@@ -68,7 +68,7 @@ function DrawerMenu({ open, onClose }: Props) {
         : "grid-rows-[0fr]"}`}>
         <div className="overflow-hidden">
           {/* Body User */}
-          <div ref={panelRef} className={`w-full bg-white transition-all duration-200 ease-out origin-top ${open
+          <div ref={panelRef} className={`relative z-35 w-full bg-white transition-all duration-200 ease-out origin-top ${open
             ? "opacity-100 translate-y-0 pointer-events-auto"
             : "opacity-0 -translate-y-2 pointer-events-none"
             }`}
@@ -81,7 +81,7 @@ function DrawerMenu({ open, onClose }: Props) {
               {loading ? "..." : fullName ? `คุณ ${fullName}` : "ไม่พบข้อมูลผู้ใช้"}
             </div>
 
-            <div className="h-3 bg-gradient-to-b from-gray-200/80 to-gray-100/0"></div>
+            <div className="h-2 w-full bg-linear-to-b from-gray-200 to-gray-100"></div>
 
             {/* Main Menu */}
             <nav className="bg-white">

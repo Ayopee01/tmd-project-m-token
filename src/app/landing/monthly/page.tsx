@@ -1,27 +1,12 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { FiCalendar, FiChevronDown, FiDownload } from "react-icons/fi";
+import type { ClimateMonthlyItem, ClimateMonthlyResponse } from "@/app/types/monthly";
 
-// ✅ ถ้า basePath เป็น /test2 ตาม next.config.ts ให้ใช้แบบนี้
-// ถ้าวันหลังเปลี่ยน basePath ให้แก้ค่าเดียวตรงนี้ หรือ set env NEXT_PUBLIC_BASE_PATH
-const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/test2";
-const MONTHLY_API_ROUTE = `${BASE_PATH}/api/monthly`;
+const MONTH_API_ROUTE = `${process.env.NEXT_PUBLIC_API_ROUTE ?? "/test2"}/api/monthly`;
 
-type ClimateMonthlyItem = {
-  content: string;
-  title: string;
-  description: string | null;
-  alt: string;
-  url: string;
-  contentdate: string; // "2025-12-31 09:35:00.0000000"
-};
-
-type ClimateMonthlyResponse = {
-  success: boolean;
-  data: ClimateMonthlyItem[];
-  message?: string;
-};
-
+/** ===== minimal helpers ===== */
 const THAI_MONTHS = [
   "มกราคม",
   "กุมภาพันธ์",
@@ -37,117 +22,82 @@ const THAI_MONTHS = [
   "ธันวาคม",
 ];
 
-function parseContentDate(raw: string): Date | null {
-  if (!raw) return null;
-  const cleaned = raw.trim().replace(" ", "T").replace(/\.\d+$/, "");
-  const d = new Date(cleaned);
+function txt(v: unknown) {
+  return String(v ?? "").trim().replace(/\s+/g, " ");
+}
+
+function parseApiDate(raw: string): Date | null {
+  const s = txt(raw);
+  if (!s) return null;
+  
+  // "2026-01-31 13:53:00.0000000" -> "2026-01-31T13:53:00"
+  const isoLike = s.replace(" ", "T").replace(/\.\d+$/, "");
+  const d = new Date(isoLike);
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function toBEYear(d: Date): number {
+function beYear(d: Date) {
   return d.getFullYear() + 543;
 }
 
-function thaiDate(d: Date): string {
+function thaiDate(d: Date) {
   const day = d.getDate();
   const month = THAI_MONTHS[d.getMonth()] ?? "";
-  const year = toBEYear(d);
+  const year = beYear(d);
   return `${day} ${month} ${year}`;
 }
 
-function thaiTime(d: Date): string {
-  return d.toLocaleTimeString("th-TH", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
+type Norm = {
+  item: ClimateMonthlyItem;
+  date: Date;
+  yearBE: number;
+  monthIndex: number; // 0-11
+};
 
-function cleanText(s: string): string {
-  return (s ?? "").trim().replace(/\s+/g, " ");
-}
-
-function shortText(s: string, max = 220): string {
-  const t = cleanText(s);
-  if (t.length <= max) return t;
-  return t.slice(0, max).trimEnd() + "…";
-}
-
-function monthLabelFromDate(d: Date | null): string {
-  if (!d) return "—";
-  return THAI_MONTHS[d.getMonth()] ?? "—";
-}
-
-function monthYearLabelFromItem(it: ClimateMonthlyItem): string {
-  // พยายามดึง "เดือน + ปี" จาก title ก่อน เพื่อให้ตรงกับข้อมูลจริง
-  const t = (it.title ?? "").trim();
-  const yearMatch = t.match(/25\d{2}/); // ปี พ.ศ. ในข้อมูลมักเป็น 25xx
-  let foundMonth: string | null = null;
-
-  for (const m of THAI_MONTHS) {
-    if (t.includes(m)) {
-      foundMonth = m;
-      break;
-    }
-  }
-
-  if (foundMonth && yearMatch?.[0]) {
-    return `${foundMonth} ${yearMatch[0]}`;
-  }
-
-  // fallback จาก contentdate
-  const d = parseContentDate(it.contentdate);
-  if (!d) return t || it.alt || "—";
-  return `${THAI_MONTHS[d.getMonth()] ?? ""} ${toBEYear(d)}`;
-}
-
-function simplifyHeaderTitle(it: ClimateMonthlyItem): string {
-  // ทำหัวข้อให้คล้ายในรูป: "ลักษณะอากาศ - ธันวาคม 2568"
-  return `ลักษณะอากาศ - ${monthYearLabelFromItem(it)}`;
-}
-
-export default function ClimateMonthlyPage() {
-  const [items, setItems] = useState<ClimateMonthlyItem[]>([]);
+function MonthlyPage() {
+  const [rows, setRows] = useState<Norm[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [selectedYear, setSelectedYear] = useState<string>(""); // พ.ศ.
+  // selections
+  const [yearBE, setYearBE] = useState<number>(0);
   const [selectedKey, setSelectedKey] = useState<string>(""); // ใช้ contentdate เป็น key
+
+  // header year dropdown
+  const [yearOpen, setYearOpen] = useState(false);
+  const yearWrapRef = useRef<HTMLDivElement | null>(null);
 
   async function load() {
     setLoading(true);
     setError(null);
 
     try {
-      const res = await fetch(MONTHLY_API_ROUTE, {
-        // route ของคุณ cache 300s แล้ว จะ no-store หรือไม่ก็ได้
-        cache: "no-store",
-      });
-
+      const res = await fetch(MONTH_API_ROUTE, { cache: "no-store" });
       const json = (await res.json()) as ClimateMonthlyResponse;
 
       if (!res.ok) throw new Error(`Request failed (${res.status})`);
-      if (!json?.success || !Array.isArray(json.data))
-        throw new Error(json?.message || "Bad response shape");
+      if (!json?.success || !Array.isArray(json.data)) throw new Error(json?.message || "Bad response");
 
-      // เรียงใหม่สุด -> เก่าสุด
-      const sorted = [...json.data].sort((a, b) => {
-        const da = parseContentDate(a.contentdate)?.getTime() ?? 0;
-        const db = parseContentDate(b.contentdate)?.getTime() ?? 0;
-        return db - da;
-      });
+      const normalized: Norm[] = json.data
+        .map((it) => {
+          const d = parseApiDate(it.contentdate);
+          if (!d) return null;
+          return { item: it, date: d, yearBE: beYear(d), monthIndex: d.getMonth() };
+        })
+        .filter(Boolean) as Norm[];
 
-      setItems(sorted);
+      if (!normalized.length) throw new Error("ไม่พบข้อมูล");
 
-      // set ปีเริ่มต้นเป็นปีของรายการล่าสุด
-      const newest = sorted[0];
-      const newestDate = newest ? parseContentDate(newest.contentdate) : null;
-      const newestBE = newestDate ? String(toBEYear(newestDate)) : "all";
+      // ใหม่สุด -> เก่าสุด
+      normalized.sort((a, b) => b.date.getTime() - a.date.getTime());
 
-      setSelectedYear(newestBE);
-      setSelectedKey(newest?.contentdate ?? "");
-    } catch (e: any) {
-      setError(e?.message || "Failed to load");
+      const latest = normalized[0];
+      setRows(normalized);
+      setYearBE(latest.yearBE);
+      setSelectedKey(latest.item.contentdate);
+      setYearOpen(false);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }
@@ -155,214 +105,270 @@ export default function ClimateMonthlyPage() {
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const yearOptions = useMemo(() => {
-    const set = new Set<number>();
-    for (const it of items) {
-      const d = parseContentDate(it.contentdate);
-      if (d) set.add(toBEYear(d));
+  // ปิด dropdown เมื่อคลิกนอกกรอบ + Esc
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (!yearWrapRef.current) return;
+      if (!yearWrapRef.current.contains(e.target as Node)) setYearOpen(false);
     }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setYearOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
+  const years = useMemo(() => {
+    const set = new Set<number>();
+    for (const r of rows) set.add(r.yearBE);
     return Array.from(set).sort((a, b) => b - a);
-  }, [items]);
-
-  const filteredByYear = useMemo(() => {
-    if (!selectedYear) return items;
-    const y = Number(selectedYear);
-    return items.filter((it) => {
-      const d = parseContentDate(it.contentdate);
-      return d ? toBEYear(d) === y : false;
-    });
-  }, [items, selectedYear]);
-
-  // รายการเดือนฝั่งขวา: เรียงใหม่สุด -> เก่าสุด (ตาม contentdate)
-  const monthList = useMemo(() => {
-    return [...filteredByYear].sort((a, b) => {
-      const da = parseContentDate(a.contentdate)?.getTime() ?? 0;
-      const db = parseContentDate(b.contentdate)?.getTime() ?? 0;
-      return db - da;
-    });
-  }, [filteredByYear]);
+  }, [rows]);
 
   const selected = useMemo(() => {
-    const hit = monthList.find((x) => x.contentdate === selectedKey);
-    return hit ?? monthList[0] ?? null;
-  }, [monthList, selectedKey]);
+    return rows.find((r) => r.item.contentdate === selectedKey) ?? null;
+  }, [rows, selectedKey]);
 
-  // ถ้าเปลี่ยนปี ให้เลือกอันใหม่สุดในปีนั้นอัตโนมัติ
+  // เดือนที่มีจริงในปีที่เลือก (เอา 1 รายการต่อเดือน)
+  const monthsInYear = useMemo(() => {
+    const inYear = rows.filter((r) => r.yearBE === yearBE).sort((a, b) => b.date.getTime() - a.date.getTime());
+    const byMonth = new Map<number, Norm>(); // monthIndex -> latest item
+    for (const r of inYear) if (!byMonth.has(r.monthIndex)) byMonth.set(r.monthIndex, r);
+
+    // เรียง ธ.ค. -> ม.ค.
+    return Array.from(byMonth.entries())
+      .sort((a, b) => b[0] - a[0])
+      .map(([monthIndex, r]) => ({
+        monthIndex,
+        label: THAI_MONTHS[monthIndex] ?? "-",
+        key: r.item.contentdate,
+      }));
+  }, [rows, yearBE]);
+
+  // ถ้าเปลี่ยนปี แล้ว selected ไม่อยู่ในปีนั้น -> เด้งไปเดือนล่าสุดของปีนั้น
   useEffect(() => {
-    if (!monthList.length) {
-      setSelectedKey("");
-      return;
-    }
-    // ถ้า key เดิมยังอยู่ใน list ก็ไม่ต้องเปลี่ยน
-    const stillOk = monthList.some((x) => x.contentdate === selectedKey);
-    if (!stillOk) setSelectedKey(monthList[0].contentdate);
+    if (!rows.length || !yearBE) return;
+    const stillInYear = selected && selected.yearBE === yearBE;
+    if (stillInYear) return;
+
+    const first = monthsInYear[0];
+    if (first?.key) setSelectedKey(first.key);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedYear, monthList.length]);
+  }, [yearBE]);
 
-  const selectedDate = selected ? parseContentDate(selected.contentdate) : null;
+  const monthLabel = selected ? THAI_MONTHS[selected.monthIndex] ?? "-" : "-";
+  const pageSubTitle = yearBE ? `ข้อมูลของปี ${yearBE}` : "—";
 
+  /** ===== Loading ===== */
   if (loading) {
     return (
-      <main className="mx-auto max-w-6xl px-4 py-8">
-        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
-          <div className="animate-pulse space-y-3">
-            <div className="h-7 w-64 rounded bg-gray-200" />
-            <div className="h-4 w-96 rounded bg-gray-200" />
-            <div className="mt-6 grid gap-4 md:grid-cols-[1fr,260px]">
-              <div className="h-80 rounded-2xl border border-gray-200 bg-white" />
-              <div className="h-80 rounded-2xl border border-gray-200 bg-white" />
+      <main className="min-h-screen bg-white">
+        <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
+          <div className="mx-auto max-w-7xl px-4 py-6">
+            <div className="animate-pulse space-y-3">
+              <div className="h-8 w-80 rounded bg-gray-200" />
+              <div className="h-5 w-60 rounded bg-gray-200" />
+              <div className="mt-5 h-11 w-full max-w-sm rounded bg-gray-200" />
             </div>
           </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-4 py-8">
+          <div className="h-80 rounded-2xl bg-gray-100 ring-1 ring-black/5" />
         </section>
       </main>
     );
   }
 
+  /** ===== Error ===== */
   if (error || !selected) {
     return (
-      <main className="mx-auto max-w-6xl px-4 py-8">
-        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
-          <h1 className="text-xl font-semibold text-gray-900">
-            สรุปลักษณะอากาศรายเดือน
-          </h1>
-          <p className="mt-2 text-sm text-red-600">{error || "ไม่พบข้อมูล"}</p>
-          <button
-            onClick={load}
-            className="mt-4 rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
-          >
-            ลองใหม่
-          </button>
+      <main className="min-h-screen bg-white">
+        <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
+          <div className="mx-auto max-w-7xl px-4 py-6">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">สรุปลักษณะอากาศรายเดือน</h1>
+              <p className="mt-1 text-sm text-gray-700 sm:text-base">ไม่สามารถโหลดข้อมูลได้ในขณะนี้</p>
+            </div>
+
+            <div className="mt-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
+              <p className="text-sm font-semibold text-red-600">{error || "ไม่พบข้อมูล"}</p>
+              <button
+                type="button"
+                onClick={load}
+                className="mt-4 rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+              >
+                ลองใหม่
+              </button>
+            </div>
+          </div>
         </section>
       </main>
     );
   }
 
+  /** ===== UI ===== */
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8">
-      {/* Header แบบในรูป */}
-      <section className="relative overflow-hidden rounded-2xl bg-white/90 p-6 shadow-sm ring-1 ring-black/5">
-        {/* background เบาๆ ให้คล้ายมีแผนที่ */}
-        <div className="pointer-events-none absolute inset-0 opacity-[0.06]">
-          <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-gray-400 blur-3xl" />
-          <div className="absolute right-20 top-10 h-56 w-56 rounded-full bg-gray-500 blur-3xl" />
-          <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-gray-300 blur-3xl" />
-        </div>
-
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold text-gray-900">
-              สรุปลักษณะอากาศรายเดือน
-            </h1>
-            <p className="mt-1 text-sm text-gray-600">
-              ข้อมูลของปี {selectedYear || "—"}
-            </p>
-
-            <div className="mt-4 w-full max-w-xs">
-              <label className="sr-only">เลือกปี</label>
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
-                className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none"
-              >
-                {yearOptions.map((y) => (
-                  <option key={y} value={String(y)}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-            </div>
+    <main className="min-h-screen bg-white">
+      {/* Header */}
+      <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
+        <div className="mx-auto max-w-7xl px-4 py-6">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">สรุปลักษณะอากาศรายเดือน</h1>
+            <p className="mt-1 text-sm text-gray-700 sm:text-base">{pageSubTitle}</p>
           </div>
 
-          <div className="flex items-center gap-2">
-            {selected.url ? (
-              <a
-                href={selected.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl border border-emerald-600 bg-white px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+          <div className="flex flex-col gap-2 mt-5 sm:flex-row sm:items-center sm:justify-between sm:mt-10">
+            {/* Year dropdown (custom) */}
+            <div ref={yearWrapRef} className="relative w-full max-w-sm">
+              <button
+                type="button"
+                onClick={() => setYearOpen((v) => !v)}
+                aria-expanded={yearOpen}
+                className="flex py-3 w-full items-center justify-between
+                  cursor-pointer rounded-lg border border-gray-300 bg-white
+                  px-5 text-left text-sm font-medium text-gray-800 outline-none
+                  focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               >
-                <span aria-hidden>⬇</span>
-                ดาวน์โหลดเอกสาร
-              </a>
-            ) : (
-              <span className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-500">
-                ไม่มีไฟล์
-              </span>
-            )}
+                <span className="flex items-center justify-start gap-4 min-w-0">
+                  <FiCalendar className="h-6 w-6 shrink-0 text-gray-800" />
+                  <span className="block truncate">{yearBE || "—"}</span>
+                </span>
 
-            <button
-              onClick={load}
-              className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50"
-              title="รีเฟรชข้อมูล"
-            >
-              รีเฟรช
-            </button>
+                <FiChevronDown
+                  className={[
+                    "h-6 w-6 shrink-0 text-gray-500 transition-transform duration-300 ease-in-out",
+                    yearOpen ? "rotate-180" : "",
+                  ].join(" ")}
+                  aria-hidden="true"
+                />
+              </button>
+
+              {yearOpen && (
+                <div className="absolute left-0 top-full z-50 mt-2 w-full">
+                  <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg">
+                    <div className="max-h-105 overflow-auto py-2">
+                      {years.map((y) => {
+                        const active = y === yearBE;
+                        return (
+                          <button
+                            key={y}
+                            type="button"
+                            onClick={() => {
+                              setYearBE(y);
+                              setYearOpen(false);
+                            }}
+                            className={[
+                              "w-full text-left px-5 py-3 text-sm font-medium",
+                              active ? "bg-emerald-600 text-white" : "text-gray-700 hover:bg-gray-50",
+                            ].join(" ")}
+                          >
+                            {y}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Download */}
+            {txt(selected.item.url) ? (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => window.open(selected.item.url, "_blank", "noopener,noreferrer")}
+                  className="group flex items-center gap-2
+                    rounded-lg border border-emerald-600 bg-white px-3 py-3
+                    cursor-pointer transition duration-150
+                    hover:bg-emerald-700 active:bg-emerald-800"
+                >
+                  <FiDownload
+                    className="h-6 w-6 text-emerald-600 transition-colors group-hover:text-gray-100 group-active:text-gray-100"
+                    aria-hidden="true"
+                  />
+                  <span className="text-sm leading-none font-semibold text-emerald-600 transition-colors group-hover:text-gray-100 group-active:text-gray-100">
+                    ดาวน์โหลดเอกสาร
+                  </span>
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       </section>
 
-      {/* Content Layout แบบในรูป: ซ้ายรายละเอียด / ขวาเลือกเดือน */}
-      <section className="mt-6 grid gap-4 md:grid-cols-[1fr,260px]">
-        {/* Left Card */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-gray-900">
-            {simplifyHeaderTitle(selected)}
-          </h2>
-
-          {/* preview (optional) */}
-          <p className="mt-2 text-sm text-gray-600">
-            {shortText(selected.content, 240)}
-          </p>
-
-          <div className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
-            {selected.content?.trim() || "—"}
-          </div>
-
-          <div className="mt-6 border-t border-gray-100 pt-4 text-xs text-gray-500">
-            อัปเดต:{" "}
-            <span className="text-gray-700">
-              {selectedDate
-                ? `${thaiDate(selectedDate)} • ${thaiTime(selectedDate)} น.`
-                : selected.contentdate}
-            </span>
-          </div>
+      {/* Body */}
+      <section className="mx-auto max-w-7xl px-4 py-8">
+        {/* Mobile month dropdown */}
+        <div className="md:hidden">
+          <select
+            value={selectedKey}
+            onChange={(e) => setSelectedKey(e.target.value)}
+            className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700
+                       outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+          >
+            {monthsInYear.map((m) => (
+              <option key={m.key} value={m.key}>
+                {m.label}
+              </option>
+            ))}
+          </select>
         </div>
 
-        {/* Right Card: Month Picker */}
-        <aside className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-          <div className="text-sm font-semibold text-gray-900">เลือกเดือน</div>
+        <div className="mt-6 grid gap-4 md:grid-cols-[1fr_260px] md:items-start">
+          {/* Main content card */}
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm ring-1 ring-black/5">
+            <h2 className="flex flex-wrap items-baseline gap-2 text-xl font-medium text-gray-900 sm:text-2xl">
+              <span>ลักษณะอากาศ</span>
+              <span className="whitespace-nowrap text-sm font-medium text-gray-600 sm:text-base">
+                - {monthLabel} {yearBE}
+              </span>
+            </h2>
 
-          <div className="mt-3 max-h-[420px] space-y-2 overflow-auto pr-1">
-            {monthList.map((it) => {
-              const d = parseContentDate(it.contentdate);
-              const label = monthLabelFromDate(d); // แสดงเฉพาะเดือนแบบในรูป
-              const active = it.contentdate === selectedKey;
+            <div className="mt-4">
+              <p className="text-sm leading-relaxed text-gray-800 whitespace-pre-line">
+                {txt(selected.item.content) || "ไม่พบข้อมูล"}
+              </p>
+            </div>
 
-              return (
-                <button
-                  key={`${it.contentdate}-${it.url}`}
-                  onClick={() => setSelectedKey(it.contentdate)}
-                  className={[
-                    "w-full rounded-xl border px-3 py-2 text-left text-sm transition",
-                    active
-                      ? "border-emerald-600 bg-emerald-600 text-white"
-                      : "border-gray-200 bg-white text-gray-900 hover:bg-gray-50",
-                  ].join(" ")}
-                >
-                  {label}
-                </button>
-              );
-            })}
+            <div className="mt-6 border-t border-gray-100 pt-3 text-xs text-gray-500">
+              อัปเดต: {thaiDate(selected.date)}
+            </div>
           </div>
 
-          <div className="mt-4 text-xs text-gray-500">
-            แสดง {monthList.length} เดือนในปี {selectedYear}
-          </div>
-        </aside>
+          {/* Desktop month sidebar */}
+          <aside className="hidden md:block rounded-xl border border-gray-200 bg-white p-4 shadow-sm ring-1 ring-black/5">
+            <div className="text-base font-medium text-gray-900">เลือกเดือน</div>
+
+            <div className="mt-3 grid gap-2">
+              {monthsInYear.map((m) => {
+                const active = m.key === selectedKey;
+                return (
+                  <button
+                    key={m.key}
+                    type="button"
+                    onClick={() => setSelectedKey(m.key)}
+                    className={[
+                      "cursor-pointer w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition",
+                      active ? "bg-emerald-600 text-white" : "bg-gray-50 text-gray-900 hover:bg-gray-100",
+                    ].join(" ")}
+                  >
+                    {m.label}
+                  </button>
+                );
+              })}
+            </div>
+          </aside>
+        </div>
       </section>
     </main>
   );
 }
+
+export default MonthlyPage;

@@ -308,19 +308,17 @@ function DailyPage() {
 
           <div className="flex flex-col gap-2 mt-5 sm:flex-row sm:items-center sm:justify-between">
             <div ref={dateWrapRef} className="relative w-full max-w-sm">
-              <FiCalendar className="pointer-events-none absolute left-5 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-900" />
-
               <button
                 type="button"
                 onClick={() => setDateOpen((v) => !v)}
                 aria-expanded={dateOpen}
                 className="flex py-3 w-full items-center justify-between
                 cursor-pointer rounded-lg border border-gray-300 bg-white
-                px-5 text-left text-sm font-medium text-gray-900 outline-none
+                px-5 text-left text-sm font-medium text-gray-800 outline-none
                 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               >
                 <span className="flex items-center justify-start gap-4 min-w-0">
-                  <FiCalendar className="h-6 w-6 shrink-0 text-gray-900" />
+                  <FiCalendar className="h-6 w-6 shrink-0 text-gray-800" />
                   <span className="block truncate">{selectedLabel}</span>
                 </span>
 
@@ -350,7 +348,7 @@ function DailyPage() {
                             }}
                             className={[
                               "w-full text-left px-5 py-3 text-sm font-medium",
-                              active ? "bg-emerald-600 text-white" : "text-gray-900 hover:bg-gray-50",
+                              active ? "bg-emerald-600 text-white" : "text-gray-800 hover:bg-gray-50",
                             ].join(" ")}
                           >
                             {label}

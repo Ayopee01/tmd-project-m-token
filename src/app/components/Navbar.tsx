@@ -23,9 +23,9 @@ function Navbar({ onOpenMenu }: Props) {
 
   const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
 
-  // sticky 
+  // sticky xl:sticky
   return (
-    <nav className="top-0 z-30 border-b border-gray-100 bg-white backdrop-blur shadow-lg xl:sticky ">
+    <nav className="top-0 z-30 border-b border-gray-100 bg-white backdrop-blur shadow-lg sticky">
       <div className="flex h-18 w-full items-center justify-between px-4 md:h-22">
         {/* Left: Brand/Logo */}
         <Link href="/" className="flex items-center gap-3 h-full">
@@ -48,7 +48,7 @@ function Navbar({ onOpenMenu }: Props) {
           >
             พยากรณ์อากาศประจำวัน
             <span
-              className={`absolute left-0 -bottom-3 h-[4px] w-full origin-left bg-emerald-600
+              className={`absolute left-0 -bottom-3 h-1 w-full origin-left bg-emerald-600
               transition-transform duration-500 ease-out
               ${isActivePath(pathname, "/landing/daily")
                   ? "scale-x-100"
@@ -63,7 +63,7 @@ function Navbar({ onOpenMenu }: Props) {
           >
             แผนที่อากาศพื้นผิว
             <span
-              className={`absolute left-0 -bottom-3 h-[4px] w-full origin-left rounded-full bg-emerald-600
+              className={`absolute left-0 -bottom-3 h-1 w-full origin-left rounded-full bg-emerald-600
               transition-transform duration-500 ease-out
               ${isActivePath(pathname, "/landing/map")
                   ? "scale-x-100"
@@ -78,7 +78,7 @@ function Navbar({ onOpenMenu }: Props) {
           >
             สรุปลักษณะอากาศรายสัปดาห์
             <span
-              className={`absolute left-0 -bottom-3 h-[4px] w-full origin-left rounded-full bg-emerald-600
+              className={`absolute left-0 -bottom-3 h-1 w-full origin-left rounded-full bg-emerald-600
               transition-transform duration-500 ease-out
               ${isActivePath(pathname, "/landing/week")
                   ? "scale-x-100"
@@ -93,7 +93,7 @@ function Navbar({ onOpenMenu }: Props) {
           >
             สรุปลักษณะอากาศรายเดือน
             <span
-              className={`absolute left-0 -bottom-3 h-[4px] w-full origin-left rounded-full bg-emerald-600
+              className={`absolute left-0 -bottom-3 h-1 w-full origin-left rounded-full bg-emerald-600
               transition-transform duration-500 ease-out
               ${isActivePath(pathname, "/landing/monthly")
                   ? "scale-x-100"
@@ -108,7 +108,7 @@ function Navbar({ onOpenMenu }: Props) {
           >
             พยากรณ์อากาศเพื่อการเกษตรราย 7 วัน
             <span
-              className={`absolute left-0 -bottom-3 h-[4px] w-full origin-left rounded-full bg-emerald-600
+              className={`absolute left-0 -bottom-3 h-1 w-full origin-left rounded-full bg-emerald-600
               transition-transform duration-500 ease-out
               ${isActivePath(pathname, "/landing/agroforecast")
                   ? "scale-x-100"
@@ -123,7 +123,7 @@ function Navbar({ onOpenMenu }: Props) {
           {/* ✅ User (ขวาสุด) */}
           <div className="hidden xl:flex items-center gap-2 rounded-full border border-gray-200 bg-white/70 px-3 py-2 text-sm text-gray-700 shadow-sm dark:border-gray-700">
             <FaUserCircle className="h-5 w-5" />
-            <span className="max-w-[220px] truncate font-medium">
+            <span className="max-w-55 truncate font-medium">
               {loading ? '...' : fullName || 'ผู้ใช้'}
             </span>
           </div>

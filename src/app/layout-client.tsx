@@ -3,7 +3,8 @@
 
 import { useState, Suspense } from "react";
 import Navbar from "@/app/components/Navbar";
-import DrawerMenu from "@/app/components/DrawerMenu";
+// import DrawerMenu from "@/app/components/DrawerMenu";
+import DrawerMenu from "./components/DrawerMenu_Sticky";
 import Footer from "./components/Footer";
 import QueryString from "@/app/components/QueryString";
 import { AuthProvider } from "@/app/hooks/auth-hook";
