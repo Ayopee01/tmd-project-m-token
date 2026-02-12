@@ -17,7 +17,7 @@ function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + '/');
 }
 
-export default function Navbar({ onOpenMenu }: Props) {
+function Navbar({ onOpenMenu }: Props) {
   const pathname = usePathname();
   const { user, loading } = useAuth();
 
@@ -25,7 +25,7 @@ export default function Navbar({ onOpenMenu }: Props) {
 
   // sticky 
   return (
-    <nav className="top-0 z-30 border-b border-gray-200/80 bg-white/90 backdrop-blur shadow-lg xl:sticky ">
+    <nav className="top-0 z-30 border-b border-gray-100 bg-white backdrop-blur shadow-lg xl:sticky ">
       <div className="flex h-18 w-full items-center justify-between px-4 md:h-22">
         {/* Left: Brand/Logo */}
         <Link href="/" className="flex items-center gap-3 h-full">
@@ -141,3 +141,5 @@ export default function Navbar({ onOpenMenu }: Props) {
     </nav>
   );
 }
+
+export default Navbar;

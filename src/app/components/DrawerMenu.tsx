@@ -23,14 +23,14 @@ const MENUS: MenuItem[] = [
   { href: "/landing/agroforecast", label: "พยากรณ์อากาศเพื่อการเกษตรราย 7 วัน" },
 ];
 
-export default function DrawerMenu({ open, onClose }: Props) {
+function DrawerMenu({ open, onClose }: Props) {
   const pathname = usePathname();
   const { user, loading } = useAuth();
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   const fullName = useMemo(
-    () => [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim(),
-    [user?.firstName, user?.lastName]
+    () => [user?.firstName].filter(Boolean).join(" ").trim(),
+    [user?.firstNameช]
   );
 
   useEffect(() => {
@@ -43,7 +43,6 @@ export default function DrawerMenu({ open, onClose }: Props) {
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as HTMLElement | null;
 
-      // ✅ กันปิดจาก outside-click ตอนกด hamburger (ไม่งั้นจะปิดก่อนแล้ว toggle เปิดกลับ)
       if (target?.closest('button[aria-label="Open Menu"]')) return;
 
       const el = panelRef.current;
@@ -62,37 +61,30 @@ export default function DrawerMenu({ open, onClose }: Props) {
   }, [open, onClose]);
 
   return (
-    // ✅ full width และอยู่ใน flow ปกติ => ดัน content ลง
-    <div className="w-full">
-      {/* ✅ animate ความสูงแบบลื่น และไม่กินพื้นที่ตอนปิด */}
-      <div
-        className={[
-          "grid transition-[grid-template-rows] duration-200 ease-out",
-          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-        ].join(" ")}
-      >
+    <section className="w-full">
+      {/* กำหนดการดัน Content ไปด้านล่างตอนเปิด Menu */}
+      <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${open
+        ? "grid-rows-[1fr]"
+        : "grid-rows-[0fr]"}`}>
         <div className="overflow-hidden">
-          <div
-            ref={panelRef}
-            className={[
-              "w-full bg-white",
-              "border-b border-gray-200/70", // เส้นล่างแบบใน Figma
-              "transition-all duration-200 ease-out origin-top",
-              open
-                ? "opacity-100 translate-y-0 pointer-events-auto"
-                : "opacity-0 -translate-y-2 pointer-events-none",
-            ].join(" ")}
+          {/* Body User */}
+          <div ref={panelRef} className={`w-full bg-white transition-all duration-200 ease-out origin-top ${open
+            ? "opacity-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 -translate-y-2 pointer-events-none"
+            }`}
             role="dialog"
             aria-modal="true"
             aria-label="Navigation menu"
           >
-            {/* ✅ แถวชื่อผู้ใช้ */}
-            <div className="h-12 border-b border-gray-200/70 px-4 flex items-center justify-center text-sm font-medium text-emerald-600">
+            {/* User */}
+            <div className="h-16 flex items-center justify-center text-sm font-medium text-emerald-600">
               {loading ? "..." : fullName ? `คุณ ${fullName}` : "ไม่พบข้อมูลผู้ใช้"}
             </div>
 
-            {/* ✅ เมนูเต็มความกว้าง + เส้นคั่นบางๆ + ตัวอักษรกึ่งกลาง */}
-            <nav className="divide-y divide-gray-200/70">
+            <div className="h-3 bg-gradient-to-b from-gray-200/80 to-gray-100/0"></div>
+
+            {/* Main Menu */}
+            <nav className="bg-white">
               {MENUS.map((m) => {
                 const active = isActivePath(pathname, m.href);
 
@@ -101,15 +93,9 @@ export default function DrawerMenu({ open, onClose }: Props) {
                     key={m.href}
                     href={m.href}
                     onClick={onClose}
-                    className={[
-                      "w-full px-4",
-                      "h-14 flex items-center justify-center", // สูงแบบแถวใน Figma
-                      "text-sm text-gray-900",
-                      "transition-colors",
-                      active
-                        ? "bg-emerald-50 text-emerald-700 font-medium"
-                        : "hover:bg-gray-50",
-                    ].join(" ")}
+                    className={`w-full px-4 h-14 flex items-center justify-center text-sm transition-colors border-b border-gray-100 ${active
+                      ? "bg-emerald-50 text-emerald-700 font-medium"
+                      : "text-gray-900 hover:bg-gray-50"}`}
                   >
                     {m.label}
                   </Link>
@@ -119,6 +105,8 @@ export default function DrawerMenu({ open, onClose }: Props) {
           </div>
         </div>
       </div>
-    </div>
+    </section >
   );
 }
+
+export default DrawerMenu;
