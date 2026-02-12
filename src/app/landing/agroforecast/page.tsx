@@ -239,7 +239,7 @@ function AgroforecastPage() {
           </div>
 
           {/* Filter + Download (เหมือน UI ตัวอย่าง) */}
-          <div className="flex flex-col gap-2 mt-5 sm:flex-row sm:items-center sm:justify-between sm:mt-10">
+          <div className="flex flex-col gap-2 mt-15 sm:flex-row sm:items-center sm:justify-between sm:mt-10">
             {/* Year dropdown */}
             <div ref={yearDropRef} className="relative w-full max-w-sm">
               <button
@@ -419,7 +419,7 @@ function AgroforecastPage() {
               type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={pageSafe === 1}
-              className="rounded-lg px-2 py-2 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg px-2 py-2 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
               aria-label="ก่อนหน้า"
             >
               <FiChevronLeft className="h-5 w-5" />
@@ -443,7 +443,7 @@ function AgroforecastPage() {
                   type="button"
                   onClick={() => setPage(n)}
                   className={[
-                    "min-w-10 rounded-lg px-3 py-2 text-sm transition",
+                    "min-w-10 rounded-lg px-3 py-2 text-sm transition cursor-pointer",
                     active
                       ? "font-semibold text-gray-900"
                       : "text-gray-500 hover:bg-gray-100 hover:text-gray-900",
@@ -459,7 +459,7 @@ function AgroforecastPage() {
               type="button"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={pageSafe === totalPages}
-              className="rounded-lg px-2 py-2 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg px-2 py-2 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
               aria-label="ถัดไป"
             >
               <FiChevronRight className="h-5 w-5" />
