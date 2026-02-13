@@ -22,4 +22,4 @@ services:
       - DGA_AGENT_ID=${DGA_AGENT_ID}
     # เรียกใช้ไฟล์ .env.local เพื่อดึง Key ลับ
     env_file:
-      - .env.local
+      - .env
