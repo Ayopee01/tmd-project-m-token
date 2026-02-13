@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "www.tmd.go.th",
+        hostname: "http://143.198.88.74:3005/",
         pathname: "/media/**",
       },
       // ถ้า URL รูปมีโดเมนอื่น/ http ให้เพิ่มได้ เช่น

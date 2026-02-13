@@ -1,6 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 
+// .env NEXT_PUBLIC_API_ROUTE /test2
+const base = (process.env.NEXT_PUBLIC_API_ROUTE ?? "")
+
 function Footer() {
   return (
     <section>
@@ -9,7 +12,7 @@ function Footer() {
         <div className="mb-8">
           <Link href="/">
             <Image
-              src="/logo.png"
+              src={`${base}/logo.png`}
               // src="/logo.png"
               alt="Thai Meteorological Department"
               width={100}

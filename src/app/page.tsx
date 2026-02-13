@@ -30,15 +30,15 @@ import {
 
 import ParallaxScene, { type ParallaxItem } from "@/app/components/parallax/ParallaxScene";
 
+// .env NEXT_PUBLIC_API_ROUTE /test2
+const base = (process.env.NEXT_PUBLIC_API_ROUTE ?? "")
+
 const BG_IMAGES = [
-  // "/dashboard/bg/3.jpeg",
-  "/dashboard/bg/3.jpeg",
+  `${base}/dashboard/bg/3.jpeg`,
 ] as const;
 
-// const ITEM_SKY = "/dashboard/item/sky.png";
-// const ITEM_BOAT = "/dashboard/item/boat.png";
-const ITEM_SKY = "/dashboard/item/sky.png";
-const ITEM_BOAT = "/dashboard/item/boat.png";
+const ITEM_SKY = `${base}/dashboard/item/sky.png`;
+const ITEM_BOAT = `${base}/dashboard/item/boat.png`;
 
 /** dd/mm/yyyy -> timestamp */
 const ddmmyyyyToTime = (s: string) => {

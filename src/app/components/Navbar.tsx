@@ -8,6 +8,9 @@ import { FaUserCircle } from 'react-icons/fa';
 import { BurgerIcon } from '@/app/components/Icons';
 import { useAuth } from '@/app/hooks/auth-hook';
 
+// .env NEXT_PUBLIC_API_ROUTE /test2
+const base = (process.env.NEXT_PUBLIC_API_ROUTE ?? "")
+
 type Props = {
   onOpenMenu: () => void;
 };
@@ -31,12 +34,11 @@ function Navbar({ onOpenMenu }: Props) {
         <Link href="/" className="flex items-center gap-3 h-full">
           <div className="relative h-full w-36 sm:w-40 md:w-42">
             <Image
-              // src="/logo.png"
-              src="/logo.png"
-              alt="Logo"
-              fill
-              priority
-              className="object-contain"
+            src={`${base}/logo.png`}
+            alt="Logo"
+            fill
+            priority
+            className="object-contain"
             />
           </div>
         </Link>
