@@ -238,8 +238,8 @@ function AgroforecastPage() {
             </p>
           </div>
 
-          {/* Filter + Download (เหมือน UI ตัวอย่าง) */}
-          <div className="flex flex-col gap-2 mt-15 sm:flex-row sm:items-center sm:justify-between sm:mt-10">
+          {/* Filter + Download */}
+          <div className="flex flex-col gap-2 mt-10 sm:flex-row sm:items-center sm:justify-between sm:mt-10">
             {/* Year dropdown */}
             <div ref={yearDropRef} className="relative w-full max-w-sm">
               <button

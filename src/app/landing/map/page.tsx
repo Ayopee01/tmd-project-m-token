@@ -350,7 +350,7 @@ function MapPage() {
           </div>
 
           {/* Controls row (UI เหมือนตัวอย่าง) */}
-          <div className="flex flex-col gap-2 mt-5 sm:flex-row sm:items-center sm:justify-between sm:mt-10">
+          <div className="flex flex-col gap-4 mt-5 md:flex-row md:items-center sm:justify-start sm:mt-10">
             {/* Type dropdown */}
             <div ref={typeWrapRef} className="relative w-full max-w-sm">
               <button
@@ -492,7 +492,7 @@ function MapPage() {
                 setTimeOpen(false);
               }}
               className={[
-                "h-12 rounded-lg px-6 text-sm font-semibold text-white whitespace-nowrap cursor-pointer",
+                "h-12 rounded-lg px-6 text-sm font-semibold text-white whitespace-nowrap cursor-pointer sm:w-96 md:w-50",
                 selectedHasData && selectedTimeKey
                   ? "bg-emerald-600 hover:bg-emerald-700"
                   : "bg-gray-300 cursor-not-allowed",
