@@ -5,7 +5,8 @@ import ZoomableImage from "@/app/components/ZoomableImage";
 import type { DailyForecastItem, DailyForecastResponse } from "@/app/types/daily";
 import { DAILY_SECTIONS } from "@/app/types/daily";
 
-const DAILY_API_ROUTE = `${process.env.NEXT_PUBLIC_API_ROUTE ?? "/test2"}/api/daily`;
+// const DAILY_API_ROUTE = "/api/daily";
+const DAILY_API_ROUTE = "/test2/api/daily";
 
 // Function
 function parseContentDate(raw: string): Date | null {
