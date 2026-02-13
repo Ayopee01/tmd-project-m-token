@@ -6,8 +6,8 @@ import type {
 } from "@/app/types/dashboard";
 
 // test2 ใช้ชั่วคราวในระหว่างพัฒนา
-export const DASHBOARD_ROUTE = "/test2/api/dashboard"; // เส้นทาง API DASHBOARD
-export const REVERSE_ROUTE = "/test2/api/province"; // เส้นทาง API แปลงพิกัดเป็นจังหวัด
+export const DASHBOARD_ROUTE = "/api/dashboard"; // เส้นทาง API DASHBOARD
+export const REVERSE_ROUTE = "/api/province"; // เส้นทาง API แปลงพิกัดเป็นจังหวัด
 export const STORAGE_KEY = "tmd_selected_province"; // เก็บจังหวัดที่เลือกใน localStorage
 
 // Function เติมเลข 0 หน้าให้ครบ 2 หลัก

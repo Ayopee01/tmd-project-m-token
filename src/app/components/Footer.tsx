@@ -9,7 +9,8 @@ function Footer() {
         <div className="mb-8">
           <Link href="/">
             <Image
-              src="/test2/logo.png"
+              src="/logo.png"
+              // src="/logo.png"
               alt="Thai Meteorological Department"
               width={100}
               height={100}

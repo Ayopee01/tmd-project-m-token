@@ -31,7 +31,8 @@ function Navbar({ onOpenMenu }: Props) {
         <Link href="/" className="flex items-center gap-3 h-full">
           <div className="relative h-full w-36 sm:w-40 md:w-42">
             <Image
-              src="/test2/logo.png"
+              // src="/logo.png"
+              src="/logo.png"
               alt="Logo"
               fill
               priority
@@ -117,7 +118,7 @@ function Navbar({ onOpenMenu }: Props) {
             />
           </Link>
         </div>
-        
+
         {/* Right: User + Mobile hamburger */}
         <div className="flex items-center gap-3">
           {/* ✅ User (ขวาสุด) */}

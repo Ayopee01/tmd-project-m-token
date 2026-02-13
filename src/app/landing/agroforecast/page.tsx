@@ -171,7 +171,7 @@ function AgroforecastPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-white">
-        <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
+        <section className="sm:bg-[url('/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
           <div className="mx-auto max-w-7xl px-4 py-6">
             <div className="animate-pulse space-y-3">
               <div className="h-9 w-96 max-w-full rounded bg-gray-200" />
@@ -196,7 +196,7 @@ function AgroforecastPage() {
   if (error) {
     return (
       <main className="min-h-screen bg-white">
-        <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
+        <section className="sm:bg-[url('/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
           <div className="mx-auto max-w-7xl px-4 py-6">
             <div className="flex flex-col gap-1">
               <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
@@ -227,7 +227,7 @@ function AgroforecastPage() {
   return (
     <main className="min-h-screen bg-white">
       {/* Header */}
-      <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
+      <section className="sm:bg-[url('/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
         <div className="mx-auto max-w-7xl px-4 py-6">
           <div className="flex flex-col gap-1">
             <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
