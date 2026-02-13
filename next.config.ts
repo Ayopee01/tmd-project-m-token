@@ -14,7 +14,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // basePath: "/test2",
+  basePath: "/test2",
   output: "standalone",
   trailingSlash: true,
 
@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "http://143.198.88.74:3005/",
+        hostname: "www.tmd.go.th",
         pathname: "/media/**",
       },
       // ถ้า URL รูปมีโดเมนอื่น/ http ให้เพิ่มได้ เช่น

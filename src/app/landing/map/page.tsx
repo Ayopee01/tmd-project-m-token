@@ -5,9 +5,7 @@ import ZoomableImage from "@/app/components/ZoomableImage";
 import { FiCalendar, FiChevronDown, FiMap } from "react-icons/fi";
 import type { UpperWindItem, UpperWindResponse } from "@/app/types/map";
 
-// .env NEXT_PUBLIC_API_ROUTE /test2
-const base = (process.env.NEXT_PUBLIC_API_ROUTE ?? "")
-const MAP_API_ROUTE = `${base}/api/map`;
+const MAP_API_ROUTE = `${process.env.NEXT_PUBLIC_API_ROUTE ?? "/test2"}/api/map`;
 
 // กำหนด Menu ประเภทแผนที่
 const Type_Menu = [
@@ -287,10 +285,7 @@ function MapPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-white">
-        <section
-          style={{ ["--bgTop" as any]: `${base}/bg_top.png` }}
-          className="sm:bg-[url(var(--bgTop))] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200"
-        >
+        <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
           <div className="mx-auto max-w-7xl px-4 py-6">
             <div className="animate-pulse space-y-3">
               <div className="h-8 w-96 rounded bg-gray-200" />
@@ -312,10 +307,7 @@ function MapPage() {
   if (error || !raw) {
     return (
       <main className="min-h-screen bg-white">
-        <section
-          style={{ ["--bgTop" as any]: `${base}/bg_top.png` }}
-          className="sm:bg-[url(var(--bgTop))] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200"
-        >
+        <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
           <div className="mx-auto max-w-7xl px-4 py-6">
             <div className="flex flex-col gap-1">
               <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">แผนที่อากาศผิวพื้นระดับต่างๆ</h1>
@@ -342,10 +334,7 @@ function MapPage() {
   return (
     <main className="min-h-screen bg-white">
       {/* Header */}
-      <section
-        style={{ ["--bgTop" as any]: `${base}/bg_top.png` }}
-        className="bg-none sm:bg-[url(var(--bgTop))] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200"
-      >
+      <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
         <div className="mx-auto max-w-7xl px-4 py-6">
           <div className="flex flex-col gap-1">
             <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">แผนที่อากาศผิวพื้นระดับต่างๆ</h1>
@@ -361,7 +350,7 @@ function MapPage() {
           </div>
 
           {/* Controls row (UI เหมือนตัวอย่าง) */}
-          <div className="flex flex-col gap-4 mt-5 md:flex-row md:items-center sm:justify-start sm:mt-10">
+          <div className="flex flex-col gap-2 mt-5 sm:flex-row sm:items-center sm:justify-between sm:mt-10">
             {/* Type dropdown */}
             <div ref={typeWrapRef} className="relative w-full max-w-sm">
               <button
@@ -503,7 +492,7 @@ function MapPage() {
                 setTimeOpen(false);
               }}
               className={[
-                "h-12 rounded-lg px-6 text-sm font-semibold text-white whitespace-nowrap cursor-pointer sm:w-96 md:w-50",
+                "h-12 rounded-lg px-6 text-sm font-semibold text-white whitespace-nowrap cursor-pointer",
                 selectedHasData && selectedTimeKey
                   ? "bg-emerald-600 hover:bg-emerald-700"
                   : "bg-gray-300 cursor-not-allowed",

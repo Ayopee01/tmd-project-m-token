@@ -11,9 +11,7 @@ import {
 } from "react-icons/fi";
 import type { ClimateWeeklyItem, ClimateWeeklyResponse, WeekRegionKey } from "@/app/types/week";
 
-// .env NEXT_PUBLIC_API_ROUTE /test2
-const base = process.env.NEXT_PUBLIC_API_ROUTE ?? "";
-const WEEK_API_ROUTE = `${base}/api/week`;
+const WEEK_API_ROUTE = `${process.env.NEXT_PUBLIC_API_ROUTE ?? "/test2"}/api/week`;
 
 /** ===== helpers ===== */
 function cleanText(v: unknown): string {
@@ -134,10 +132,7 @@ function WeekPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-white">
-        <section
-          style={{ ["--bgTop" as any]: `${base}/bg_top.png` }}
-          className="bg-none sm:bg-[url(var(--bgTop))] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200"
-        >
+        <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
           <div className="mx-auto max-w-7xl px-4 py-6">
             <div className="animate-pulse space-y-3">
               <div className="h-8 w-96 rounded bg-gray-200" />
@@ -162,10 +157,7 @@ function WeekPage() {
   if (error || !selected) {
     return (
       <main className="min-h-screen bg-white">
-        <section
-          style={{ ["--bgTop" as any]: `${base}/bg_top.png` }}
-          className="bg-none sm:bg-[url(var(--bgTop))] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200"
-        >
+        <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
           <div className="mx-auto max-w-7xl px-4 py-6">
             <div className="flex flex-col gap-1">
               <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
@@ -196,10 +188,7 @@ function WeekPage() {
   return (
     <main className="min-h-screen bg-white">
       {/* Header */}
-      <section
-        style={{ ["--bgTop" as any]: `${base}/bg_top.png` }}
-        className="bg-none sm:bg-[url(var(--bgTop))] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200"
-      >
+      <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
         <div className="mx-auto max-w-7xl px-4 py-6">
           <div className="flex flex-col gap-1">
             <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">

@@ -28,18 +28,6 @@ import {
   WiDayCloudy, // ท้องฟ้ามีเมฆบางส่วน
 } from "react-icons/wi";
 
-import ParallaxScene, { type ParallaxItem } from "@/app/components/parallax/ParallaxScene";
-
-// .env NEXT_PUBLIC_API_ROUTE /test2
-const base = (process.env.NEXT_PUBLIC_API_ROUTE ?? "")
-
-const BG_IMAGES = [
-  `${base}/dashboard/bg/3.jpeg`,
-] as const;
-
-const ITEM_SKY = `${base}/dashboard/item/sky.png`;
-const ITEM_BOAT = `${base}/dashboard/item/boat.png`;
-
 /** dd/mm/yyyy -> timestamp */
 const ddmmyyyyToTime = (s: string) => {
   const [dd, mm, yyyy] = (s ?? "").split("/").map((x) => Number(x));
@@ -159,7 +147,7 @@ function DashboardPage() {
     loadProvince(saved || undefined);
 
     (async () => {
-      const gpsProvince = await fetchGPSProvince(() => { });
+      const gpsProvince = await fetchGPSProvince(() => {});
       if (cancelled) return;
       if (!gpsProvince) return;
 
@@ -226,41 +214,9 @@ function DashboardPage() {
   const isTodaySelected = !!todayStr && selectedDay?.forecastDate === todayStr;
   const WeatherIcon = pickWeatherIcon(selectedDay?.descriptionThai);
 
-  //Parallax
-  const bgIndex = selectedIdx % 4;
-
-  const parallaxItems: ParallaxItem[] = [
-    {
-      src: ITEM_SKY,
-      positionClassName: "absolute inset-0",
-      className:
-        "absolute -top-16 left-1/2 w-[1200px] max-w-none -translate-x-1/2 opacity-70 animate-[drift_18s_linear_infinite]",
-      mouseX: 22,
-      mouseY: 10,
-      scrollY: 0.14,
-    },
-    {
-      src: ITEM_BOAT,
-      positionClassName: "absolute bottom-[-44px] left-1/2",
-      className:
-        "w-[520px] max-w-[92vw] -translate-x-1/2 drop-shadow-2xl animate-[float_7s_ease-in-out_infinite]",
-      mouseX: 34,
-      mouseY: 14,
-      scrollY: 0.22,
-    },
-  ];
-
   return (
     <main className="flex justify-center bg-white px-5 py-10 text-slate-900">
-      <ParallaxScene
-        bgImages={BG_IMAGES}
-        activeBgIndex={bgIndex}
-        items={parallaxItems}
-        zIndexClassName="z-0"
-        overlayClassName="bg-cover bg-center bg-no-repeat"
-        enabled
-      />
-      <section className="relative z-10">
+      <section>
         {/* Province select */}
         <header className="w-full max-w-90">
           <label className="sr-only">เลือกจังหวัด</label>
@@ -483,14 +439,14 @@ function DashboardPage() {
                           "active:scale-[0.98]",
                           isActive
                             ? [
-                              "border-emerald-500/70 bg-emerald-600 text-white",
-                              "hover:bg-emerald-600 active:bg-emerald-700",
-                            ].join(" ")
+                                "border-emerald-500/70 bg-emerald-600 text-white",
+                                "hover:bg-emerald-600 active:bg-emerald-700",
+                              ].join(" ")
                             : [
-                              "border-slate-900/10 bg-white text-slate-800",
-                              "hover:border-emerald-400/50 hover:bg-emerald-500/10",
-                              "active:bg-emerald-500/20",
-                            ].join(" "),
+                                "border-slate-900/10 bg-white text-slate-800",
+                                "hover:border-emerald-400/50 hover:bg-emerald-500/10",
+                                "active:bg-emerald-500/20",
+                              ].join(" "),
                         ].join(" ")}
                       >
                         <div

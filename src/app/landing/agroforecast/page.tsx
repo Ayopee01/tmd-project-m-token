@@ -11,9 +11,9 @@ import {
 
 import type { Agro7DaysItem, Agro7DaysResponse } from "@/app/types/agroforecast";
 
-// .env NEXT_PUBLIC_API_ROUTE /test2
-const base = process.env.NEXT_PUBLIC_API_ROUTE ?? "";
-const AGRO_API_ROUTE = `${base}/api/agroforecast`;
+const AGRO_API_ROUTE = `${
+  process.env.NEXT_PUBLIC_API_ROUTE ?? "/test2"
+}/api/agroforecast`;
 
 //กำหนดจำนวน Card ใน Page
 const PAGE_SIZE = 6;
@@ -171,10 +171,7 @@ function AgroforecastPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-white">
-        <section
-          style={{ ["--bgTop" as any]: `${base}/bg_top.png` }}
-          className="bg-none sm:bg-[url(var(--bgTop))] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200"
-        >
+        <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
           <div className="mx-auto max-w-7xl px-4 py-6">
             <div className="animate-pulse space-y-3">
               <div className="h-9 w-96 max-w-full rounded bg-gray-200" />
@@ -199,10 +196,7 @@ function AgroforecastPage() {
   if (error) {
     return (
       <main className="min-h-screen bg-white">
-        <section
-          style={{ ["--bgTop" as any]: `${base}/bg_top.png` }}
-          className="bg-none sm:bg-[url(var(--bgTop))] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200"
-        >
+        <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
           <div className="mx-auto max-w-7xl px-4 py-6">
             <div className="flex flex-col gap-1">
               <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
@@ -233,10 +227,7 @@ function AgroforecastPage() {
   return (
     <main className="min-h-screen bg-white">
       {/* Header */}
-      <section
-        style={{ ["--bgTop" as any]: `${base}/bg_top.png` }}
-        className="bg-none sm:bg-[url(var(--bgTop))] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200"
-      >
+      <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
         <div className="mx-auto max-w-7xl px-4 py-6">
           <div className="flex flex-col gap-1">
             <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
@@ -247,8 +238,8 @@ function AgroforecastPage() {
             </p>
           </div>
 
-          {/* Filter + Download */}
-          <div className="flex flex-col gap-2 mt-10 sm:flex-row sm:items-center sm:justify-between sm:mt-10">
+          {/* Filter + Download (เหมือน UI ตัวอย่าง) */}
+          <div className="flex flex-col gap-2 mt-15 sm:flex-row sm:items-center sm:justify-between sm:mt-10">
             {/* Year dropdown */}
             <div ref={yearDropRef} className="relative w-full max-w-sm">
               <button

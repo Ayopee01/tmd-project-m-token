@@ -4,9 +4,6 @@ import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/app/hooks/auth-hook';
 
-// .env NEXT_PUBLIC_API_ROUTE /test2
-const base = (process.env.NEXT_PUBLIC_API_ROUTE ?? "")
-
 function QueryString() {
   const searchParams = useSearchParams();
   const { setUser } = useAuth();
@@ -43,7 +40,8 @@ function QueryString() {
       sessionStorage.setItem(loginKey, 'done');
 
       // 1) Function เรียก Route Login จาก /api/auth/login
-      const res = await fetch(`${base}/api/auth/login`, {
+      // test2 ใช้ชั่วคราวในระหว่างพัฒนา
+      const res = await fetch('/test2/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ appId, mToken }),
@@ -77,7 +75,8 @@ function QueryString() {
       sessionStorage.setItem(notiKey, 'sent');
 
       // 2) Notification เรียก Route Login จาก /api/auth/notification
-      const nRes = await fetch(`${base}/api/auth/notification`, {
+      // test2 ใช้ชั่วคราวในระหว่างพัฒนา
+      const nRes = await fetch('/test2/api/auth/notification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -94,7 +93,7 @@ function QueryString() {
       // ตรวจสอบผลลัพธ์การ notification
       if (!nRes.ok || nData?.success === false) {
         console.warn('Notification Failed:', nData?.message || nData?.error || nRes.status);
-        
+
         // ถ้าอยากให้ “ส่งใหม่ได้” ตอน fail ให้เปิดบรรทัดนี้
         // sessionStorage.removeItem(notiKey);
       }

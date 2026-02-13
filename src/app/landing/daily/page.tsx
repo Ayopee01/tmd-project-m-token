@@ -5,9 +5,7 @@ import ZoomableImage from "@/app/components/ZoomableImage";
 import type { DailyForecastItem, DailyForecastResponse } from "@/app/types/daily";
 import { DAILY_SECTIONS } from "@/app/types/daily";
 
-// .env NEXT_PUBLIC_API_ROUTE /test2
-const base = process.env.NEXT_PUBLIC_API_ROUTE ?? "";
-const DAILY_API_ROUTE = `${base}/api/daily`;
+const DAILY_API_ROUTE = `${process.env.NEXT_PUBLIC_API_ROUTE ?? "/test2"}/api/daily`;
 
 // Function
 function parseContentDate(raw: string): Date | null {
@@ -226,10 +224,7 @@ function DailyPage() {
     return (
       <main className="min-h-screen bg-white">
         {/* Header (เหมือนตอนโหลดเสร็จ) */}
-        <section
-          style={{ ["--bgTop" as any]: `${base}/bg_top.png` }}
-          className="bg-none sm:bg-[url(var(--bgTop))] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200"
-        >
+        <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
           <div className="mx-auto max-w-7xl px-4 py-6">
             <div className="flex flex-col gap-1">
               <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
@@ -265,10 +260,7 @@ function DailyPage() {
   {/* UI Section */ }
   return (
     <main>
-      <section
-        style={{ ["--bgTop" as any]: `${base}/bg_top.png` }}
-        className="bg-none sm:bg-[url(var(--bgTop))] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200"
-      >
+      <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
         <div className="mx-auto max-w-7xl px-4 py-6">
           <div className="flex flex-col gap-1">
             <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
