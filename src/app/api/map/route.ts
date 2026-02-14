@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export const revalidate = 300; // cache api 300 วินาที/5 นาที
 
 // URL API แผนที่ลมบน
-const TMD_URL = "https://data.tmd.go.th/api/UpperWindMap/v1/";
+const TMD_URL = "https://data.tmd.go.th/api/TmdUpperWindMap/v1/";
 
 export async function GET() {
   try {

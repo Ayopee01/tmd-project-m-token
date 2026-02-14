@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import Logo from "public/logo.png"
 
 function Footer() {
   return (
@@ -9,7 +10,7 @@ function Footer() {
         <div className="mb-8">
           <Link href="/">
             <Image
-              src="/test2/logo.png"
+              src={Logo}
               alt="Thai Meteorological Department"
               width={100}
               height={100}

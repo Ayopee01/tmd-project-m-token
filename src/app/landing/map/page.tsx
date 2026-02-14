@@ -1,11 +1,20 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ZoomableImage from "@/app/components/ZoomableImage";
-import { FiCalendar, FiChevronDown, FiMap } from "react-icons/fi";
+import {
+  FiCalendar,
+  FiChevronDown,
+  FiChevronLeft,
+  FiChevronRight,
+  FiMap,
+} from "react-icons/fi";
 import type { UpperWindItem, UpperWindResponse } from "@/app/types/map";
 
-const MAP_API_ROUTE = `${process.env.NEXT_PUBLIC_API_ROUTE ?? "/test2"}/api/map`;
+const basePath = process.env.NEXT_PUBLIC_API_ROUTE ?? "";
+const MAP_API_ROUTE = `${basePath}/api/map`;
+
+const SOUNDING_SCROLL_DURATION_MS = 550;
 
 // กำหนด Menu ประเภทแผนที่
 const Type_Menu = [
@@ -19,11 +28,14 @@ const Type_Menu = [
   "แผนที่ลมชั้นบนระดับ 600 m",
   "แผนที่ลมชั้นบนรวม 4 ระดับ",
   "แผนที่รายละเอียดประเทศไทยและใกล้เคียง",
-  "แผนที่ค่าความเปลี่ยนแปลงความกดอากาศ",
-  "แผนที่ค่าความเปลี่ยนแปลงอุณหภูมิ",
+  "แผนที่ค่าเปลี่ยนแปลงความกดอากาศ",
+  "แผนที่ค่าเปลี่ยนแปลงอุณหภูมิ",
   "แผนที่ค่าเปลี่ยนแปลงอุณหภูมิจุดน้ำค้าง",
   "แผนที่หยั่งอากาศ",
 ] as const;
+
+const SOUNDING_TYPE_LABEL = "แผนที่หยั่งอากาศ" as const;
+const SOUNDING_API_KEY = "AirMapWeather" as const;
 
 // ชื่อเดือนภาษาไทย (ใช้แสดง label เวลา)
 const THAI_MONTHS = [
@@ -41,7 +53,71 @@ const THAI_MONTHS = [
   "ธันวาคม",
 ] as const;
 
-/** แปลง "2026-0x-x0 0x:00:00.0000000" -> Date (ใช้ทำ sort/label เวลา) */
+// fallback กรณี Title เป็น null แต่ต้องโชว์เป็นไทย
+const SOUNDING_TITLE_FALLBACK: Record<string, string> = {
+  Bangkok: "กรุงเทพมหานคร",
+  ChiangMai: "เชียงใหม่",
+  KhonKaen: "ขอนแก่น",
+  UbonRatchaThani: "อุบลราชธานี",
+  Songkhla: "สงขลา",
+  Phuket: "ภูเก็ต",
+  ChanthaBuri: "จันทบุรี",
+  Chanthaburi: "จันทบุรี",
+  Phitsanulok: "พิษณุโลก",
+  NakhonRatchasima: "นครราชสีมา",
+  PrachuapKhiriKhan: "ประจวบคีรีขันธ์",
+  Chonburi: "ชลบุรี",
+  ChonBuri: "ชลบุรี",
+  Chumphon: "ชุมพร",
+};
+
+type SoundingStation = {
+  id: string;
+  title: string;
+  imagePath: string;
+};
+
+type ScrollDir = -1 | 1;
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+function readNonEmptyString(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  return s ? s : null;
+}
+
+/** ดึงรายการจังหวัดจาก AirMapWeather: xxxTitle + xxxImagePath (คงลำดับเดิมตาม key ใน API) */
+function extractSoundingStations(item: UpperWindItem | null): SoundingStation[] {
+  if (!item || !isRecord(item)) return [];
+
+  const rec: Record<string, unknown> = item;
+  const seenTitle = new Set<string>();
+  const out: SoundingStation[] = [];
+
+  for (const key of Object.keys(rec)) {
+    if (!key.endsWith("Title")) continue;
+
+    const base = key.slice(0, -"Title".length);
+    const rawTitle = readNonEmptyString(rec[key]);
+    const title = rawTitle ?? SOUNDING_TITLE_FALLBACK[base] ?? base;
+
+    const imagePath = readNonEmptyString(rec[`${base}ImagePath`]);
+    if (!imagePath) continue; // เอาเฉพาะที่มีรูปจริง
+
+    // กันซ้ำแบบ ChanthaBuri/Chanthaburi -> "จันทบุรี" ให้เหลือใบเดียว
+    if (seenTitle.has(title)) continue;
+    seenTitle.add(title);
+
+    out.push({ id: title, title, imagePath });
+  }
+
+  return out;
+}
+
+/** แปลง "2026-0x-x0 0x:00:00.0000000" -> Date */
 function parseContentDate(raw: string): Date | null {
   if (!raw) return null;
   const cleaned = raw.replace(" ", "T").replace(/\.\d+$/, "");
@@ -49,7 +125,7 @@ function parseContentDate(raw: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/** แสดงวันเวลาแบบไทย + ปี พ.ศ. (ใช้ใน dropdown เวลา/หัวข้อ) */
+/** แสดงวันเวลาแบบไทย + ปี พ.ศ. */
 function thaiDateTime(d: Date): string {
   const day = d.getDate();
   const month = THAI_MONTHS[d.getMonth()] ?? "";
@@ -62,7 +138,10 @@ function thaiDateTime(d: Date): string {
   return `${day} ${month} ${yearBE} ${time} น.`;
 }
 
-/** ทำ data (object) -> list entries เพื่อใช้งานง่าย + เก็บเฉพาะที่มี url */
+/** ทำ data -> list entries
+ *  - ปกติ: เก็บเฉพาะที่มี url
+ *  - AirMapWeather: ไม่มี url แต่ต้องเก็บเพื่อเลือกวัน/เวลา + การ์ดจังหวัด
+ */
 function normalizeToEntries(
   data: UpperWindResponse["data"] | null | undefined
 ): Array<{ apiKey: string; item: UpperWindItem }> {
@@ -73,6 +152,12 @@ function normalizeToEntries(
     const arr = Array.isArray(value) ? value : value ? [value] : [];
     for (const it of arr) {
       if (!it) continue;
+
+      if (apiKey === SOUNDING_API_KEY) {
+        out.push({ apiKey, item: it });
+        continue;
+      }
+
       if (typeof it.url !== "string" || it.url === "") continue;
       out.push({ apiKey, item: it });
     }
@@ -87,10 +172,13 @@ function isMatchType(menuLabel: string, entry: { apiKey: string; item: UpperWind
   const alt = entry.item.alt ?? "";
   const apiKey = entry.apiKey ?? "";
 
+  // Sounding: match ด้วย apiKey โดยตรง
+  if (label === SOUNDING_TYPE_LABEL && apiKey === SOUNDING_API_KEY) return true;
+
   // หลัก: title/alt ต้องมี label
   if (title.includes(label) || alt.includes(label)) return true;
 
-  // fallback เบาๆ: ดึงเลข hPa จากเมนูไปเช็คใน apiKey (เผื่อ title/alt ว่าง)
+  // fallback เบาๆ: ดึงเลข hPa จากเมนูไปเช็คใน apiKey
   const num = label.match(/(\d{3,4})\s*hPa/u)?.[1];
   if (num && apiKey.includes(num)) return true;
 
@@ -114,6 +202,76 @@ function getTimeOptions(items: UpperWindItem[]) {
   return Array.from(times.entries())
     .sort((a, b) => b[1].getTime() - a[1].getTime())
     .map(([key, date]) => ({ key, label: thaiDateTime(date) }));
+}
+
+/** easing สำหรับ animate scroll */
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function getGapPx(el: HTMLElement): number {
+  const cs = window.getComputedStyle(el);
+  const raw = cs.columnGap || cs.gap || "0px";
+  const n = Number.parseFloat(raw);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function getFirstCardWidthPx(row: HTMLElement): number {
+  const first = row.querySelector<HTMLElement>("button");
+  if (!first) return row.clientWidth;
+  return first.getBoundingClientRect().width;
+}
+
+/** คำนวณระยะเลื่อนแบบ "เป็นชุด" ตามจำนวนการ์ดที่พอดีใน viewport */
+function calcPageDeltaPx(row: HTMLElement): number {
+  const gap = getGapPx(row);
+  const cardW = getFirstCardWidthPx(row);
+  const unit = cardW + gap;
+
+  if (unit <= 0) return row.clientWidth;
+
+  const pageSize = Math.max(1, Math.floor((row.clientWidth + gap) / unit));
+  return pageSize * unit;
+}
+
+/** animate scrollLeft แบบกำหนด duration ได้ */
+function animateScrollLeft(
+  el: HTMLElement,
+  target: number,
+  durationMs: number,
+  onDone?: () => void
+) {
+  const prefersReduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+  if (prefersReduced || durationMs <= 0) {
+    el.scrollLeft = target;
+    onDone?.();
+    return;
+  }
+
+  const start = el.scrollLeft;
+  const diff = target - start;
+  if (Math.abs(diff) < 0.5) {
+    el.scrollLeft = target;
+    onDone?.();
+    return;
+  }
+
+  const t0 = performance.now();
+
+  const tick = (now: number) => {
+    const p = Math.min(1, (now - t0) / durationMs);
+    const eased = easeInOutCubic(p);
+    el.scrollLeft = start + diff * eased;
+
+    if (p < 1) {
+      requestAnimationFrame(tick);
+    } else {
+      el.scrollLeft = target;
+      onDone?.();
+    }
+  };
+
+  requestAnimationFrame(tick);
 }
 
 function MapPage() {
@@ -149,13 +307,11 @@ function MapPage() {
 
       setRaw(json);
 
-      // ค่าเริ่มต้น: หา type แรกใน Type_Menu ที่มีข้อมูลจริง
-      const entries = normalizeToEntries(json.data);
-
+      const allEntries = normalizeToEntries(json.data);
       const firstType =
-        Type_Menu.find((label) => entries.some((e) => isMatchType(label, e))) ?? Type_Menu[0];
+        Type_Menu.find((label) => allEntries.some((e) => isMatchType(label, e))) ?? Type_Menu[0];
 
-      const firstItems = entries.filter((e) => isMatchType(firstType, e)).map((e) => e.item);
+      const firstItems = allEntries.filter((e) => isMatchType(firstType, e)).map((e) => e.item);
       const firstTimes = getTimeOptions(firstItems);
       const firstTime = firstTimes[0]?.key ?? (firstItems[0]?.contentdate ?? "");
 
@@ -180,7 +336,6 @@ function MapPage() {
   useEffect(() => {
     function onDown(e: MouseEvent) {
       const t = e.target as Node;
-
       if (typeWrapRef.current && !typeWrapRef.current.contains(t)) setTypeOpen(false);
       if (timeWrapRef.current && !timeWrapRef.current.contains(t)) setTimeOpen(false);
     }
@@ -209,7 +364,6 @@ function MapPage() {
     for (const label of Type_Menu) {
       const items = entries.filter((e) => isMatchType(label, e)).map((e) => e.item);
 
-      // sort ล่าสุดก่อนด้วย contentdate
       const sorted = [...items].sort((a, b) => {
         const da = parseContentDate(a.contentdate ?? "")?.getTime() ?? 0;
         const db = parseContentDate(b.contentdate ?? "")?.getTime() ?? 0;
@@ -229,7 +383,7 @@ function MapPage() {
 
   const timeOptions = useMemo(() => getTimeOptions(selectedItems), [selectedItems]);
 
-  // เปลี่ยนประเภทแล้ว sync เวลาให้เป็นเวลาล่าสุดของประเภทนั้น (ถ้าเวลาที่เลือกเดิมไม่มี)
+  // เปลี่ยนประเภทแล้ว sync เวลา
   useEffect(() => {
     if (!selectedTypeLabel) return;
 
@@ -249,13 +403,10 @@ function MapPage() {
 
   const selectedHasData = selectedItems.length > 0;
 
-  // label สำหรับปุ่มเวลา (รองรับ 0/1/หลายตัวเลือก)
   const selectedTimeLabel =
-    timeOptions.find((t) => t.key === selectedTimeKey)?.label ??
-    timeOptions[0]?.label ??
-    "-";
+    timeOptions.find((t) => t.key === selectedTimeKey)?.label ?? timeOptions[0]?.label ?? "-";
 
-  // shown: อิงจาก applied (หลังกดปุ่ม) ถ้าไม่มีใช้ selected
+  // shown: อิงจาก applied (หลังกดปุ่ม)
   const shown = useMemo(() => {
     const typeLabel = applied?.typeLabel ?? selectedTypeLabel;
     const timeKey = applied?.timeKey ?? selectedTimeKey;
@@ -267,8 +418,6 @@ function MapPage() {
     return exact ?? items[0] ?? null;
   }, [applied, selectedTypeLabel, selectedTimeKey, itemsByTypeLabel]);
 
-  const imageSrc = shown?.url ?? "";
-  const descText = shown?.description ?? "";
   const shownDate = parseContentDate(shown?.contentdate ?? "");
 
   const appliedTypeLabel = applied?.typeLabel ?? selectedTypeLabel;
@@ -281,12 +430,130 @@ function MapPage() {
     appliedTimeOptions.find((t) => t.key === appliedTimeKey)?.label ??
     (shownDate ? thaiDateTime(shownDate) : shown?.contentdate ?? "");
 
+  // ===== Sounding (AirMapWeather) =====
+  const isSoundingApplied = appliedTypeLabel === SOUNDING_TYPE_LABEL;
+
+  const soundingStations = useMemo(
+    () => (isSoundingApplied ? extractSoundingStations(shown) : []),
+    [isSoundingApplied, shown]
+  );
+
+  const [activeSoundingId, setActiveSoundingId] = useState<string>("");
+
+  useEffect(() => {
+    if (!isSoundingApplied) {
+      setActiveSoundingId("");
+      return;
+    }
+    const first = soundingStations[0]?.id ?? "";
+    setActiveSoundingId((prev) =>
+      prev && soundingStations.some((s) => s.id === prev) ? prev : first
+    );
+  }, [isSoundingApplied, soundingStations]);
+
+  const activeSoundingIndex = useMemo(() => {
+    if (!soundingStations.length) return 0;
+    const idx = soundingStations.findIndex((s) => s.id === activeSoundingId);
+    return idx >= 0 ? idx : 0;
+  }, [soundingStations, activeSoundingId]);
+
+  // scroll ให้การ์ด active อยู่ในจอ (ตอน "คลิกการ์ด" เท่านั้น)
+  const soundingRowMobileRef = useRef<HTMLDivElement | null>(null);
+  const soundingRowDesktopRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isSoundingApplied) return;
+
+    const rows = [soundingRowMobileRef.current, soundingRowDesktopRef.current].filter(
+      (r): r is HTMLDivElement => Boolean(r)
+    );
+
+    for (const row of rows) {
+      const el = row.querySelector<HTMLButtonElement>(
+        `button[data-sounding-index="${activeSoundingIndex}"]`
+      );
+      if (el) el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }
+  }, [isSoundingApplied, activeSoundingIndex]);
+
+  const activeSounding = isSoundingApplied
+    ? soundingStations[activeSoundingIndex] ?? null
+    : null;
+
+  const imageSrc = isSoundingApplied ? activeSounding?.imagePath ?? "" : shown?.url ?? "";
+  const descText = isSoundingApplied ? "" : shown?.description ?? "";
+
+  // ===== ✅ ปุ่มเลื่อน: เลื่อน "เป็นชุด" + animate duration =====
+  const isAnimatingScrollRef = useRef<boolean>(false);
+
+  const scrollSoundingCardsByPage = useCallback(
+    (dir: ScrollDir) => {
+      // ปุ่มบนหัวเป็น desktop อยู่แล้ว แต่กันไว้เผื่อเรียกที่อื่น
+      const row =
+        window.matchMedia("(min-width: 640px)").matches
+          ? soundingRowDesktopRef.current
+          : soundingRowMobileRef.current;
+
+      if (!row) return;
+      if (isAnimatingScrollRef.current) return;
+
+      const delta = calcPageDeltaPx(row);
+      const max = Math.max(0, row.scrollWidth - row.clientWidth);
+      const target = Math.min(max, Math.max(0, row.scrollLeft + dir * delta));
+
+      if (Math.abs(target - row.scrollLeft) < 1) return;
+
+      isAnimatingScrollRef.current = true;
+      animateScrollLeft(row, target, SOUNDING_SCROLL_DURATION_MS, () => {
+        isAnimatingScrollRef.current = false;
+      });
+    },
+    []
+  );
+
+  const [canScrollPrevDesktop, setCanScrollPrevDesktop] = useState<boolean>(false);
+  const [canScrollNextDesktop, setCanScrollNextDesktop] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isSoundingApplied) {
+      setCanScrollPrevDesktop(false);
+      setCanScrollNextDesktop(false);
+      return;
+    }
+
+    const row = soundingRowDesktopRef.current;
+    if (!row) return;
+
+    const update = () => {
+      const max = Math.max(0, row.scrollWidth - row.clientWidth);
+      setCanScrollPrevDesktop(row.scrollLeft > 2);
+      setCanScrollNextDesktop(row.scrollLeft < max - 2);
+    };
+
+    update();
+
+    const onScroll = () => update();
+    row.addEventListener("scroll", onScroll, { passive: true });
+
+    const ro = new ResizeObserver(() => update());
+    ro.observe(row);
+
+    return () => {
+      row.removeEventListener("scroll", onScroll);
+      ro.disconnect();
+    };
+  }, [isSoundingApplied, soundingStations.length]);
+
   /** ===== Loading ===== */
   if (loading) {
     return (
       <main className="min-h-screen bg-white">
-        <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
-          <div className="mx-auto max-w-7xl px-4 py-6">
+        <section className="relative min-h-60 border-b border-gray-200">
+          <div
+            className="hidden sm:block absolute inset-0 bg-no-repeat bg-top-right bg-contain"
+            style={{ backgroundImage: `url(${basePath}/bg_top.png)` }}
+          />
+          <div className="mx-auto max-w-7xl px-4 py-6 relative z-10">
             <div className="animate-pulse space-y-3">
               <div className="h-8 w-96 rounded bg-gray-200" />
               <div className="h-5 w-130 rounded bg-gray-200" />
@@ -307,11 +574,19 @@ function MapPage() {
   if (error || !raw) {
     return (
       <main className="min-h-screen bg-white">
-        <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
-          <div className="mx-auto max-w-7xl px-4 py-6">
+        <section className="relative min-h-60 border-b border-gray-200">
+          <div
+            className="hidden sm:block absolute inset-0 bg-no-repeat bg-top-right bg-contain"
+            style={{ backgroundImage: `url(${basePath}/bg_top.png)` }}
+          />
+          <div className="mx-auto max-w-7xl px-4 py-6 relative z-10">
             <div className="flex flex-col gap-1">
-              <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">แผนที่อากาศผิวพื้นระดับต่างๆ</h1>
-              <p className="mt-1 text-sm font-medium text-gray-600 sm:text-base">ไม่สามารถโหลดข้อมูลได้ในขณะนี้</p>
+              <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
+                แผนที่อากาศผิวพื้นระดับต่างๆ
+              </h1>
+              <p className="mt-1 text-sm font-medium text-gray-600 sm:text-base">
+                ไม่สามารถโหลดข้อมูลได้ในขณะนี้
+              </p>
             </div>
 
             <div className="mt-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
@@ -334,10 +609,16 @@ function MapPage() {
   return (
     <main className="min-h-screen bg-white">
       {/* Header */}
-      <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
-        <div className="mx-auto max-w-7xl px-4 py-6">
+      <section className="relative min-h-60 border-b border-gray-200">
+        <div
+          className="hidden sm:block absolute inset-0 bg-no-repeat bg-top-right bg-contain"
+          style={{ backgroundImage: `url(${basePath}/bg_top.png)` }}
+        />
+        <div className="mx-auto max-w-7xl px-4 py-6 relative z-10">
           <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">แผนที่อากาศผิวพื้นระดับต่างๆ</h1>
+            <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
+              แผนที่อากาศผิวพื้นระดับต่างๆ
+            </h1>
 
             <p className="mt-1 text-sm font-medium text-gray-600 sm:text-base">
               <span className="flex flex-wrap items-baseline gap-x-2">
@@ -349,8 +630,8 @@ function MapPage() {
             </p>
           </div>
 
-          {/* Controls row (UI เหมือนตัวอย่าง) */}
-          <div className="flex flex-col gap-2 mt-5 sm:flex-row sm:items-center sm:justify-between sm:mt-10">
+          {/* Controls row */}
+          <div className="flex flex-col gap-2 mt-5 sm:flex-row sm:items-center sm:justify-start sm:mt-10">
             {/* Type dropdown */}
             <div ref={typeWrapRef} className="relative w-full max-w-sm">
               <button
@@ -414,7 +695,7 @@ function MapPage() {
               )}
             </div>
 
-            {/* Date/Time dropdown (รองรับหลายวัน/หลายเวลา) */}
+            {/* Date/Time dropdown */}
             <div ref={timeWrapRef} className="relative w-full max-w-sm">
               <button
                 type="button"
@@ -439,7 +720,9 @@ function MapPage() {
                       selectedHasData ? "text-gray-800" : "text-gray-400",
                     ].join(" ")}
                   />
-                  <span className="block truncate">{selectedHasData ? selectedTimeLabel : "ไม่มีข้อมูล"}</span>
+                  <span className="block truncate">
+                    {selectedHasData ? selectedTimeLabel : "ไม่มีข้อมูล"}
+                  </span>
                 </span>
 
                 <FiChevronDown
@@ -452,7 +735,6 @@ function MapPage() {
                 />
               </button>
 
-              {/* dropdown list: โชว์เมื่อมีข้อมูล และมีมากกว่า 1 ตัวเลือก (หรืออยากให้ 1 ตัวเลือกก็เปิดได้ ให้เอาเงื่อนไข timeOptions.length > 1 ออก) */}
               {selectedHasData && timeOptions.length > 1 && timeOpen && (
                 <div className="absolute left-0 top-full z-50 mt-2 w-full">
                   <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg">
@@ -504,22 +786,172 @@ function MapPage() {
         </div>
       </section>
 
-      {/* Title Map */}
+      {/* Title Map + Desktop arrows */}
       <section className="mx-auto max-w-7xl px-4 py-3 sm:py-6">
-        <div className="text-lg font-semibold text-gray-900 sm:text-2xl">
-          <div className="flex flex-wrap items-baseline gap-x-2">
-            <span>{appliedTypeLabel || "แผนที่"}</span>
-            {appliedTimeLabel ? <span className="text-sm font-medium text-gray-600">{appliedTimeLabel}</span> : null}
+        <div className="flex items-start sm:items-center justify-between gap-3">
+          <div className="text-lg font-semibold text-gray-900 sm:text-2xl">
+            <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
+              <span className="whitespace-nowrap">
+                {isSoundingApplied ? `${appliedTypeLabel || "แผนที่"} -` : appliedTypeLabel || "แผนที่"}
+              </span>
+
+              {appliedTimeLabel ? (
+                <span className="text-sm font-medium text-gray-600 whitespace-nowrap">
+                  {isSoundingApplied ? appliedTimeLabel : `- ${appliedTimeLabel}`}
+                </span>
+              ) : null}
+
+              {isSoundingApplied ? (
+                <span className="text-sm font-medium text-gray-500 whitespace-nowrap">
+                  ( {soundingStations.length} จังหวัด )
+                </span>
+              ) : null}
+            </div>
           </div>
+
+          {/* ปุ่มเลื่อนบนหัว (Desktop) */}
+          {isSoundingApplied ? (
+            <div className="hidden sm:flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => scrollSoundingCardsByPage(-1)}
+                disabled={soundingStations.length <= 1 || !canScrollPrevDesktop}
+                className={[
+                  "inline-flex items-center justify-center rounded-lg border px-2.5 py-2 text-sm font-semibold cursor-pointer",
+                  soundingStations.length <= 1 || !canScrollPrevDesktop
+                    ? "border-gray-200 text-gray-300 cursor-not-allowed"
+                    : "border-gray-300 text-gray-700 hover:bg-gray-50",
+                ].join(" ")}
+                aria-label="ก่อนหน้า"
+              >
+                <FiChevronLeft className="h-5 w-5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => scrollSoundingCardsByPage(1)}
+                disabled={soundingStations.length <= 1 || !canScrollNextDesktop}
+                className={[
+                  "inline-flex items-center justify-center rounded-lg border px-2.5 py-2 text-sm font-semibold cursor-pointer",
+                  soundingStations.length <= 1 || !canScrollNextDesktop
+                    ? "border-gray-200 text-gray-300 cursor-not-allowed"
+                    : "border-gray-300 text-gray-700 hover:bg-gray-50",
+                ].join(" ")}
+                aria-label="ถัดไป"
+              >
+                <FiChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+          ) : null}
         </div>
       </section>
 
+      {/* Sounding Cards */}
+      {isSoundingApplied ? (
+        <section className="mx-auto max-w-7xl px-0 sm:px-4 pb-2">
+          {/* Mobile */}
+          <div
+            ref={soundingRowMobileRef}
+            className="sm:hidden flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory
+              [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {soundingStations.map((s, idx) => {
+              const active = idx === activeSoundingIndex;
+
+              return (
+                <button
+                  key={`${s.id}-${idx}`}
+                  type="button"
+                  data-sounding-index={idx}
+                  onClick={() => setActiveSoundingId(s.id)}
+                  className={[
+                    "relative shrink-0 rounded-xl border p-4 text-left shadow-sm transition cursor-pointer",
+                    "w-55",
+                    "h-24 overflow-hidden",
+                    active ? "bg-white border-emerald-200" : "bg-gray-50 border-sky-100",
+                  ].join(" ")}
+                >
+                  <span
+                    className={[
+                      "absolute left-0 top-4 bottom-4 w-1 rounded-r",
+                      active ? "bg-emerald-600" : "bg-transparent",
+                    ].join(" ")}
+                  />
+                  <div className="pl-2 h-full flex flex-col justify-center">
+                    <div className="text-sm font-semibold text-gray-900 leading-tight">
+                      จังหวัด {s.title}
+                    </div>
+                    <div className="mt-1 text-xs font-medium text-gray-500 leading-tight">
+                      แผนที่หยั่งอากาศ
+                    </div>
+                    <div className="mt-1 text-xs font-medium text-gray-500 leading-tight">
+                      วันที่ {appliedTimeLabel || "-"}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Desktop */}
+          <div
+            ref={soundingRowDesktopRef}
+            className="hidden sm:flex gap-4 overflow-x-auto pb-2
+            [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {soundingStations.map((s, idx) => {
+              const active = idx === activeSoundingIndex;
+
+              return (
+                <button
+                  key={`${s.id}-${idx}`}
+                  type="button"
+                  data-sounding-index={idx}
+                  onClick={() => setActiveSoundingId(s.id)}
+                  className={[
+                    "relative shrink-0 w-72 rounded-xl border p-4 text-left shadow-sm transition cursor-pointer",
+                    active
+                      ? "bg-white border-emerald-200"
+                      : "bg-gray-50 border-sky-100 hover:bg-gray-100",
+                  ].join(" ")}
+                >
+                  <span
+                    className={[
+                      "absolute left-0 top-4 bottom-4 w-1 rounded-r",
+                      active ? "bg-emerald-600" : "bg-transparent",
+                    ].join(" ")}
+                  />
+                  <div className="pl-2">
+                    <div className="text-sm font-semibold text-gray-900">จังหวัด {s.title}</div>
+                    <div className="mt-1 text-xs font-medium text-gray-500">แผนที่หยั่งอากาศ</div>
+                    <div className="mt-1 text-xs font-medium text-gray-500">
+                      วันที่ {appliedTimeLabel || "-"}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      {/* หัวข้อจังหวัด (Sounding) เหนือรูป */}
+      {isSoundingApplied && activeSounding?.title ? (
+        <section className="mx-auto max-w-7xl px-4 pb-3">
+          <h2 className="text-center text-base font-semibold text-gray-900">
+            จังหวัด {activeSounding.title}
+          </h2>
+        </section>
+      ) : null}
+
       {/* Description (mobile) */}
       <section className="mx-auto max-w-7xl px-4 py-3 sm:hidden">
-        <p className="mx-auto text-sm leading-relaxed text-gray-700">{descText || "-"}</p>
+        {!isSoundingApplied ? (
+          <p className="mx-auto text-sm leading-relaxed text-gray-700">{descText || "-"}</p>
+        ) : null}
       </section>
 
-      {/* Image (Zoomable) */}
+      {/* Image */}
       <section className="mx-auto max-w-7xl px-4 pb-10">
         {imageSrc ? (
           <div className="flex justify-center">
@@ -527,7 +959,11 @@ function MapPage() {
               <div className="shadow-xl">
                 <ZoomableImage
                   src={imageSrc}
-                  alt={(shown?.alt ?? shown?.title ?? "Map") || "Map"}
+                  alt={
+                    isSoundingApplied
+                      ? `แผนที่หยั่งอากาศ - จังหวัด ${activeSounding?.title ?? ""}`
+                      : (shown?.alt ?? shown?.title ?? "Map") || "Map"
+                  }
                   width={1600}
                   height={1000}
                   className="h-auto w-full"
@@ -541,9 +977,11 @@ function MapPage() {
         )}
 
         {/* Description (desktop) */}
-        <div className="hidden mx-auto mt-6 max-w-5xl border-t border-gray-100 pt-4 sm:block">
-          <p className="text-center text-sm text-gray-700">{descText || "-"}</p>
-        </div>
+        {!isSoundingApplied ? (
+          <div className="hidden mx-auto mt-6 max-w-5xl border-t border-gray-100 pt-4 sm:block">
+            <p className="text-center text-sm text-gray-700">{descText || "-"}</p>
+          </div>
+        ) : null}
       </section>
     </main>
   );

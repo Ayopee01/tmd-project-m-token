@@ -263,7 +263,7 @@ function DashboardPage() {
                         value={provinceQuery}
                         onChange={(e) => setProvinceQuery(e.target.value)}
                         placeholder="ค้นหาจังหวัด..."
-                        className="h-10 w-full rounded-xl border border-slate-900/10 bg-white pl-9 pr-9 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-300/60"
+                        className="h-10 w-full rounded-xl border border-slate-900/10 bg-white pl-9 pr-9 text-base text-slate-900 outline-none focus:ring-2 focus:ring-emerald-300/60"
                       />
                       {provinceQuery ? (
                         <button

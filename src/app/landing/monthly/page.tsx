@@ -4,7 +4,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FiCalendar, FiChevronDown, FiDownload } from "react-icons/fi";
 import type { ClimateMonthlyItem, ClimateMonthlyResponse } from "@/app/types/monthly";
 
-const MONTH_API_ROUTE = `${process.env.NEXT_PUBLIC_API_ROUTE ?? "/test2"}/api/monthly`;
+const basePath = process.env.NEXT_PUBLIC_API_ROUTE ?? "";
+const MONTH_API_ROUTE = `${basePath}/api/monthly`;
 
 /** ===== minimal helpers ===== */
 const THAI_MONTHS = [
@@ -179,8 +180,13 @@ function MonthlyPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-white">
-        <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
-          <div className="mx-auto max-w-7xl px-4 py-6">
+        {/* Header */}
+        <section className="relative min-h-60 border-b border-gray-200">
+          {/* Background layer */}
+          <div className="hidden sm:block absolute inset-0 bg-no-repeat bg-top-right bg-contain"
+            style={{ backgroundImage: `url(${basePath}/bg_top.png)` }}
+          ></div>
+          <div className="mx-auto max-w-7xl px-4 py-6 relative z-10">
             <div className="animate-pulse space-y-3">
               <div className="h-8 w-80 rounded bg-gray-200" />
               <div className="h-5 w-60 rounded bg-gray-200" />
@@ -200,8 +206,13 @@ function MonthlyPage() {
   if (error || !selected) {
     return (
       <main className="min-h-screen bg-white">
-        <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
-          <div className="mx-auto max-w-7xl px-4 py-6">
+        {/* Header */}
+        <section className="relative min-h-60 border-b border-gray-200">
+          {/* Background layer */}
+          <div className="hidden sm:block absolute inset-0 bg-no-repeat bg-top-right bg-contain"
+            style={{ backgroundImage: `url(${basePath}/bg_top.png)` }}
+          ></div>
+          <div className="mx-auto max-w-7xl px-4 py-6 relative z-10">
             <div className="flex flex-col gap-1">
               <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">สรุปลักษณะอากาศรายเดือน</h1>
               <p className="mt-1 text-sm text-gray-700 sm:text-base">ไม่สามารถโหลดข้อมูลได้ในขณะนี้</p>
@@ -227,8 +238,12 @@ function MonthlyPage() {
   return (
     <main className="min-h-screen bg-white">
       {/* Header */}
-      <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
-        <div className="mx-auto max-w-7xl px-4 py-6">
+      <section className="relative min-h-60 border-b border-gray-200">
+        {/* Background layer */}
+        <div className="hidden sm:block absolute inset-0 bg-no-repeat bg-top-right bg-contain"
+          style={{ backgroundImage: `url(${basePath}/bg_top.png)` }}
+        ></div>
+        <div className="mx-auto max-w-7xl px-4 py-6 relative z-10">
           <div className="flex flex-col gap-1">
             <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">สรุปลักษณะอากาศรายเดือน</h1>
             <p className="mt-1 text-sm text-gray-700 sm:text-base">{pageSubTitle}</p>

@@ -1,20 +1,7 @@
-// // next.config.ts
-// import type { NextConfig } from "next";
-
-// const nextConfig: NextConfig = {
-//   basePath: '/test2',
-//   output: 'standalone',
-//   // (Optional) ป้องกันปัญหากรณี Link ไปผิด Path
-//   trailingSlash: true, 
-// };
-
-// export default nextConfig;
-
-// next.config.ts
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  basePath: "/test2",
+  // basePath: "/test2",
   output: "standalone",
   trailingSlash: false,
 
@@ -26,7 +13,9 @@ const nextConfig: NextConfig = {
         pathname: "/media/**",
       },
       // ถ้า URL รูปมีโดเมนอื่น/ http ให้เพิ่มได้ เช่น
-      // { protocol: "http", hostname: "www.tmd.go.th", pathname: "/media/**" },
+      // protocol: "http", 
+      // hostname: "www.tmd.go.th", 
+      // pathname: "/media/**",
     ],
   },
 };

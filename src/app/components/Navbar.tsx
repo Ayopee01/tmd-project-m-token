@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { FaUserCircle } from 'react-icons/fa';
-
-import { BurgerIcon } from '@/app/components/Icons';
 import { useAuth } from '@/app/hooks/auth-hook';
+import { FaUserCircle } from 'react-icons/fa';
+import { FiMenu } from 'react-icons/fi';
+import Logo from "public/logo.png"
 
 type Props = {
   onOpenMenu: () => void;
@@ -23,7 +23,6 @@ function Navbar({ onOpenMenu }: Props) {
 
   const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
 
-  // sticky xl:sticky
   return (
     <nav className="top-0 z-30 border-b border-gray-100 bg-white backdrop-blur shadow-lg sticky">
       <div className="flex h-18 w-full items-center justify-between px-4 md:h-22">
@@ -31,7 +30,7 @@ function Navbar({ onOpenMenu }: Props) {
         <Link href="/" className="flex items-center gap-3 h-full">
           <div className="relative h-full w-36 sm:w-40 md:w-42">
             <Image
-              src="/test2/logo.png"
+              src={Logo}
               alt="Logo"
               fill
               priority
@@ -117,10 +116,10 @@ function Navbar({ onOpenMenu }: Props) {
             />
           </Link>
         </div>
-        
+
         {/* Right: User + Mobile hamburger */}
         <div className="flex items-center gap-3">
-          {/* ✅ User (ขวาสุด) */}
+          {/* User (ขวาสุด) */}
           <div className="hidden xl:flex items-center gap-2 rounded-full border border-gray-200 bg-white/70 px-3 py-2 text-sm text-gray-700 shadow-sm dark:border-gray-700">
             <FaUserCircle className="h-5 w-5" />
             <span className="max-w-55 truncate font-medium">
@@ -134,7 +133,7 @@ function Navbar({ onOpenMenu }: Props) {
             aria-label="Open Menu"
             type="button"
           >
-            <BurgerIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-gray-500 hover:text-gray-700 transition duration-150" />
+            <FiMenu className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-gray-500 hover:text-gray-700 transition duration-150" />
           </button>
         </div>
       </div>

@@ -5,8 +5,8 @@ import ZoomableImage from "@/app/components/ZoomableImage";
 import type { DailyForecastItem, DailyForecastResponse } from "@/app/types/daily";
 import { DAILY_SECTIONS } from "@/app/types/daily";
 
-// const DAILY_API_ROUTE = "/api/daily";
-const DAILY_API_ROUTE = "/test2/api/daily";
+const basePath = process.env.NEXT_PUBLIC_API_ROUTE ?? "";
+const DAILY_API_ROUTE = `${basePath}/api/daily`;
 
 // Function
 function parseContentDate(raw: string): Date | null {
@@ -224,9 +224,13 @@ function DailyPage() {
   if (error || !selected) {
     return (
       <main className="min-h-screen bg-white">
-        {/* Header (เหมือนตอนโหลดเสร็จ) */}
-        <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
-          <div className="mx-auto max-w-7xl px-4 py-6">
+        {/* Header */}
+        <section className="relative min-h-60 border-b border-gray-200">
+          {/* Background layer */}
+          <div className="hidden sm:block absolute inset-0 bg-no-repeat bg-top-right bg-contain"
+            style={{ backgroundImage: `url(${basePath}/bg_top.png)` }}
+          ></div>
+          <div className="mx-auto max-w-7xl px-4 py-6 relative z-10">
             <div className="flex flex-col gap-1">
               <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
                 ข่าวพยากรณ์อากาศประจำวัน
@@ -261,8 +265,13 @@ function DailyPage() {
   {/* UI Section */ }
   return (
     <main>
-      <section className="sm:bg-[url('/test2/bg_top.png')] bg-no-repeat bg-top-right bg-contain min-h-60 border-b border-solid border-gray-200">
-        <div className="mx-auto max-w-7xl px-4 py-6">
+      {/* Header */}
+      <section className="relative min-h-60 border-b border-gray-200">
+        {/* Background layer */}
+        <div className="hidden sm:block absolute inset-0 bg-no-repeat bg-top-right bg-contain"
+          style={{ backgroundImage: `url(${basePath}/bg_top.png)` }}
+        ></div>
+        <div className="mx-auto max-w-7xl px-4 py-6 relative z-10">
           <div className="flex flex-col gap-1">
             <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
               ข่าวพยากรณ์อากาศประจำวัน

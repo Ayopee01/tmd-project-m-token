@@ -23,7 +23,7 @@ export async function GET() {
         return NextResponse.json(data);
     } catch {
         return NextResponse.json(
-            { success: false, message: "Failed to fetch Map API" },
+            { success: false, message: "Failed to fetch Daily API" },
             { status: 500 }
         );
     }

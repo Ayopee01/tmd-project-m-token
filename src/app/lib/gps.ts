@@ -5,9 +5,10 @@ import type {
   ProvinceResponse,
 } from "@/app/types/dashboard";
 
-// test2 ใช้ชั่วคราวในระหว่างพัฒนา
-export const DASHBOARD_ROUTE = "/test2/api/dashboard"; // เส้นทาง API DASHBOARD
-export const REVERSE_ROUTE = "/test2/api/province"; // เส้นทาง API แปลงพิกัดเป็นจังหวัด
+const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
+export const DASHBOARD_ROUTE = `${base}/api/dashboard`; // เส้นทาง API DASHBOARD
+export const REVERSE_ROUTE = `${base}/api/province`; // เส้นทาง API แปลงพิกัดเป็นจังหวัด
 export const STORAGE_KEY = "tmd_selected_province"; // เก็บจังหวัดที่เลือกใน localStorage
 
 // Function เติมเลข 0 หน้าให้ครบ 2 หลัก
@@ -106,18 +107,18 @@ export async function fetchGPSProvince(setNote: (s: string) => void): Promise<st
   } catch (err: unknown) { // กรณีล้มเหลว
     const code = // ตรวจสอบรหัสข้อผิดพลาด
       typeof err === "object" && // กรณีเป็น object
-      err && // ไม่เป็น null
-      // Check if err ในกรณีต่างๆ มี property
-      "code" in err &&
-      typeof (err as { code?: unknown }).code === "number" // property code เป็น number
+        err && // ไม่เป็น null
+        // Check if err ในกรณีต่างๆ มี property
+        "code" in err &&
+        typeof (err as { code?: unknown }).code === "number" // property code เป็น number
         ? (err as { code: number }).code // ดึงรหัสข้อผิดพลาด
         : -1;
 
     // แจ้งข้อผิดพลาดตามรหัสในกรณีที่ล้มเหลวต่างๆ
-    if (code === 1) setNote("ผู้ใช้ไม่อนุญาตให้เข้าถึงตำแหน่ง (GPS)"); 
-    else if (code === 2) setNote("ไม่สามารถระบุตำแหน่งได้"); 
-    else if (code === 3) setNote("หมดเวลาในการระบุตำแหน่ง"); 
-    else setNote("ไม่สามารถใช้ GPS ได้"); 
+    if (code === 1) setNote("ผู้ใช้ไม่อนุญาตให้เข้าถึงตำแหน่ง (GPS)");
+    else if (code === 2) setNote("ไม่สามารถระบุตำแหน่งได้");
+    else if (code === 3) setNote("หมดเวลาในการระบุตำแหน่ง");
+    else setNote("ไม่สามารถใช้ GPS ได้");
 
     return "";
   }
