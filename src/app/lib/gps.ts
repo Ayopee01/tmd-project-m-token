@@ -5,7 +5,7 @@ import type {
   ProvinceResponse,
 } from "@/app/types/dashboard";
 
-const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+const base = process.env.NEXT_PUBLIC_API_ROUTE ?? "";
 
 export const DASHBOARD_ROUTE = `${base}/api/dashboard`; // เส้นทาง API DASHBOARD
 export const REVERSE_ROUTE = `${base}/api/province`; // เส้นทาง API แปลงพิกัดเป็นจังหวัด
