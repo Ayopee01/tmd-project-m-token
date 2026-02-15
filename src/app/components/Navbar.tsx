@@ -22,6 +22,7 @@ function Navbar({ onOpenMenu }: Props) {
   const { user, loading } = useAuth();
 
   const fullName = [user?.firstName].filter(Boolean).join(' ').trim();
+  // , user?.lastName
 
   return (
     <nav className="top-0 z-30 border-b border-gray-100 bg-white backdrop-blur shadow-lg sticky">
