@@ -29,7 +29,7 @@ function DrawerMenu({ open, onClose }: Props) {
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   const fullName = useMemo(
-    () => [user?.firstName].filter(Boolean).join(" ").trim(),
+    () => [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim(),
     [user?.firstName, user?.lastName]
   );
 
