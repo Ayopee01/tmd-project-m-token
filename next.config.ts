@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // basePath: "/test2",
+  basePath: "/test2",
   output: "standalone",
   trailingSlash: false,
 
