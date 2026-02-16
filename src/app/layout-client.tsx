@@ -7,7 +7,7 @@ import DrawerMenu from "./components/DrawerMenu_Sticky";
 import Footer from "./components/Footer";
 import QueryString from "@/app/components/QueryString";
 import { AuthProvider } from "@/app/hooks/auth-hook";
-import CzpBackButtonVisible from "@/app/components/CzpBackButtonVisible";
+import CzpBackButtonGate from "@/app/components/CzpBackButtonGate";
 import SwipeBack from "@/app/components/SwipeBack";
 
 export default function RootLayoutClient({ children }: { children: React.ReactNode }) {
@@ -16,7 +16,7 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
     return (
         <AuthProvider>
             {/* ปุ่ม Back ของ CZP */}
-            <CzpBackButtonVisible visible={true} />
+            <CzpBackButtonGate visible={true} />
 
             {/* ปัดขวาเพื่อย้อนกลับ */}
             <SwipeBack disabled={open} />
