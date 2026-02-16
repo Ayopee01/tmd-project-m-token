@@ -343,7 +343,7 @@ function WeekPage() {
                         <FiCloudRain className="h-4 w-4 text-sky-600" />
                         ปริมาณฝนสูงสุด
                       </div>
-                      <div className="mt-1 text-sm text-gray-800">{r.max_rain || "-"}</div>
+                      <div className="mt-1 text-sm text-gray-800">{r.max_rain || ""}</div>
                     </div>
 
                     <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
@@ -351,7 +351,7 @@ function WeekPage() {
                         <FiArrowUp className="h-4 w-4 text-red-500" />
                         อุณหภูมิสูงสุด
                       </div>
-                      <div className="mt-1 text-sm text-gray-800">{r.max_temp || "-"}</div>
+                      <div className="mt-1 text-sm text-gray-800">{r.max_temp || ""}</div>
                     </div>
 
                     <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
@@ -359,7 +359,7 @@ function WeekPage() {
                         <FiArrowDown className="h-4 w-4 text-blue-600" />
                         อุณหภูมิต่ำสุด
                       </div>
-                      <div className="mt-1 text-sm text-gray-800">{r.min_temp || "-"}</div>
+                      <div className="mt-1 text-sm text-gray-800">{r.min_temp || ""}</div>
                     </div>
                   </div>
                 </div>

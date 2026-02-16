@@ -424,17 +424,7 @@ function DashboardPage() {
                     {(selectedDay?.windDirectionDeg ?? "-") + "°"}
                   </div>
                 </div>
-
-                <div className="flex flex-col items-center">
-                  <FiDroplet className="h-7 w-7 text-slate-800" />
-                  <div className="mt-2 text-[11px] text-slate-600">
-                    ปริมาณฝน
-                  </div>
-                  <div className="mt-1 text-xs font-medium text-slate-900">
-                    {selectedDay?.percentRainCover ?? "-"} %
-                  </div>
-                </div>
-
+                
                 <div className="flex flex-col items-center">
                   <FiWind className="h-7 w-7 text-slate-800" />
                   <div className="mt-2 text-[11px] text-slate-600">
@@ -442,6 +432,16 @@ function DashboardPage() {
                   </div>
                   <div className="mt-1 text-xs font-medium text-slate-900">
                     {selectedDay?.windSpeedKmh ?? "-"} กม./ชม.
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center">
+                  <FiDroplet className="h-7 w-7 text-slate-800" />
+                  <div className="mt-2 text-[11px] text-slate-600">
+                    พื้นที่ฝนตก
+                  </div>
+                  <div className="mt-1 text-xs font-medium text-slate-900">
+                    {selectedDay?.percentRainCover ?? "-"} %
                   </div>
                 </div>
               </div>

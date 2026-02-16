@@ -590,7 +590,7 @@ function MapPage() {
             </div>
 
             <div className="mt-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
-              <p className="text-sm font-semibold text-red-600">{error || "-"}</p>
+              <p className="text-sm font-semibold text-red-600">{error || ""}</p>
               <button
                 type="button"
                 onClick={load}
@@ -979,7 +979,7 @@ function MapPage() {
         {/* Description (desktop) */}
         {!isSoundingApplied ? (
           <div className="hidden mx-auto mt-6 max-w-5xl border-t border-gray-100 pt-4 sm:block">
-            <p className="text-center text-sm text-gray-700">{descText || "-"}</p>
+            <p className="text-center text-sm text-gray-700">{descText || ""}</p>
           </div>
         ) : null}
       </section>
