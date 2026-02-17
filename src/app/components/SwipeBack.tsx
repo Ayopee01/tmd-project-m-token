@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import type { SwipeBackProps } from "@/app/types/swipeback";
+import { ReadonlyURLSearchParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import type { SwipeBackProps, SnapshotItem } from "@/app/types/swipeback";
+
+const STACK_KEY = "__swipeback_stack_v1__";
+const STACK_LIMIT = 10;
 
 function isTextInput(el: Element | null) {
   if (!el) return false;
@@ -11,20 +14,76 @@ function isTextInput(el: Element | null) {
   return (el as HTMLElement).isContentEditable === true;
 }
 
-function getSwipeTarget(targetId?: string) {
-  if (targetId) {
-    const byId = document.getElementById(targetId);
-    if (byId) return byId as HTMLElement;
+function getElById(id?: string) {
+  if (!id) return null;
+  return document.getElementById(id) as HTMLElement | null;
+}
+
+function readStack(): SnapshotItem[] {
+  try {
+    const raw = sessionStorage.getItem(STACK_KEY);
+    const arr = raw ? (JSON.parse(raw) as SnapshotItem[]) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
   }
-  const main = document.querySelector("main");
-  if (main) return main as HTMLElement;
-  return document.body as HTMLElement;
+}
+
+function writeStack(stack: SnapshotItem[]) {
+  try {
+    sessionStorage.setItem(STACK_KEY, JSON.stringify(stack.slice(-STACK_LIMIT)));
+  } catch {
+    // ignore
+  }
+}
+
+function peekStack(): SnapshotItem | null {
+  const s = readStack();
+  return s.length ? s[s.length - 1] : null;
+}
+
+function pushStack(item: SnapshotItem) {
+  const s = readStack();
+  // กัน push ซ้ำ ๆ ถ้าหน้าเดิมเหมือนกัน
+  const top = s[s.length - 1];
+  if (top?.key === item.key) return;
+  s.push(item);
+  writeStack(s);
+}
+
+function popIfTopMatches(key: string) {
+  const s = readStack();
+  const top = s[s.length - 1];
+  if (top?.key === key) {
+    s.pop();
+    writeStack(s);
+  }
+}
+
+function buildRouteKey(pathname: string, searchParams: ReadonlyURLSearchParams | null) {
+  const q = searchParams?.toString();
+  return q ? `${pathname}?${q}` : pathname;
+}
+
+function renderBackLayer(backEl: HTMLElement, snap: SnapshotItem | null) {
+  if (!snap) {
+    backEl.innerHTML = "";
+    backEl.style.opacity = "0";
+    return;
+  }
+
+  // content + overlay (ไว้ทำ dim fade)
+  backEl.innerHTML = `
+    <div data-swipeback-backcontent style="position:absolute; inset:0; will-change: transform;">
+      ${snap.html}
+    </div>
+    <div data-swipeback-overlay style="position:absolute; inset:0;"></div>
+  `;
+  backEl.style.opacity = "0"; // ซ่อนไว้ก่อน เรียกตอนเริ่มปัดค่อยโชว์
 }
 
 export default function SwipeBack({
   disabled = false,
-
-  // ✅ -1 = ปัดได้ทั้งจอ (ตามที่ขอ)
   edgePx = -1,
 
   minDistancePx = 70,
@@ -35,9 +94,22 @@ export default function SwipeBack({
   animEasing = "cubic-bezier(0.2, 0.8, 0.2, 1)",
 
   targetId = "swipeback-root",
+  backId = "swipeback-back",
+  stageId = "swipeback-stage",
+
+  backParallaxRatio = 0.3,
+  backOverlayMaxOpacity = 0.12,
 }: SwipeBackProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const routeKey = useMemo(() => buildRouteKey(pathname, searchParams), [pathname, searchParams]);
+
+  const routeKeyRef = useRef(routeKey);
+  useEffect(() => {
+    routeKeyRef.current = routeKey;
+  }, [routeKey]);
 
   const stateRef = useRef({
     tracking: false,
@@ -48,18 +120,19 @@ export default function SwipeBack({
     startY: 0,
     lastX: 0,
     lastY: 0,
-
     startT: 0,
-
-    pendingBack: false,
 
     raf: 0 as number | 0,
     queuedX: 0,
 
-    // เก็บค่าเดิมไว้ restore
-    origTransform: "" as string,
-    origTransition: "" as string,
-    origWillChange: "" as string,
+    backSnap: null as SnapshotItem | null,
+
+    origFrontTransform: "",
+    origFrontTransition: "",
+    origFrontWillChange: "",
+
+    // คุม back layer
+    backScrollY: 0,
   });
 
   const opts = useMemo(
@@ -71,6 +144,10 @@ export default function SwipeBack({
       animDurationMs,
       animEasing,
       targetId,
+      backId,
+      stageId,
+      backParallaxRatio,
+      backOverlayMaxOpacity,
     }),
     [
       edgePx,
@@ -80,84 +157,202 @@ export default function SwipeBack({
       animDurationMs,
       animEasing,
       targetId,
+      backId,
+      stageId,
+      backParallaxRatio,
+      backOverlayMaxOpacity,
     ]
   );
 
-  // รีเซ็ตทุกครั้งที่ pathname เปลี่ยน (กันค้าง transform หลัง back)
+  // ✅ sync back layer ทุกครั้งที่ route เปลี่ยน
   useEffect(() => {
-    const s = stateRef.current;
-    const target = typeof window !== "undefined" ? getSwipeTarget(opts.targetId) : null;
-    if (!target) return;
+    const backEl = getElById(opts.backId);
+    if (!backEl) return;
 
-    target.style.transition = "none";
-    target.style.transform = "translate3d(0,0,0)";
-    target.style.willChange = "";
+    // ถ้ากลับมาหน้าเดิมที่ snapshot.top ตรงกัน => pop (ใช้กับ back/gesture)
+    popIfTopMatches(routeKey);
 
-    s.pendingBack = false;
-  }, [pathname, opts.targetId]);
+    const snap = peekStack();
+    renderBackLayer(backEl, snap);
+  }, [routeKey, opts.backId]);
+
+  // ✅ patch history.pushState เพื่อ capture snapshot ก่อน “ไปหน้าใหม่”
+  useEffect(() => {
+    const front = getElById(opts.targetId);
+    if (!front) return;
+
+    const stage = getElById(opts.stageId);
+    const backEl = getElById(opts.backId);
+    if (!stage || !backEl) return;
+
+    const origPush = history.pushState;
+    const origReplace = history.replaceState;
+
+    const tryCapture = (urlLike: any) => {
+      try {
+        const curKey = routeKeyRef.current;
+
+        if (!urlLike) return;
+        const url = typeof urlLike === "string" ? new URL(urlLike, location.href) : new URL(String(urlLike), location.href);
+        if (url.origin !== location.origin) return;
+
+        const nextKey = url.pathname + url.search;
+        if (nextKey === curKey) return;
+
+        // เก็บ snapshot ของ “หน้าปัจจุบัน” ไว้เป็น back ของหน้าถัดไป
+        const snap: SnapshotItem = {
+          key: curKey,
+          html: front.innerHTML,
+          scrollY: window.scrollY || 0,
+          ts: Date.now(),
+        };
+        pushStack(snap);
+
+        // preload back layer ให้พร้อม (optional)
+        renderBackLayer(backEl, peekStack());
+      } catch {
+        // ignore
+      }
+    };
+
+    history.pushState = function (state: any, title: string, url?: string | URL | null) {
+      tryCapture(url);
+      // @ts-ignore
+      return origPush.apply(this, arguments);
+    } as any;
+
+    history.replaceState = function (state: any, title: string, url?: string | URL | null) {
+      // โดยมาก replaceState คือปรับ url แบบ shallow ไม่อยาก push snapshot
+      // ถ้าอยากให้ replace ก็ capture ให้เปลี่ยนเป็น tryCapture(url)
+      // @ts-ignore
+      return origReplace.apply(this, arguments);
+    } as any;
+
+    return () => {
+      history.pushState = origPush;
+      history.replaceState = origReplace;
+    };
+  }, [opts.targetId, opts.backId, opts.stageId]);
 
   useEffect(() => {
     if (disabled) return;
 
     const s = stateRef.current;
-    const target = getSwipeTarget(opts.targetId);
+    const front = getElById(opts.targetId);
+    const backEl = getElById(opts.backId);
+    if (!front || !backEl) return;
 
-    // save original styles (ครั้งเดียวตอน mount)
-    s.origTransform = target.style.transform || "";
-    s.origTransition = target.style.transition || "";
-    s.origWillChange = target.style.willChange || "";
+    s.origFrontTransform = front.style.transform || "";
+    s.origFrontTransition = front.style.transition || "";
+    s.origFrontWillChange = front.style.willChange || "";
 
     const width = () => Math.max(1, window.innerWidth || 1);
 
-    const setTransformImmediate = (x: number) => {
-      const clamped = Math.max(0, Math.min(x, width()));
-      target.style.transition = "none";
-      target.style.transform = `translate3d(${clamped}px, 0, 0)`;
+    const getBackParts = () => {
+      const content = backEl.querySelector("[data-swipeback-backcontent]") as HTMLElement | null;
+      const overlay = backEl.querySelector("[data-swipeback-overlay]") as HTMLElement | null;
+      return { content, overlay };
     };
 
-    const animateTo = (x: number, onDone?: () => void) => {
-      const clamped = Math.max(0, Math.min(x, width()));
-      target.style.transition = `transform ${opts.animDurationMs}ms ${opts.animEasing}`;
-      target.style.transform = `translate3d(${clamped}px, 0, 0)`;
+    const showBackLayer = (snap: SnapshotItem) => {
+      s.backSnap = snap;
+      s.backScrollY = snap.scrollY || 0;
+
+      backEl.style.opacity = "1";
+      const { content, overlay } = getBackParts();
+      if (content) {
+        // เริ่มต้นให้หน้าเก่าอยู่ “เยื้องซ้าย” นิดๆ
+        const x = -width() * opts.backParallaxRatio;
+        content.style.transform = `translate3d(${x}px, ${-s.backScrollY}px, 0)`;
+      }
+      if (overlay) {
+        overlay.style.background = `rgba(0,0,0,${opts.backOverlayMaxOpacity})`;
+        overlay.style.opacity = "1";
+      }
+    };
+
+    const hideBackLayer = () => {
+      backEl.style.opacity = "0";
+      s.backSnap = null;
+    };
+
+    const setProgress = (dx: number) => {
+      const w = width();
+      const p = Math.max(0, Math.min(1, dx / w));
+
+      // front ตามนิ้ว
+      const clamped = Math.max(0, Math.min(dx, w));
+      front.style.transition = "none";
+      front.style.transform = `translate3d(${clamped}px, 0, 0)`;
+
+      // back ค่อยๆ เลื่อนเข้ามา + overlay fade out
+      const { content, overlay } = getBackParts();
+      if (content) {
+        const x = -w * opts.backParallaxRatio * (1 - p);
+        content.style.transform = `translate3d(${x}px, ${-s.backScrollY}px, 0)`;
+      }
+      if (overlay) {
+        overlay.style.opacity = String(1 - p);
+      }
+    };
+
+    const animateFrontTo = (x: number, onDone?: () => void) => {
+      const w = width();
+      const clamped = Math.max(0, Math.min(x, w));
+      front.style.transition = `transform ${opts.animDurationMs}ms ${opts.animEasing}`;
+      front.style.transform = `translate3d(${clamped}px, 0, 0)`;
 
       if (!onDone) return;
-
       let done = false;
       const finish = () => {
         if (done) return;
         done = true;
-        target.removeEventListener("transitionend", finish);
+        front.removeEventListener("transitionend", finish);
         onDone();
       };
-
-      target.addEventListener("transitionend", finish, { once: true });
-
-      // กันกรณี transitionend ไม่ยิง
+      front.addEventListener("transitionend", finish, { once: true });
       window.setTimeout(finish, opts.animDurationMs + 60);
     };
 
-    const resetToZero = () => {
-      animateTo(0, () => {
-        target.style.transition = "none";
-        target.style.willChange = "";
-      });
+    const animateBackToRest = (rest: boolean) => {
+      const w = width();
+      const { content, overlay } = getBackParts();
+      if (content) {
+        const x = rest ? -w * opts.backParallaxRatio : 0;
+        content.style.transition = `transform ${opts.animDurationMs}ms ${opts.animEasing}`;
+        content.style.transform = `translate3d(${x}px, ${-s.backScrollY}px, 0)`;
+        window.setTimeout(() => (content.style.transition = "none"), opts.animDurationMs + 10);
+      }
+      if (overlay) {
+        overlay.style.transition = `opacity ${opts.animDurationMs}ms ${opts.animEasing}`;
+        overlay.style.opacity = rest ? "1" : "0";
+        window.setTimeout(() => (overlay.style.transition = "none"), opts.animDurationMs + 10);
+      }
     };
 
-    const commitBack = () => {
-      s.pendingBack = true;
-      const outX = width();
-      animateTo(outX, () => {
-        // เรียก back หลังสไลด์ออก
-        router.back();
-      });
-    };
-
-    const queueTransform = (x: number) => {
-      s.queuedX = x;
+    const queueProgress = (dx: number) => {
+      s.queuedX = dx;
       if (s.raf) return;
       s.raf = window.requestAnimationFrame(() => {
         s.raf = 0;
-        setTransformImmediate(s.queuedX);
+        setProgress(s.queuedX);
+      });
+    };
+
+    const resetToZero = () => {
+      animateFrontTo(0, () => {
+        front.style.transition = "none";
+        front.style.willChange = "";
+        hideBackLayer();
+      });
+      animateBackToRest(true);
+    };
+
+    const commitBack = () => {
+      const outX = width();
+      animateBackToRest(false);
+      animateFrontTo(outX, () => {
+        router.back();
       });
     };
 
@@ -165,11 +360,14 @@ export default function SwipeBack({
       s.tracking = false;
       s.dragging = false;
       s.pointerId = -1;
-      if (s.raf) {
-        cancelAnimationFrame(s.raf);
-        s.raf = 0;
-      }
+      if (s.raf) cancelAnimationFrame(s.raf);
+      s.raf = 0;
       resetToZero();
+    };
+
+    const canSwipeBackNow = () => {
+      const snap = peekStack();
+      return !!snap;
     };
 
     const onPointerDown = (e: PointerEvent) => {
@@ -177,13 +375,18 @@ export default function SwipeBack({
       if (!e.isPrimary) return;
       if (e.pointerType === "mouse" && e.button !== 0) return;
 
-      // ถ้าต้องการ “เฉพาะขอบซ้าย” ให้ตั้ง edgePx เป็นตัวเลข >= 0
+      // ✅ ล็อค: ถ้าไม่มีหน้าให้ย้อน (ไม่มี snapshot) => ไม่ให้เริ่ม gesture
+      if (!canSwipeBackNow()) return;
+
+      // edge mode (ถ้าต้องการบังคับขอบซ้าย)
       if (opts.edgePx >= 0 && e.clientX > opts.edgePx) return;
 
       const targetEl = e.target as Element | null;
-
       if (isTextInput(targetEl)) return;
       if (targetEl?.closest?.("[data-no-swipeback]")) return;
+
+      const snap = peekStack();
+      if (!snap) return;
 
       s.tracking = true;
       s.dragging = false;
@@ -195,8 +398,11 @@ export default function SwipeBack({
       s.lastY = e.clientY;
       s.startT = performance.now();
 
-      target.style.willChange = "transform";
-      target.style.transition = "none";
+      front.style.willChange = "transform";
+      front.style.transition = "none";
+
+      // ✅ โชว์หน้าเก่าไว้ข้างหลังทันที
+      showBackLayer(snap);
     };
 
     const onPointerMove = (e: PointerEvent) => {
@@ -209,29 +415,22 @@ export default function SwipeBack({
       s.lastX = e.clientX;
       s.lastY = e.clientY;
 
-      // ถ้าเลื่อนแนวตั้งเยอะกว่าแนวนอน => ยกเลิก (กันชน scroll)
       if (Math.abs(dy) > opts.maxVerticalPx && Math.abs(dy) > Math.abs(dx)) {
         cancelTracking();
         return;
       }
-
-      // ถ้าปัดไปทางซ้ายแรงๆ ก็ยกเลิก
       if (dx < -10) {
         cancelTracking();
         return;
       }
 
-      // เริ่ม drag แนวนอนเมื่อ dx ชัดเจน
       if (!s.dragging) {
         if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) s.dragging = true;
         else return;
       }
 
-      // กันหน้าจอเลื่อนตอนลากกลับ
       e.preventDefault();
-
-      // ให้ตามนิ้ว (เฉพาะ dx บวก)
-      queueTransform(Math.max(0, dx));
+      queueProgress(Math.max(0, dx));
     };
 
     const onPointerUp = (e: PointerEvent) => {
@@ -244,13 +443,11 @@ export default function SwipeBack({
 
       s.tracking = false;
 
-      // ถ้าไม่ใช่ gesture แนวนอนจริงๆ ให้คืนสภาพ
       if (!s.dragging) {
         resetToZero();
         return;
       }
 
-      // เงื่อนไขย้อนกลับ
       if (dt <= opts.maxTimeMs && dx >= opts.minDistancePx && Math.abs(dy) <= opts.maxVerticalPx) {
         commitBack();
       } else {
@@ -267,7 +464,6 @@ export default function SwipeBack({
       cancelTracking();
     };
 
-    // ใช้ pointer events (ครอบคลุม touch + mouse)
     window.addEventListener("pointerdown", onPointerDown, { passive: true });
     window.addEventListener("pointermove", onPointerMove, { passive: false });
     window.addEventListener("pointerup", onPointerUp, { passive: true });
@@ -279,10 +475,9 @@ export default function SwipeBack({
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("pointercancel", onPointerCancel);
 
-      // restore styles
-      target.style.transform = s.origTransform;
-      target.style.transition = s.origTransition;
-      target.style.willChange = s.origWillChange;
+      front.style.transform = s.origFrontTransform;
+      front.style.transition = s.origFrontTransition;
+      front.style.willChange = s.origFrontWillChange;
 
       if (s.raf) cancelAnimationFrame(s.raf);
       s.raf = 0;
