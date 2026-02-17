@@ -14,26 +14,37 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
 
   return (
     <AuthProvider>
-      <SwipeBack disabled={open} />
+      {/* ปัดขวาเพื่อย้อนกลับ */}
+      <SwipeBack disabled={open} targetId="swipeback-root" backId="swipeback-back" />
 
       <Suspense fallback={null}>
         <QueryString />
       </Suspense>
 
-      {/* ✅ stage: มี back layer + front layer */}
-      <div id="swipeback-stage" className="relative min-h-dvh overflow-x-hidden overscroll-x-none bg-white">
-        {/* ✅ ต้องมีตัวนี้ เพื่อให้ SwipeBack ผูก gesture + แสดงหน้าเก่าตอนปัด */}
+      {/* stage */}
+      <div
+        id="swipeback-stage"
+        className="relative isolate min-h-dvh overflow-x-hidden overscroll-x-none bg-white"
+      >
+        {/* back preview layer (อยู่หลังสุด) */}
         <div
           id="swipeback-back"
           className="fixed inset-0 z-0 pointer-events-none opacity-0"
         />
 
-        {/* front layer */}
-        <div id="swipeback-root" className="relative z-10 min-h-dvh touch-pan-y">
+        {/* UI คงที่ (กดได้เสมอ) */}
+        <div className="relative z-20">
           <Navbar onOpenMenu={() => setOpen((i) => !i)} />
           <DrawerMenu open={open} onClose={() => setOpen(false)} />
+        </div>
 
+        {/* ✅ front content (เฉพาะเนื้อหน้า) */}
+        <main id="swipeback-root" className="relative z-10 min-h-[calc(100dvh)] touch-pan-y">
           {children}
+        </main>
+
+        {/* UI คงที่ด้านล่าง (กดได้เสมอ) */}
+        <div className="relative z-20">
           <Footer />
         </div>
       </div>

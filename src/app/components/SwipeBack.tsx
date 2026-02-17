@@ -1,11 +1,54 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import type { SwipeBackProps, SnapshotItem } from "@/app/types/swipeback";
 
-const STACK_KEY = "__swipeback_stack_v1__";
-const STACK_LIMIT = 8;
+const KEY = "__swipeback_stack__";
+const LIM = 8;
+
+const readStack = (): SnapshotItem[] => {
+  try {
+    const raw = sessionStorage.getItem(KEY);
+    const parsed = raw ? (JSON.parse(raw) as SnapshotItem[]) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeStack = (s: SnapshotItem[]) => {
+  try {
+    sessionStorage.setItem(KEY, JSON.stringify(s.slice(-LIM)));
+  } catch {
+    // ignore
+  }
+};
+
+const peekStack = (): SnapshotItem | null => {
+  const s = readStack();
+  return s.length ? s[s.length - 1] : null;
+};
+
+const pushStack = (it: SnapshotItem) => {
+  const s = readStack();
+  s.push(it);
+  writeStack(s);
+};
+
+const isInternalLink = (a: HTMLAnchorElement) => {
+  const href = a.getAttribute("href") || "";
+  if (!href || href.startsWith("#")) return false;
+
+  if (href.startsWith("http")) {
+    try {
+      return new URL(href).origin === location.origin;
+    } catch {
+      return false;
+    }
+  }
+  return true;
+};
 
 function isTextInput(el: Element | null) {
   if (!el) return false;
@@ -14,454 +57,226 @@ function isTextInput(el: Element | null) {
   return (el as HTMLElement).isContentEditable === true;
 }
 
-function byId(id?: string) {
-  return id ? (document.getElementById(id) as HTMLElement | null) : null;
-}
-
-function safeReadStack(): SnapshotItem[] {
-  try {
-    const raw = sessionStorage.getItem(STACK_KEY);
-    const arr = raw ? (JSON.parse(raw) as SnapshotItem[]) : [];
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
-}
-
-function safeWriteStack(stack: SnapshotItem[]) {
-  try {
-    sessionStorage.setItem(STACK_KEY, JSON.stringify(stack.slice(-STACK_LIMIT)));
-  } catch {}
-}
-
-function peekStack(): SnapshotItem | null {
-  const s = safeReadStack();
-  return s.length ? s[s.length - 1] : null;
-}
-
-function pushStack(item: SnapshotItem) {
-  const s = safeReadStack();
-  const top = s[s.length - 1];
-  if (top?.key === item.key) return;
-  s.push(item);
-  safeWriteStack(s);
-}
-
-function popIfTopMatches(key: string) {
-  const s = safeReadStack();
-  const top = s[s.length - 1];
-  if (top?.key === key) {
-    s.pop();
-    safeWriteStack(s);
-  }
-}
-
-function getRouteKey(pathname: string) {
-  const search = typeof window !== "undefined" ? window.location.search : "";
-  return `${pathname}${search || ""}`;
-}
-
-function viewportWidthStable() {
-  // ✅ นิ่งกว่า innerWidth ในมือถือ (address bar ยุบ/ขยาย)
-  const vv = typeof window !== "undefined" ? window.visualViewport : null;
-  const w =
-    vv?.width ??
-    document.documentElement?.clientWidth ??
-    window.innerWidth ??
-    1;
-  return Math.max(1, Math.round(w));
-}
-
-function ensureBackHTML(backEl: HTMLElement, snap: SnapshotItem | null, overlayMax: number) {
-  if (!snap) {
-    backEl.innerHTML = "";
-    backEl.style.opacity = "0";
-    return;
-  }
-
-  backEl.innerHTML = `
-    <div data-swipeback-backcontent style="position:absolute; inset:0; will-change: transform;">
-      ${snap.html}
-    </div>
-    <div data-swipeback-overlay style="position:absolute; inset:0; background: rgba(0,0,0,${overlayMax}); opacity: 1;"></div>
-  `;
-  backEl.style.opacity = "0";
-}
+type CanBackState = { idx?: number } | null;
 
 export default function SwipeBack({
   disabled = false,
-  edgePx = -1,
-
-  minDistancePx = 70,
-  maxVerticalPx = 35,
-  maxTimeMs = 500,
-
-  animDurationMs = 220,
-  animEasing = "cubic-bezier(0.2, 0.8, 0.2, 1)",
-
+  edgePx = 20, // เหมือน RN: gestureResponseDistance.horizontal
+  minDistancePx = 80,
   targetId = "swipeback-root",
   backId = "swipeback-back",
-
-  backParallaxRatio = 0.3,
-  backOverlayMaxOpacity = 0.12,
 }: SwipeBackProps) {
   const router = useRouter();
-  const pathname = usePathname();
 
-  const routeKey = useMemo(() => getRouteKey(pathname), [pathname]);
+  const st = useRef({
+    on: false,
+    drag: false,
+    id: -1,
 
-  const routeKeyRef = useRef(routeKey);
-  useEffect(() => {
-    routeKeyRef.current = routeKey;
-  }, [routeKey]);
+    sx: 0,
+    sy: 0,
+    lx: 0,
+    ly: 0,
 
-  const stateRef = useRef({
-    tracking: false,
-    dragging: false,
-    pointerId: -1,
-
-    startX: 0,
-    startY: 0,
-    lastX: 0,
-    lastY: 0,
-    startT: 0,
-
-    // ✅ width ล็อคตอนเริ่ม gesture
-    gestureW: 1,
-
-    // ✅ velocity
-    lastMoveT: 0,
-    lastMoveX: 0,
-    vX: 0, // px/ms
-
-    raf: 0 as number | 0,
-    queuedX: 0,
-
-    snap: null as SnapshotItem | null,
+    w: 1,
     snapScrollY: 0,
-
-    origTransform: "",
-    origTransition: "",
-    origWillChange: "",
   });
 
-  const opts = useMemo(
-    () => ({
-      edgePx,
-      minDistancePx,
-      maxVerticalPx,
-      maxTimeMs,
-      animDurationMs,
-      animEasing,
-      targetId,
-      backId,
-      backParallaxRatio,
-      backOverlayMaxOpacity,
-    }),
-    [
-      edgePx,
-      minDistancePx,
-      maxVerticalPx,
-      maxTimeMs,
-      animDurationMs,
-      animEasing,
-      targetId,
-      backId,
-      backParallaxRatio,
-      backOverlayMaxOpacity,
-    ]
-  );
-
-  // ✅ sync stack / back template เมื่อ route เปลี่ยน
   useEffect(() => {
-    const backEl = byId(opts.backId);
-    if (!backEl) return;
+    const front = document.getElementById(targetId) as HTMLElement | null;
+    const back = document.getElementById(backId) as HTMLElement | null;
+    if (!front || !back) return;
 
-    popIfTopMatches(routeKey);
-    ensureBackHTML(backEl, peekStack(), opts.backOverlayMaxOpacity);
-  }, [routeKey, opts.backId, opts.backOverlayMaxOpacity]);
-
-  // ✅ capture snapshot ก่อน pushState (ตามของคุณ)
-  useEffect(() => {
-    const front = byId(opts.targetId);
-    const backEl = byId(opts.backId);
-    if (!front || !backEl) return;
-
-    const origPush = history.pushState;
-
-    const tryCapture = (urlLike: any) => {
-      try {
-        if (!urlLike) return;
-
-        const curKey = routeKeyRef.current;
-        const url =
-          typeof urlLike === "string"
-            ? new URL(urlLike, location.href)
-            : new URL(String(urlLike), location.href);
-
-        if (url.origin !== location.origin) return;
-
-        const nextKey = `${url.pathname}${url.search}`;
-        if (nextKey === curKey) return;
-
-        pushStack({
-          key: curKey,
-          html: front.innerHTML,
-          scrollY: window.scrollY || 0,
-          ts: Date.now(),
-        });
-
-        ensureBackHTML(backEl, peekStack(), opts.backOverlayMaxOpacity);
-      } catch {}
+    const capture = () => {
+      pushStack({
+        html: front.innerHTML,
+        scrollY: window.scrollY || 0,
+        ts: Date.now(),
+      });
     };
 
-    history.pushState = function (state: any, title: string, url?: string | URL | null) {
-      tryCapture(url);
-      // @ts-ignore
-      return origPush.apply(this, arguments);
-    } as any;
+    // ✅ เก็บ snapshot ตอน “กำลังจะไปหน้าใหม่” (Typed 100%)
+    type PushState = History["pushState"];
+    const origPush: PushState = history.pushState;
 
-    return () => {
-      history.pushState = origPush;
+    history.pushState = function (
+      this: History,
+      state: any,
+      title: string,
+      url?: string | URL | null
+    ) {
+      capture();
+      return origPush.call(this, state, title, url);
     };
-  }, [opts.targetId, opts.backId, opts.backOverlayMaxOpacity]);
 
-  // ✅ HARD RESET ทุกครั้งที่ pathname เปลี่ยน (กันค้าง/หลุดขอบ)
-  useEffect(() => {
-    const s = stateRef.current;
-    const front = byId(opts.targetId);
-    const backEl = byId(opts.backId);
-    if (!front || !backEl) return;
+    // ✅ เผื่อ Next ใช้ <a> / Link -> capture ตอน click
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!a) return;
 
-    s.tracking = false;
-    s.dragging = false;
-    s.pointerId = -1;
+      if (a.target && a.target !== "_self") return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      if (!isInternalLink(a)) return;
 
-    if (s.raf) cancelAnimationFrame(s.raf);
-    s.raf = 0;
+      capture();
+    };
+    document.addEventListener("click", onClick, true);
 
-    front.style.transition = "none";
-    front.style.transform = "translate3d(0,0,0)";
-    front.style.willChange = "";
+    const canBack = () => {
+      const idx = (history.state as CanBackState)?.idx;
+      return (typeof idx === "number" ? idx > 0 : history.length > 1) || !!peekStack();
+    };
 
-    backEl.style.opacity = "0";
-    s.snap = null;
-  }, [pathname, opts.targetId, opts.backId]);
+    const showBack = () => {
+      const snap = peekStack();
+      if (!snap) return false;
 
-  useEffect(() => {
-    if (disabled) return;
+      st.current.snapScrollY = snap.scrollY;
 
-    const s = stateRef.current;
-    const front = byId(opts.targetId);
-    const backEl = byId(opts.backId);
-    if (!front || !backEl) return;
+      back.innerHTML = `
+        <div data-bc style="position:absolute; inset:0; will-change:transform;">
+          ${snap.html}
+        </div>
+        <div data-ov style="position:absolute; inset:0; background:rgba(0,0,0,.12)"></div>
+      `;
+      back.style.opacity = "1";
 
-    s.origTransform = front.style.transform || "";
-    s.origTransition = front.style.transition || "";
-    s.origWillChange = front.style.willChange || "";
-
-    const parts = () => ({
-      content: backEl.querySelector("[data-swipeback-backcontent]") as HTMLElement | null,
-      overlay: backEl.querySelector("[data-swipeback-overlay]") as HTMLElement | null,
-    });
-
-    const canSwipe = () => !!peekStack();
-
-    const showBack = (snap: SnapshotItem) => {
-      s.snap = snap;
-      s.snapScrollY = snap.scrollY || 0;
-
-      ensureBackHTML(backEl, snap, opts.backOverlayMaxOpacity);
-      backEl.style.opacity = "1";
-
-      const { content, overlay } = parts();
-      if (content) {
-        const x = -s.gestureW * opts.backParallaxRatio;
-        content.style.transform = `translate3d(${x}px, ${-s.snapScrollY}px, 0)`;
+      const bc = back.querySelector("[data-bc]") as HTMLElement | null;
+      if (bc) {
+        bc.style.transform = `translate3d(${-st.current.w * 0.3}px, ${-snap.scrollY}px, 0)`;
       }
-      if (overlay) overlay.style.opacity = "1";
+      return true;
     };
 
     const hideBack = () => {
-      backEl.style.opacity = "0";
-      s.snap = null;
+      back.style.opacity = "0";
+      back.innerHTML = "";
     };
 
-    const setProgress = (dx: number) => {
-      const w = s.gestureW;
-
-      // ✅ clamp แข็ง ไม่ให้หลุดขอบ
-      const clamped = Math.max(0, Math.min(dx, w));
-      const p = clamped / w;
+    const setX = (x: number) => {
+      const w = st.current.w;
+      const cx = Math.max(0, Math.min(x, w));
+      const p = cx / w;
 
       front.style.transition = "none";
-      front.style.transform = `translate3d(${clamped}px, 0, 0)`;
+      front.style.transform = `translate3d(${cx}px,0,0)`;
 
-      const { content, overlay } = parts();
-      if (content) {
-        const x = -w * opts.backParallaxRatio * (1 - p);
-        content.style.transform = `translate3d(${x}px, ${-s.snapScrollY}px, 0)`;
+      const bc = back.querySelector("[data-bc]") as HTMLElement | null;
+      const ov = back.querySelector("[data-ov]") as HTMLElement | null;
+
+      if (bc) {
+        const bx = -w * 0.3 * (1 - p);
+        bc.style.transform = `translate3d(${bx}px, ${-st.current.snapScrollY}px, 0)`;
       }
-      if (overlay) overlay.style.opacity = String(1 - p);
+      if (ov) ov.style.opacity = String(1 - p);
     };
 
-    const animateFrontTo = (x: number, onDone?: () => void) => {
-      const w = s.gestureW;
-      const clamped = Math.max(0, Math.min(x, w));
-      front.style.transition = `transform ${opts.animDurationMs}ms ${opts.animEasing}`;
-      front.style.transform = `translate3d(${clamped}px, 0, 0)`;
+    const anim = (to: number, done?: () => void) => {
+      const w = st.current.w;
+      const t = Math.max(0, Math.min(to, w));
 
-      if (!onDone) return;
-      let done = false;
+      front.style.transition = "transform 220ms cubic-bezier(.2,.8,.2,1)";
+      front.style.transform = `translate3d(${t}px,0,0)`;
+
+      if (!done) return;
+
+      let finished = false;
       const finish = () => {
-        if (done) return;
-        done = true;
-        front.removeEventListener("transitionend", finish);
-        onDone();
+        if (finished) return;
+        finished = true;
+        done();
       };
-      front.addEventListener("transitionend", finish, { once: true });
-      window.setTimeout(finish, opts.animDurationMs + 60);
+
+      const timer = window.setTimeout(finish, 260);
+      front.addEventListener(
+        "transitionend",
+        () => {
+          window.clearTimeout(timer);
+          finish();
+        },
+        { once: true }
+      );
     };
 
-    const resetToZero = () => {
-      animateFrontTo(0, () => {
+    const reset = () =>
+      anim(0, () => {
         front.style.transition = "none";
         front.style.willChange = "";
         hideBack();
       });
-    };
-
-    const commitBack = () => {
-      animateFrontTo(s.gestureW, () => router.back());
-    };
-
-    const queue = (dx: number) => {
-      s.queuedX = dx;
-      if (s.raf) return;
-      s.raf = requestAnimationFrame(() => {
-        s.raf = 0;
-        setProgress(s.queuedX);
-      });
-    };
-
-    const cancel = () => {
-      s.tracking = false;
-      s.dragging = false;
-      s.pointerId = -1;
-      if (s.raf) cancelAnimationFrame(s.raf);
-      s.raf = 0;
-      resetToZero();
-    };
 
     const onDown = (e: PointerEvent) => {
       if (disabled) return;
       if (!e.isPrimary) return;
       if (e.pointerType === "mouse" && e.button !== 0) return;
-
-      if (!canSwipe()) return;
-      if (opts.edgePx >= 0 && e.clientX > opts.edgePx) return;
+      if (!canBack()) return;
+      if (edgePx >= 0 && e.clientX > edgePx) return;
 
       const targetEl = e.target as Element | null;
       if (isTextInput(targetEl)) return;
       if (targetEl?.closest?.("[data-no-swipeback]")) return;
 
-      const snap = peekStack();
-      if (!snap) return;
+      st.current.on = true;
+      st.current.drag = false;
+      st.current.id = e.pointerId;
 
-      // ✅ ล็อค width ตอนเริ่ม gesture
-      s.gestureW = viewportWidthStable();
+      st.current.sx = st.current.lx = e.clientX;
+      st.current.sy = st.current.ly = e.clientY;
 
-      s.tracking = true;
-      s.dragging = false;
-      s.pointerId = e.pointerId;
-
-      s.startX = e.clientX;
-      s.startY = e.clientY;
-      s.lastX = e.clientX;
-      s.lastY = e.clientY;
-
-      s.startT = performance.now();
-      s.lastMoveT = s.startT;
-      s.lastMoveX = e.clientX;
-      s.vX = 0;
-
-      front.style.willChange = "transform";
-      front.style.transition = "none";
-      front.style.transform = "translate3d(0,0,0)";
-
-      showBack(snap);
+      const w = window.visualViewport?.width ?? window.innerWidth ?? 1;
+      st.current.w = Math.max(1, Math.round(w));
     };
 
     const onMove = (e: PointerEvent) => {
-      if (!s.tracking) return;
-      if (e.pointerId !== s.pointerId) return;
+      if (!st.current.on || e.pointerId !== st.current.id) return;
 
-      const now = performance.now();
+      const dx = e.clientX - st.current.sx;
+      const dy = e.clientY - st.current.sy;
+      st.current.lx = e.clientX;
+      st.current.ly = e.clientY;
 
-      const dx = e.clientX - s.startX;
-      const dy = e.clientY - s.startY;
-
-      // velocity
-      const dt = Math.max(1, now - s.lastMoveT);
-      s.vX = (e.clientX - s.lastMoveX) / dt;
-      s.lastMoveT = now;
-      s.lastMoveX = e.clientX;
-
-      s.lastX = e.clientX;
-      s.lastY = e.clientY;
-
-      if (Math.abs(dy) > opts.maxVerticalPx && Math.abs(dy) > Math.abs(dx)) {
-        cancel();
-        return;
-      }
-      if (dx < -10) {
-        cancel();
-        return;
-      }
-
-      // ✅ เริ่ม drag เมื่อชัดเจน + กัน accidental
-      if (!s.dragging) {
-        const SLOP = 10;
-        if (Math.abs(dx) > SLOP && Math.abs(dx) > Math.abs(dy) * 1.2) s.dragging = true;
-        else return;
+      if (!st.current.drag) {
+        if (dx > 14 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+          st.current.drag = true;
+          front.style.willChange = "transform";
+          if (!showBack()) {
+            st.current.on = false;
+            st.current.drag = false;
+            return;
+          }
+        } else return;
       }
 
       e.preventDefault();
-      queue(Math.max(0, dx));
+      setX(Math.max(0, dx));
     };
 
     const onUp = (e: PointerEvent) => {
-      if (!s.tracking) return;
-      if (e.pointerId !== s.pointerId) return;
+      if (!st.current.on || e.pointerId !== st.current.id) return;
 
-      const now = performance.now();
-      const totalT = now - s.startT;
+      st.current.on = false;
 
-      const dx = s.lastX - s.startX;
-      const dy = s.lastY - s.startY;
+      // ถ้าไม่ลากจริง => tap ปกติ
+      if (!st.current.drag) return;
 
-      s.tracking = false;
+      const dx = st.current.lx - st.current.sx;
 
-      if (!s.dragging) {
-        resetToZero();
-        return;
+      if (dx >= minDistancePx || dx >= st.current.w * 0.35) {
+        anim(st.current.w, () => router.back());
+      } else {
+        reset();
       }
 
-      // ✅ ตัดสินใจแบบแม่น: ระยะถึง หรือ velocity สูง (flick)
-      const okDistance = dx >= opts.minDistancePx && Math.abs(dy) <= opts.maxVerticalPx;
-      const okFlick = totalT <= opts.maxTimeMs && s.vX > 0.7 && dx > 20;
-
-      if (okDistance || okFlick) commitBack();
-      else resetToZero();
-
-      s.dragging = false;
-      s.pointerId = -1;
+      st.current.drag = false;
+      st.current.id = -1;
     };
 
     const onCancel = (e: PointerEvent) => {
-      if (!s.tracking) return;
-      if (e.pointerId !== s.pointerId) return;
-      cancel();
+      if (!st.current.on || e.pointerId !== st.current.id) return;
+      st.current.on = false;
+      st.current.drag = false;
+      st.current.id = -1;
+      reset();
     };
 
     window.addEventListener("pointerdown", onDown, { passive: true });
@@ -470,19 +285,20 @@ export default function SwipeBack({
     window.addEventListener("pointercancel", onCancel, { passive: true });
 
     return () => {
+      history.pushState = origPush;
+      document.removeEventListener("click", onClick, true);
+
       window.removeEventListener("pointerdown", onDown);
-      window.removeEventListener("pointermove", onMove as any);
+      window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onCancel);
 
-      front.style.transform = s.origTransform;
-      front.style.transition = s.origTransition;
-      front.style.willChange = s.origWillChange;
-
-      if (s.raf) cancelAnimationFrame(s.raf);
-      s.raf = 0;
+      front.style.transition = "none";
+      front.style.transform = "translate3d(0,0,0)";
+      front.style.willChange = "";
+      hideBack();
     };
-  }, [router, disabled, opts, pathname]);
+  }, [router, disabled, edgePx, minDistancePx, targetId, backId]);
 
   return null;
 }
