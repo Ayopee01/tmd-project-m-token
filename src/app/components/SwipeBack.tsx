@@ -57,16 +57,9 @@ function popIfTopMatches(key: string) {
 }
 
 function getRouteKey(pathname: string) {
+  // ✅ ไม่ใช้ useSearchParams -> ใช้ window.location.search (client เท่านั้น)
   const search = typeof window !== "undefined" ? window.location.search : "";
   return `${pathname}${search || ""}`;
-}
-
-function hasBrowserBack() {
-  // Next มักใส่ idx ใน history.state
-  const st: any = typeof window !== "undefined" ? window.history.state : null;
-  if (typeof st?.idx === "number") return st.idx > 0;
-  // fallback
-  return typeof window !== "undefined" ? window.history.length > 1 : false;
 }
 
 function ensureBackHTML(backEl: HTMLElement, snap: SnapshotItem | null, overlayMax: number) {
@@ -87,9 +80,7 @@ function ensureBackHTML(backEl: HTMLElement, snap: SnapshotItem | null, overlayM
 
 export default function SwipeBack({
   disabled = false,
-
-  // -1 = ปัดได้ทั้งจอ
-  edgePx = -1,
+  edgePx = -1, // -1 = ปัดได้ทั้งจอ
 
   minDistancePx = 70,
   maxVerticalPx = 35,
@@ -108,6 +99,7 @@ export default function SwipeBack({
   const pathname = usePathname();
 
   const routeKey = useMemo(() => getRouteKey(pathname), [pathname]);
+
   const routeKeyRef = useRef(routeKey);
   useEffect(() => {
     routeKeyRef.current = routeKey;
@@ -162,89 +154,65 @@ export default function SwipeBack({
     ]
   );
 
-  // ✅ sync stack/pop + render back template เมื่อ route เปลี่ยน
+  // ✅ อัปเดต back layer เมื่อ route เปลี่ยน (และ pop stack เมื่อกลับมาถึงหน้าเดิม)
   useEffect(() => {
     const backEl = byId(opts.backId);
     if (!backEl) return;
 
-    // ถ้าเพิ่ง back มาถึงหน้าเดิม -> pop snapshot
+    // ถ้า route ปัจจุบันตรงกับ snapshot.top => แปลว่าเพิ่ง back มา -> pop
     popIfTopMatches(routeKey);
 
     const top = peekStack();
     ensureBackHTML(backEl, top, opts.backOverlayMaxOpacity);
   }, [routeKey, opts.backId, opts.backOverlayMaxOpacity]);
 
-  // ✅ เติม snapshot stack: ดัก pushState + replaceState + click <a>
+  // ✅ ดัก pushState เพื่อ capture snapshot “หน้าปัจจุบัน” ก่อนจะไปหน้าใหม่
   useEffect(() => {
     const front = byId(opts.targetId);
     const backEl = byId(opts.backId);
     if (!front || !backEl) return;
 
-    const captureNow = () => {
-      const key = routeKeyRef.current;
-      const snap: SnapshotItem = {
-        key,
-        html: front.innerHTML,
-        scrollY: window.scrollY || 0,
-        ts: Date.now(),
-      };
-      pushStack(snap);
-      // เตรียม back layer ให้พร้อม
-      ensureBackHTML(backEl, peekStack(), opts.backOverlayMaxOpacity);
+    const origPush = history.pushState;
+
+    const tryCapture = (urlLike: any) => {
+      try {
+        if (!urlLike) return;
+
+        const curKey = routeKeyRef.current;
+
+        const url =
+          typeof urlLike === "string"
+            ? new URL(urlLike, location.href)
+            : new URL(String(urlLike), location.href);
+
+        if (url.origin !== location.origin) return;
+
+        const nextKey = `${url.pathname}${url.search}`;
+        if (nextKey === curKey) return;
+
+        const snap: SnapshotItem = {
+          key: curKey,
+          html: front.innerHTML,
+          scrollY: window.scrollY || 0,
+          ts: Date.now(),
+        };
+
+        pushStack(snap);
+        ensureBackHTML(backEl, peekStack(), opts.backOverlayMaxOpacity);
+      } catch {}
     };
 
-    const origPush = history.pushState;
-    const origReplace = history.replaceState;
-
     history.pushState = function (state: any, title: string, url?: string | URL | null) {
-      // เก็บ snapshot “ก่อน” เปลี่ยนหน้า
-      captureNow();
+      tryCapture(url);
       // @ts-ignore
       return origPush.apply(this, arguments);
     } as any;
 
-    history.replaceState = function (state: any, title: string, url?: string | URL | null) {
-      // บางกรณี Next ใช้ replaceState ตอนนำทาง/เปลี่ยนเส้นทาง
-      captureNow();
-      // @ts-ignore
-      return origReplace.apply(this, arguments);
-    } as any;
-
-    const onDocClickCapture = (e: MouseEvent) => {
-      const el = e.target as Element | null;
-      const a = el?.closest?.("a[href]") as HTMLAnchorElement | null;
-      if (!a) return;
-
-      // เปิดแท็บใหม่/ลิงก์ภายนอกไม่ต้อง capture
-      if (a.target && a.target !== "_self") return;
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-
-      const href = a.getAttribute("href") || "";
-      if (!href) return;
-      if (href.startsWith("#")) return;
-      if (href.startsWith("http")) {
-        try {
-          const u = new URL(href);
-          if (u.origin !== location.origin) return;
-        } catch {
-          return;
-        }
-      }
-
-      // คลิกนำทางในแอป -> capture
-      captureNow();
-    };
-
-    document.addEventListener("click", onDocClickCapture, true);
-
     return () => {
       history.pushState = origPush;
-      history.replaceState = origReplace;
-      document.removeEventListener("click", onDocClickCapture, true);
     };
   }, [opts.targetId, opts.backId, opts.backOverlayMaxOpacity]);
 
-  // ✅ gesture + preview
   useEffect(() => {
     if (disabled) return;
 
@@ -264,16 +232,15 @@ export default function SwipeBack({
       overlay: backEl.querySelector("[data-swipeback-overlay]") as HTMLElement | null,
     });
 
-    const canSwipe = () => {
-      // ✅ ปลดล็อคตาม back จริงของ browser หรือมี snapshot ก็ให้ปัดได้
-      return hasBrowserBack() || !!peekStack();
-    };
+    const canSwipe = () => !!peekStack(); // ✅ ล็อคถ้าไม่มี snapshot (ไม่มีหน้าในแอปให้ย้อน)
 
     const showBack = (snap: SnapshotItem) => {
       s.snap = snap;
       s.snapScrollY = snap.scrollY || 0;
 
+      // render เผื่อยังไม่ได้ render
       ensureBackHTML(backEl, snap, opts.backOverlayMaxOpacity);
+
       backEl.style.opacity = "1";
 
       const { content, overlay } = parts();
@@ -298,7 +265,7 @@ export default function SwipeBack({
       front.style.transition = "none";
       front.style.transform = `translate3d(${clamped}px, 0, 0)`;
 
-      // back (ถ้ามี snapshot)
+      // back ค่อยๆ เลื่อนเข้ามา + overlay fade
       const { content, overlay } = parts();
       if (content) {
         const x = -w * opts.backParallaxRatio * (1 - p);
@@ -335,14 +302,7 @@ export default function SwipeBack({
 
     const commitBack = () => {
       animateFrontTo(width(), () => {
-        // ถ้ามี back จริง -> back
-        if (hasBrowserBack()) router.back();
-        else {
-          // fallback: ถ้ามี snapshot แต่ history ไม่มี (เช่น reload) -> replace ไปหน้า snapshot
-          const snap = peekStack();
-          if (snap?.key) router.replace(snap.key);
-          else router.back();
-        }
+        router.back();
       });
     };
 
@@ -369,7 +329,7 @@ export default function SwipeBack({
       if (!e.isPrimary) return;
       if (e.pointerType === "mouse" && e.button !== 0) return;
 
-      // ✅ ล็อคเมื่อไม่มี back จริงๆ
+      // ✅ ล็อคเมื่อไม่มี back ภายในแอป
       if (!canSwipe()) return;
 
       if (opts.edgePx >= 0 && e.clientX > opts.edgePx) return;
@@ -377,6 +337,9 @@ export default function SwipeBack({
       const targetEl = e.target as Element | null;
       if (isTextInput(targetEl)) return;
       if (targetEl?.closest?.("[data-no-swipeback]")) return;
+
+      const snap = peekStack();
+      if (!snap) return;
 
       s.tracking = true;
       s.dragging = false;
@@ -391,9 +354,7 @@ export default function SwipeBack({
       front.style.willChange = "transform";
       front.style.transition = "none";
 
-      const snap = peekStack();
-      if (snap) showBack(snap); // ✅ มี snapshot ถึงจะโชว์หน้าเก่า
-      else backEl.style.opacity = "0";
+      showBack(snap);
     };
 
     const onMove = (e: PointerEvent) => {
