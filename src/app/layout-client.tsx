@@ -7,29 +7,28 @@ import DrawerMenu from "./components/DrawerMenu_Sticky";
 import Footer from "./components/Footer";
 import QueryString from "@/app/components/QueryString";
 import { AuthProvider } from "@/app/hooks/auth-hook";
-import CzpBackButtonGate from "@/app/components/CzpBackButtonGate";
 import SwipeBack from "@/app/components/SwipeBack";
 
 export default function RootLayoutClient({ children }: { children: React.ReactNode }) {
-    const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
-    return (
-        <AuthProvider>
-            {/* ปุ่ม Back ของ CZP */}
-            <CzpBackButtonGate visible={true} />
+  return (
+    <AuthProvider>
+      <SwipeBack disabled={open} />
 
-            {/* ปัดขวาเพื่อย้อนกลับ */}
-            <SwipeBack disabled={open} />
+      <Suspense fallback={null}>
+        <QueryString />
+      </Suspense>
+      <div
+        id="swipeback-root"
+        className="min-h-dvh overflow-x-hidden touch-pan-y"
+      >
+        <Navbar onOpenMenu={() => setOpen((i) => !i)} />
+        <DrawerMenu open={open} onClose={() => setOpen(false)} />
 
-            <Suspense fallback={null}>
-                <QueryString />
-            </Suspense>
-
-            <Navbar onOpenMenu={() => setOpen((i) => !i)} />
-            <DrawerMenu open={open} onClose={() => setOpen(false)} />
-
-            {children}
-            <Footer />
-        </AuthProvider>
-    );
+        {children}
+        <Footer />
+      </div>
+    </AuthProvider>
+  );
 }
