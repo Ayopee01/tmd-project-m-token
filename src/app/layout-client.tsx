@@ -21,7 +21,7 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
       </Suspense>
 
       {/* ✅ stage: มี back layer + front layer */}
-      <div id="swipeback-stage" className="relative min-h-dvh overflow-x-hidden bg-white">
+      <div id="swipeback-stage" className="relative min-h-dvh overflow-x-hidden overscroll-x-none bg-white">
         {/* ✅ ต้องมีตัวนี้ เพื่อให้ SwipeBack ผูก gesture + แสดงหน้าเก่าตอนปัด */}
         <div
           id="swipeback-back"
