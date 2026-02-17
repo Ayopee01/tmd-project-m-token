@@ -14,32 +14,20 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
 
   return (
     <AuthProvider>
-      {/* ปัดขวาเพื่อย้อนกลับ */}
       <SwipeBack disabled={open} />
 
       <Suspense fallback={null}>
         <QueryString />
       </Suspense>
+      <div
+        id="swipeback-root"
+        className="min-h-dvh overflow-x-hidden touch-pan-y"
+      >
+        <Navbar onOpenMenu={() => setOpen((i) => !i)} />
+        <DrawerMenu open={open} onClose={() => setOpen(false)} />
 
-      {/* ✅ stage: มี back layer + front layer */}
-      <div id="swipeback-stage" className="relative min-h-dvh overflow-x-hidden bg-white">
-        {/* ชั้นหลังไว้โชว์หน้าเก่าตอนปัด */}
-        <div
-          id="swipeback-back"
-          className="fixed inset-0 z-0 pointer-events-none opacity-0"
-        />
-
-        {/* ชั้นหน้า (หน้า current) ที่เราจะ translate ตอนปัด */}
-        <div
-          id="swipeback-root"
-          className="relative z-10 min-h-dvh touch-pan-y"
-        >
-          <Navbar onOpenMenu={() => setOpen((i) => !i)} />
-          <DrawerMenu open={open} onClose={() => setOpen(false)} />
-
-          {children}
-          <Footer />
-        </div>
+        {children}
+        <Footer />
       </div>
     </AuthProvider>
   );
