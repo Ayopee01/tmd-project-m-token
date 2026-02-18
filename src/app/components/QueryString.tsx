@@ -11,26 +11,28 @@ function QueryString() {
   const { setUser } = useAuth();
   // เก็บสถานะการทำงาน โดยใช้ useRef ไม่ทำให้ re-render หากทำเสร็จแล้วจะตั้งเป็น false
   const inFlightRef = useRef(false);
+  const backBtnSetRef = useRef(false); // กันรันซ้ำ (Dev strict mode)
 
-  // ตั้ง Title + ปุ่ม Back (รอ czpSdk โหลด)
+  // ✅ เปิดปุ่ม Back “เสมอ”
   useEffect(() => {
+    if (backBtnSetRef.current) return;
+    backBtnSetRef.current = true;
+
     let timer: number | undefined;
 
-    const trySetTitle = () => {
+    const apply = () => {
       if (typeof window === "undefined") return false;
-      if (window.czpSdk?.setTitle) {
-        window.czpSdk.setTitle("Test", true); // true = แสดงปุ่ม Back
+      if (window.czpSdk?.setBackButtonVisible) {
+        window.czpSdk.setBackButtonVisible(true);
         return true;
       }
       return false;
     };
 
-    if (trySetTitle()) return;
+    if (apply()) return;
 
     timer = window.setInterval(() => {
-      if (trySetTitle()) {
-        window.clearInterval(timer);
-      }
+      if (apply() && timer) window.clearInterval(timer);
     }, 200);
 
     return () => {
