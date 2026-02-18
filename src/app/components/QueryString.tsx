@@ -13,31 +13,12 @@ function QueryString() {
   const inFlightRef = useRef(false);
   const backBtnSetRef = useRef(false); // กันรันซ้ำ (Dev strict mode)
 
-  // ✅ เปิดปุ่ม Back “เสมอ”
+  // เปิดปุ่ม Back “True”
   useEffect(() => {
     if (backBtnSetRef.current) return;
     backBtnSetRef.current = true;
 
-    let timer: number | undefined;
-
-    const apply = () => {
-      if (typeof window === "undefined") return false;
-      if (window.czpSdk?.setBackButtonVisible) {
-        window.czpSdk.setBackButtonVisible(true);
-        return true;
-      }
-      return false;
-    };
-
-    if (apply()) return;
-
-    timer = window.setInterval(() => {
-      if (apply() && timer) window.clearInterval(timer);
-    }, 200);
-
-    return () => {
-      if (timer) window.clearInterval(timer);
-    };
+    window.czpSdk?.setBackButtonVisible?.(true);
   }, []);
 
   // รับค่า appId, mToken จาก URL Params (Query String)

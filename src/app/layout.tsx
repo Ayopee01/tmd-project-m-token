@@ -22,7 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="th">
       <body className={`${inter.variable} ${notoThai.variable} antialiased`}>
         <Script
-          src="https://czp.dga.or.th/cportal/sdk/iu/v3/sdk.js"
+          src="https://czp.dga.or.th/cportal/sdk/iu/v4/sdk.js"
           strategy="afterInteractive"
         />
         <LayoutClient>{children}</LayoutClient>
