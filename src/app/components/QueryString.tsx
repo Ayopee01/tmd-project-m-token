@@ -1,23 +1,26 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useAuth } from "@/app/hooks/auth-hook";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_API_ROUTE ?? "";
 
 function QueryString() {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+
   const { setUser } = useAuth();
   // เก็บสถานะการทำงาน โดยใช้ useRef ไม่ทำให้ re-render หากทำเสร็จแล้วจะตั้งเป็น false
   const inFlightRef = useRef(false);
   const backBtnSetRef = useRef(false);
 
+
   // เปิดปุ่ม Back “True”
   useEffect(() => {
     if (backBtnSetRef.current) return;
     backBtnSetRef.current = true;
-
     window.czpSdk?.setBackButtonVisible?.(true);
   }, []);
 
@@ -26,8 +29,11 @@ function QueryString() {
     const appId = searchParams.get("appId");
     const mToken = searchParams.get("mToken");
 
-    // ถ้าไม่มีค่าใดค่าหนึ่งจะหยุดทำงาน (รอ useEffect มีการเปลี่ยนแปลง)
-    if (!appId || !mToken) return;
+    // ❌ ไม่มีค่า -> ไป 404 default
+    if (!appId || !mToken) {
+      if (pathname !== "/__404__") router.replace("/__404__");
+      return;
+    }
 
     // สร้าง key สำหรับเก็บสถานะการ login ใน sessionStorage กันยิงซ้ำ
     const loginKey = `dga_login_done:${appId}|${mToken}`;
@@ -59,6 +65,7 @@ function QueryString() {
           // ลบสถานะการ login ออก ในกรณีที่ไม่สำเร็จ
           sessionStorage.removeItem(loginKey);
           console.error("Login Error:", data?.error || data?.message || res.status);
+          if (pathname !== "/__404__") router.replace("/__404__");// ถ้าจะให้ fail แล้ว 404
           return;
         }
 
@@ -105,6 +112,7 @@ function QueryString() {
         console.error("Network Error:", err);
         // ทำการ Remove ค่า 'done' ใน loginKey ออก
         sessionStorage.removeItem(loginKey);
+        if (pathname !== "/__404__") router.replace("/__404__");
       } finally {
         // ทำการตั้งสถานะการทำงานเป็น false (ปลดล็อกให้ทำงานครั้งถัดไปได้)
         inFlightRef.current = false;
@@ -113,7 +121,7 @@ function QueryString() {
 
     // เรียก Function handleLogin ส่งค่า appId, mToken และสถานะ loginKey
     void handleLogin(appId, mToken, loginKey);
-  }, [searchParams, setUser]);
+  }, [searchParams, setUser, router, pathname]);
 
   return null;
 }

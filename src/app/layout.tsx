@@ -23,9 +23,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.variable} ${notoThai.variable} antialiased`}>
         <Script
           src="https://czp.dga.or.th/cportal/sdk/iu/v4/sdk.js"
-          strategy="afterInteractive"
-        />
-        <LayoutClient>{children}</LayoutClient>
+          strategy="afterInteractive">
+        </Script>
+        <LayoutClient>
+          {children}
+        </LayoutClient>
       </body>
     </html>
   );
