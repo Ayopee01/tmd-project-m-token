@@ -28,10 +28,10 @@ function QueryString() {
   useEffect(() => {
     const appId = searchParams.get("appId");
     const mToken = searchParams.get("mToken");
-    // const alreadyOk = sessionStorage.getItem(OK_KEY) === "1";
+    const alreadyOk = sessionStorage.getItem(OK_KEY) === "1";
 
     // // ✅ ถ้าเคยผ่านแล้ว (login สำเร็จครั้งแรกแล้ว) ไม่ต้องเช็ค query อีก
-    // if (alreadyOk) return;
+    if (alreadyOk) return;
 
     // ❌ ไม่มีค่า -> ไป 404 default
     if (!appId || !mToken) {
