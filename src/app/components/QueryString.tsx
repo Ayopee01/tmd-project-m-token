@@ -28,17 +28,16 @@ function QueryString() {
   useEffect(() => {
     const appId = searchParams.get("appId");
     const mToken = searchParams.get("mToken");
-    const alreadyOk = typeof window !== "undefined" && sessionStorage.getItem(OK_KEY) === "1";
+    // const alreadyOk = sessionStorage.getItem(OK_KEY) === "1";
 
-    // ✅ ถ้าเคยผ่านแล้ว (login สำเร็จครั้งแรกแล้ว) ไม่ต้องเช็ค query อีก
-    if (alreadyOk) return;
+    // // ✅ ถ้าเคยผ่านแล้ว (login สำเร็จครั้งแรกแล้ว) ไม่ต้องเช็ค query อีก
+    // if (alreadyOk) return;
 
     // ❌ ไม่มีค่า -> ไป 404 default
     if (!appId || !mToken) {
       if (pathname !== "/__404__") router.replace("/__404__");
       return;
     }
-
 
     // สร้าง key สำหรับเก็บสถานะการ login ใน sessionStorage กันยิงซ้ำ
     const loginKey = `dga_login_done:${appId}|${mToken}`;
@@ -76,7 +75,7 @@ function QueryString() {
 
         // Login สำเร็จ -> เก็บ user ไว้ global
         setUser(data.user ?? null);
-        sessionStorage.setItem(OK_KEY, "1");
+        // sessionStorage.setItem(OK_KEY, "1");
 
         // หา userId จาก data.user ใช้ในการ notification
         const userId = data.user?.userId;
