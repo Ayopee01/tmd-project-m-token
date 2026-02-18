@@ -43,8 +43,8 @@ function DrawerMenu({ open, onClose }: Props) {
     const { user, loading } = useAuth();
 
     const fullName = useMemo(
-        () => [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim(),
-        [user?.firstName, user?.lastName]
+        () => [user?.firstName, user?.lastName , user?.userId].filter(Boolean).join(" ").trim(),
+        [user?.firstName, user?.lastName , user?.userId]
         // , user?.lastName
     );
 
