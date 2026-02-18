@@ -9,9 +9,34 @@ const BASE_PATH = process.env.NEXT_PUBLIC_API_ROUTE ?? "";
 function QueryString() {
   const searchParams = useSearchParams();
   const { setUser } = useAuth();
-
   // เก็บสถานะการทำงาน โดยใช้ useRef ไม่ทำให้ re-render หากทำเสร็จแล้วจะตั้งเป็น false
   const inFlightRef = useRef(false);
+
+  // ตั้ง Title + ปุ่ม Back (รอ czpSdk โหลด)
+  useEffect(() => {
+    let timer: number | undefined;
+
+    const trySetTitle = () => {
+      if (typeof window === "undefined") return false;
+      if (window.czpSdk?.setTitle) {
+        window.czpSdk.setTitle("Test", true); // true = แสดงปุ่ม Back
+        return true;
+      }
+      return false;
+    };
+
+    if (trySetTitle()) return;
+
+    timer = window.setInterval(() => {
+      if (trySetTitle()) {
+        window.clearInterval(timer);
+      }
+    }, 200);
+
+    return () => {
+      if (timer) window.clearInterval(timer);
+    };
+  }, []);
 
   // รับค่า appId, mToken จาก URL Params (Query String)
   useEffect(() => {
