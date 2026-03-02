@@ -17,6 +17,7 @@ import {
   FiWind,
   FiSearch,
   FiX,
+  FiThermometer,
 } from "react-icons/fi";
 
 import type { IconType } from "react-icons";
@@ -249,7 +250,7 @@ function DashboardPage() {
     loadProvince(saved || undefined);
 
     (async () => {
-      const gpsProvince = await fetchGPSProvince(() => {});
+      const gpsProvince = await fetchGPSProvince(() => { });
       if (cancelled) return;
       if (!gpsProvince) return;
 
@@ -329,15 +330,14 @@ function DashboardPage() {
   }, [awsItem?.dateTimeUtc7]);
 
   return (
-    <main
-      className="flex justify-center px-5 py-10 text-slate-900
-      bg-gradient-to-br from-sky-200 via-white to-fuchsia-200"
+    <main className="flex justify-center px-5 py-10 text-slate-900 
+    bg-gradient-to-br from-sky-200 via-white to-fuchsia-200"
     >
-      <section>
+      <section className="w-full">
         {/* Province select */}
-        <header className="w-full">
+        <header className="w-full max-w-sm mx-auto">
           <label className="sr-only">เลือกจังหวัด</label>
-          <div ref={provinceWrapRef} className="relative w-full">
+          <div ref={provinceWrapRef} className="relative">
             <button
               type="button"
               onClick={() => {
@@ -346,15 +346,11 @@ function DashboardPage() {
               }}
               disabled={loading || provinceOptions.length === 0}
               aria-expanded={provinceOpen}
-              className={[
-                "h-11 w-full cursor-pointer rounded-full px-4 pr-4 text-sm outline-none",
-                "relative flex items-center",
-                "border border-slate-900/10 bg-white text-slate-800 shadow-sm",
-                "focus:ring-2 focus:ring-emerald-600",
-                "disabled:cursor-not-allowed disabled:opacity-60",
-              ].join(" ")}
+              className="flex items-center w-full sm:w-80 h-11 px-4 text-sm
+              bg-white rounded-full border border-slate-900/10 shadow-sm text-slate-800 focus:ring-2 focus:ring-emerald-600 
+              outline-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 "
             >
-              <span className="pointer-events-none absolute inset-x-12 truncate text-center">
+              <span className="pointer-events-none w-20 truncate text-center">
                 {selectedProvinceLabel}
               </span>
 
@@ -441,8 +437,8 @@ function DashboardPage() {
           </div>
         </header>
 
-        {/* Loading */}
-        <section className="mt-8 flex flex-1 flex-col items-center justify-start text-center">
+        {/* UI Loading */}
+        <section className="mt-4 flex flex-1 flex-col items-center justify-start text-center">
           {loading ? (
             <div className="w-full max-w-xl rounded-3xl border border-slate-900/10 bg-white p-6 text-slate-800 shadow-sm">
               <div className="animate-pulse space-y-4">
@@ -463,104 +459,98 @@ function DashboardPage() {
             </div>
           ) : (
             <>
-              {/* provinceName */}
-              <div className="mt-4 text-xl font-semibold leading-none text-gray-700 sm:text-2xl">
-                {provinceData.provinceNameThai}
-              </div>
 
-              {/* WeatherIcon */}
-              <div className="mt-5 flex items-center justify-center gap-4 ">
-                <span className="truncate text-sm sm:text-base text-gray-700">
-                  {shortCondition(selectedDay?.descriptionThai)}
-                </span>
-                <WeatherIcon className="h-7 w-7 sm:h-9 sm:w-9 text-slate-700" />
-                {isTodaySelected ? (
-                  <span className="ml-1 rounded-full bg-slate-900/5 px-2 py-0.5 text-sm text-gray-700">
-                    วันนี้
-                  </span>
-                ) : null}
-              </div>
-
-              {/* วันที่จาก forecastDate */}
-              {selectedDateFullBE ? (
-                <div className="mt-2 text-sm text-slate-600">
-                  วันที่ {selectedDateFullBE}
-                </div>
-              ) : null}
-
-              {/* ✅ AWS CARD */}
-              <div className="mt-4 w-full max-w-xl rounded-3xl border border-slate-900/10 bg-white/85 p-4 text-left shadow-sm backdrop-blur">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold text-slate-800">
-                      ข้อมูลสถานีอัตโนมัติ (AWS)
-                    </div>
-                    {awsItem?.stationNameTh ? (
-                      <div className="mt-0.5 text-[11px] text-slate-500">
-                        {awsItem.stationNameTh}
+              <section className="flex gap-4">
+                {/* AWS CARD */}
+                <div className="mt-4 w-full max-w-xl rounded-3xl border border-slate-900/10 bg-white/85 p-4 text-left shadow-sm backdrop-blur">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-800">
+                        สภาพอากาศปัจจุบัน (AWS)
                       </div>
+                      {awsItem?.stationNameTh ? (
+                        <div className="mt-0.5 text-[11px] text-slate-500">
+                          {awsItem.stationNameTh}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="text-right text-[11px] text-slate-600">
+                      {awsLoading ? "กำลังโหลด..." : awsUpdatedText || "-"}
+                    </div>
+                  </div>
+
+                  {awsError ? (
+                    <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                      โหลด AWS ไม่สำเร็จ: {awsError}
+                    </div>
+                  ) : (
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <MetricCard
+                        label="อุณหภูมิ"
+                        value={
+                          awsItem?.temperature != null
+                            ? `${awsItem.temperature} °C`
+                            : "-"
+                        }
+                      />
+                      <MetricCard
+                        label="ความเร็วลม (จาก AWS)"
+                        value={
+                          awsItem?.windSpeed != null
+                            ? `${awsItem.windSpeed} m/s`
+                            : "-"
+                        }
+                      />
+                      <MetricCard
+                        label="ฝน 15 นาที"
+                        value={
+                          awsItem?.precip15Mins != null
+                            ? `${awsItem.precip15Mins} มม.`
+                            : "-"
+                        }
+                      />
+                      <MetricCard
+                        label="ฝนสะสมวันนี้"
+                        value={
+                          awsItem?.precipToday != null
+                            ? `${awsItem.precipToday} มม. (ตั้งแต่ 07:00 น.)`
+                            : `- (ตั้งแต่ 07:00 น.)`
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Weather 7 day */}
+                <section className="mt-8 w-full max-w-xl rounded-3xl border border-slate-900/10 bg-white p-6 text-slate-800 shadow-sm">
+                  {/* WeatherIcon */}
+                  <div className="flex items-center justify-center gap-4 ">
+                    <span className="truncate text-sm sm:text-base text-gray-700">
+                      {shortCondition(selectedDay?.descriptionThai)}
+                    </span>
+                    <WeatherIcon className="h-7 w-7 sm:h-9 sm:w-9 text-slate-700" />
+                    {isTodaySelected ? (
+                      <span className="ml-1 rounded-full bg-slate-900/5 px-2 py-0.5 text-sm text-gray-700">
+                        วันนี้
+                      </span>
                     ) : null}
                   </div>
 
-                  <div className="text-right text-[11px] text-slate-600">
-                    {awsLoading ? "กำลังโหลด..." : awsUpdatedText || "-"}
-                  </div>
-                </div>
-
-                {awsError ? (
-                  <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                    โหลด AWS ไม่สำเร็จ: {awsError}
-                  </div>
-                ) : (
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    <MetricCard
-                      label="อุณหภูมิ"
-                      value={
-                        awsItem?.temperature != null
-                          ? `${awsItem.temperature} °C`
-                          : "-"
-                      }
-                    />
-                    <MetricCard
-                      label="ความเร็วลม (จาก AWS)"
-                      value={
-                        awsItem?.windSpeed != null
-                          ? `${awsItem.windSpeed} m/s`
-                          : "-"
-                      }
-                    />
-                    <MetricCard
-                      label="ฝน 15 นาที"
-                      value={
-                        awsItem?.precip15Mins != null
-                          ? `${awsItem.precip15Mins} มม.`
-                          : "-"
-                      }
-                    />
-                    <MetricCard
-                      label="ฝนสะสมวันนี้"
-                      value={
-                        awsItem?.precipToday != null
-                          ? `${awsItem.precipToday} มม. (ตั้งแต่ 07:00 น.)`
-                          : `- (ตั้งแต่ 07:00 น.)`
-                      }
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Temp */}
-              <section className="mt-8">
-                <div className="flex items-center justify-center gap-3">
-                  <div className="flex flex-col items-center leading-none">
-                    <div className="text-6xl sm:text-7xl font-light tracking-tight text-gray-700">
-                      {selectedDay?.maxTempC ?? "-"}°
+                  {/* Temp */}
+                  <section className="mt-8">
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="flex flex-col items-center leading-none">
+                        <div className="text-6xl sm:text-7xl font-light tracking-tight text-gray-700">
+                          {selectedDay?.maxTempC ?? "-"}°
+                        </div>
+                        <div className="text-6xl sm:text-7xl font-light tracking-tight text-gray-600">
+                          {selectedDay?.minTempC ?? "-"}°
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-6xl sm:text-7xl font-light tracking-tight text-gray-600">
-                      {selectedDay?.minTempC ?? "-"}°
-                    </div>
-                  </div>
-                </div>
+                  </section>
+                </section>
               </section>
 
               {/* Metrics row */}

@@ -7,7 +7,7 @@ import DrawerMenu from "./components/DrawerMenu_Sticky";
 import Footer from "./components/Footer";
 import QueryString from "@/app/components/QueryString";
 import { AuthProvider } from "@/app/hooks/auth-hook";
-import SwipeBack from "@/app/components/SwipeBack";
+// import SwipeBack from "@/app/components/SwipeBack";
 
 export default function RootLayoutClient({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -15,7 +15,7 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
   return (
     <AuthProvider>
       {/* ปัดขวาเพื่อย้อนกลับ */}
-      <SwipeBack disabled={open} />
+      {/* <SwipeBack disabled={open} /> */}
 
       <Suspense fallback={null}>
         <QueryString />
