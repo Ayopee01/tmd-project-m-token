@@ -348,7 +348,7 @@ function DashboardPage() {
               }}
               disabled={loading || provinceOptions.length === 0}
               aria-expanded={provinceOpen}
-              className="flex items-center w-full sm:w-80 h-11 px-4 text-sm
+              className="flex items-center w-full h-11 px-4 text-sm
               bg-white rounded-full border border-slate-900/10 shadow-sm text-slate-800
               focus:ring-2 focus:ring-emerald-600 outline-none cursor-pointer
               disabled:cursor-not-allowed disabled:opacity-60"
