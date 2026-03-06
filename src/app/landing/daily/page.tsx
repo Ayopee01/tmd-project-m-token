@@ -105,10 +105,8 @@ function DailyPage() {
   }, [items, selectedKey]);
 
   const selectedLabel = useMemo(() => {
-    const it = items.find((x) => x.contentdate === selectedKey);
-    if (!it) return "";
-    const d = parseContentDate(it.contentdate);
-    return d ? `${thaiDate(d)} ${thaiTime(d)} น.` : it.contentdate;
+    const selected = items.find((x) => x.contentdate === selectedKey);
+    return selected?.title ?? "";
   }, [items, selectedKey]);
 
   useEffect(() => {
@@ -361,7 +359,7 @@ function DailyPage() {
                               active ? "bg-emerald-600 text-white" : "text-gray-800 hover:bg-gray-50",
                             ].join(" ")}
                           >
-                            {label}
+                            {it.title}
                           </button>
                         );
                       })}

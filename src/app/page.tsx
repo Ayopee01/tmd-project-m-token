@@ -17,7 +17,6 @@ import {
   FiWind,
   FiSearch,
   FiX,
-  FiThermometer,
 } from "react-icons/fi";
 
 import type { IconType } from "react-icons";
