@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 
-export const revalidate = 300;
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 const AWS_BY_PROVINCE_URL =
   "https://tmd.go.th/api/weather/get-aws-weather-by-province";
+
+const NO_STORE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, max-age=0, must-revalidate",
+  Pragma: "no-cache",
+  Expires: "0",
+};
 
 export type AwsWeatherItem = {
   provinceId: number;
@@ -29,12 +36,18 @@ export type AwsWeatherItem = {
   weatherType: string | null;
   tempType: string | null;
   waveType: string | null;
-  dateTimeUtc7: string; // "2026-02-17T17:27:00.000+0700"
+  dateTimeUtc7: string;
 };
 
 export type AwsApiResponse = {
   success: boolean;
   data: AwsWeatherItem[];
+  message: string;
+};
+
+type AwsErrorResponse = {
+  success: false;
+  data: [];
   message: string;
 };
 
@@ -124,32 +137,39 @@ const PROVINCE_81 = [
 
 type Province81 = (typeof PROVINCE_81)[number];
 
+const PROVINCE_SET = new Set<string>(PROVINCE_81);
+
 function isProvince81(x: string): x is Province81 {
-  return (PROVINCE_81 as readonly string[]).includes(x);
+  return PROVINCE_SET.has(x);
 }
 
-async function fetchAwsOne(province: string): Promise<AwsApiResponse> {
+async function fetchAwsOne(province: Province81): Promise<AwsApiResponse> {
   const url = `${AWS_BY_PROVINCE_URL}?province=${encodeURIComponent(province)}`;
+
   const res = await fetch(url, {
     headers: { Accept: "application/json" },
-    next: { revalidate: 300 },
+    cache: "no-store",
   });
 
   if (!res.ok) {
     throw new Error(`Upstream error: ${res.status}`);
   }
+
   return (await res.json()) as AwsApiResponse;
 }
 
-// ดึงครบทั้ง 81 (กันยิงพร้อมกัน 81 ยิงทีเดียว ด้วย worker pool)
-async function fetchAwsAll(limit = 8) {
+async function fetchAwsAll(
+  limit = 8
+): Promise<Record<string, AwsApiResponse | AwsErrorResponse>> {
   const names = [...PROVINCE_81];
-  const out: Record<string, AwsApiResponse | { success: false; data: []; message: string }> = {};
+  const out: Record<string, AwsApiResponse | AwsErrorResponse> = {};
+
   let idx = 0;
 
   const worker = async () => {
     while (idx < names.length) {
-      const name = names[idx++];
+      const name = names[idx++]!;
+
       try {
         out[name] = await fetchAwsOne(name);
       } catch (e) {
@@ -162,7 +182,9 @@ async function fetchAwsAll(limit = 8) {
     }
   };
 
-  await Promise.all(Array.from({ length: Math.min(limit, names.length) }, worker));
+  const workerCount = Math.max(1, Math.min(limit, names.length));
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+
   return out;
 }
 
@@ -170,23 +192,28 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
 
-    // 1) ถ้าเรียกแบบ all=1 -> ดึงครบ 81
-    const all = searchParams.get("all") === "1";
-    if (all) {
+    if (searchParams.get("all") === "1") {
       const data = await fetchAwsAll(8);
-      return NextResponse.json({
-        success: true,
-        count: PROVINCE_81.length,
-        data,
-      });
+
+      return NextResponse.json(
+        {
+          success: true,
+          count: PROVINCE_81.length,
+          data,
+        },
+        { headers: NO_STORE_HEADERS }
+      );
     }
 
-    // 2) เรียกแบบ province=...
     const province = searchParams.get("province");
+
     if (!province) {
       return NextResponse.json(
-        { success: false, message: "Missing query param: province (or use all=1)" },
-        { status: 400 }
+        {
+          success: false,
+          message: "Missing query param: province (or use all=1)",
+        },
+        { status: 400, headers: NO_STORE_HEADERS }
       );
     }
 
@@ -197,12 +224,13 @@ export async function GET(req: Request) {
           message: "Invalid province value (not in PROVINCE_81)",
           province,
         },
-        { status: 400 }
+        { status: 400, headers: NO_STORE_HEADERS }
       );
     }
 
     const data = await fetchAwsOne(province);
-    return NextResponse.json(data);
+
+    return NextResponse.json(data, { headers: NO_STORE_HEADERS });
   } catch (err: unknown) {
     return NextResponse.json(
       {
@@ -210,7 +238,7 @@ export async function GET(req: Request) {
         message: "Failed to fetch AWS weather",
         snippet: err instanceof Error ? err.message : String(err),
       },
-      { status: 500 }
+      { status: 502, headers: NO_STORE_HEADERS }
     );
   }
 }

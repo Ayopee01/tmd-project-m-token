@@ -1,4 +1,3 @@
-// app/RootLayoutClient.tsx
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
@@ -9,27 +8,35 @@ import DrawerMenu from "./components/DrawerMenu_Sticky";
 import Footer from "./components/Footer";
 import QueryString from "@/app/components/QueryString";
 import { AuthProvider } from "@/app/hooks/auth-hook";
+// import SwipeBack from "@/app/components/SwipeBack";
 
-export default function RootLayoutClient({ children }: { children: React.ReactNode }) {
-    const [open, setOpen] = useState(false);
-    const pathname = usePathname();
+export default function RootLayoutClient({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
-    useEffect(() => {
-        window.czpSdk?.setBackButtonVisible?.(true);
-    }, [pathname]);
+  useEffect(() => {
+    window.czpSdk?.setBackButtonVisible?.(true);
+  }, [pathname]);
 
-    return (
-        <AuthProvider>
-            <Suspense fallback={null}>
-                <QueryString />
-            </Suspense>
+  return (
+    <AuthProvider>
+      {/* ปัดขวาเพื่อย้อนกลับ */}
+      {/* <SwipeBack disabled={open} /> */}
 
-            <Navbar onOpenMenu={() => setOpen((i) => !i)} />
-            <DrawerMenu open={open} onClose={() => setOpen(false)} />
+      <Suspense fallback={null}>
+        <QueryString />
+      </Suspense>
 
-            {children}
+      <Navbar onOpenMenu={() => setOpen((i) => !i)} />
+      <DrawerMenu open={open} onClose={() => setOpen(false)} />
 
-            <Footer />
-        </AuthProvider>
-    );
+      {children}
+
+      <Footer />
+    </AuthProvider>
+  );
 }
