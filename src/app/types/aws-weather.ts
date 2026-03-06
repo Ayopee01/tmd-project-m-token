@@ -30,6 +30,13 @@ export type AwsWeatherItem = {
   tempType: string | null;
   waveType: string | null;
 
+  stationName: string;
+  temperatureText: string;
+  windSpeedText: string;
+  precip15Text: string;
+  precipTodayText: string;
+  precipTodayNote: string;
+
   dateTimeUtc7: string; // "2026-02-19T15:51:00.000+0700"
 };
 
