@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DashboardOK, ProvinceForecast } from "@/app/types/dashboard";
+import type { AwsWeatherItem, AwsApiResponse } from "@/app/types/aws-weather";
 import {
   STORAGE_KEY,
-  fetchDashboard,
   fetchGPSProvince,
   rotateToToday,
   toDDMMYYYY,
@@ -12,22 +12,27 @@ import {
 
 import {
   FiChevronDown,
-  FiChevronUp,
   FiDroplet,
   FiCompass,
   FiWind,
   FiSearch,
   FiX,
+  FiThermometer,
 } from "react-icons/fi";
 
 import type { IconType } from "react-icons";
 import {
-  WiDaySunny, // ท้องฟ้าโปร่ง
-  WiRain, // ฝน
-  WiThunderstorm, // ฝนฟ้าคะนอง
-  WiDayCloudy, // ท้องฟ้ามีเมฆบางส่วน
+  WiDaySunny,
+  WiRain,
+  WiThunderstorm,
+  WiDayCloudy,
 } from "react-icons/wi";
 
+/** ---------- ROUTES (ชัดเจน) ---------- */
+const DASHBOARD_ROUTE = "/api/dashboard";
+const AWS_ROUTE = "/api/aws-weather";
+
+/** ---------- HELPERS ---------- */
 /** dd/mm/yyyy -> timestamp */
 const ddmmyyyyToTime = (s: string) => {
   const [dd, mm, yyyy] = (s ?? "").split("/").map((x) => Number(x));
@@ -44,8 +49,6 @@ function parseDDMMYYYY(s: string): Date | null {
 
 const TH_DOW = new Intl.DateTimeFormat("th-TH", { weekday: "short" });
 
-const TH_MD = new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "short" });
-
 function formatThaiFullDateBE(d: Date) {
   const parts = new Intl.DateTimeFormat("th-TH", {
     day: "numeric",
@@ -61,6 +64,14 @@ function formatThaiFullDateBE(d: Date) {
   return `${day} ${month} พ.ศ. ${year}`;
 }
 
+function formatTime24(d: Date) {
+  return new Intl.DateTimeFormat("th-TH", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+}
+
 function shortCondition(text?: string) {
   const t = (text ?? "").trim();
   if (!t) return "-";
@@ -71,12 +82,10 @@ function shortCondition(text?: string) {
 /** เลือกไอคอนอากาศจากคำอธิบาย (ไทย) */
 function pickWeatherIcon(desc?: string): IconType {
   const t = (desc ?? "").trim();
-
   if (t.includes("ฝนฟ้าคะนอง")) return WiThunderstorm;
   if (t === "ฝน" || t.includes("ฝน")) return WiRain;
   if (t.includes("ท้องฟ้ามีเมฆบางส่วน")) return WiDayCloudy;
   if (t.includes("ท้องฟ้าโปร่ง")) return WiDaySunny;
-
   return WiDayCloudy;
 }
 
@@ -84,6 +93,38 @@ function pickWeatherIcon(desc?: string): IconType {
 const TH_COLLATOR = new Intl.Collator("th", { sensitivity: "base" });
 function sortThai(a: string, b: string) {
   return TH_COLLATOR.compare(a, b);
+}
+
+/** ✅ ชุดเดิม: แปลงความเร็วลม * 1.852 (เฉพาะของ forecast) */
+const KNOT_TO_KMH = 1.852;
+function windToKmh(v?: number | null) {
+  if (typeof v !== "number" || Number.isNaN(v)) return null;
+  return Math.round(v * KNOT_TO_KMH * 10) / 10;
+}
+
+/** ✅ parse dateTimeUtc7 แบบ +0700 -> +07:00 */
+function parseUtc7(iso: string): Date | null {
+  if (!iso) return null;
+  const fixed = iso.replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
+  const d = new Date(fixed);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** ---------- ✅ แนวทาง B: เรียก /api/dashboard ตรง ๆ ---------- */
+async function fetchDashboardDirect(provinceThai?: string): Promise<DashboardOK> {
+  // ถ้า route ของคุณใช้ param อื่น ให้แก้ตรงนี้ (เช่น provinceName)
+  const qs = provinceThai ? `?province=${encodeURIComponent(provinceThai)}` : "";
+  const res = await fetch(`${DASHBOARD_ROUTE}${qs}`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text || `Dashboard error: ${res.status}`);
+  }
+
+  return (await res.json()) as DashboardOK;
 }
 
 function DashboardPage() {
@@ -97,15 +138,18 @@ function DashboardPage() {
 
   const [provinceIndex, setProvinceIndex] =
     useState<DashboardOK["provincesIndex"]>([]);
-  const [provinceData, setProvinceData] = useState<ProvinceForecast | null>(
-    null
-  );
+  const [provinceData, setProvinceData] = useState<ProvinceForecast | null>(null);
 
   const [selectedProvinceKey, setSelectedProvinceKey] = useState("");
   const [todayStr, setTodayStr] = useState("");
 
   const [selectedIdx, setSelectedIdx] = useState(0);
   const userChangedRef = useRef(false);
+
+  /* AWS states */
+  const [awsLoading, setAwsLoading] = useState(false);
+  const [awsError, setAwsError] = useState<string | null>(null);
+  const [awsItem, setAwsItem] = useState<AwsWeatherItem | null>(null);
 
   const applyOK = (ok: DashboardOK) => {
     setProvinceIndex(ok.provincesIndex);
@@ -118,13 +162,46 @@ function DashboardPage() {
     }
   };
 
+  const loadAws = async (provinceThai: string) => {
+    if (!provinceThai) return;
+
+    setAwsLoading(true);
+    setAwsError(null);
+
+    try {
+      const res = await fetch(
+        `${AWS_ROUTE}?province=${encodeURIComponent(provinceThai)}`,
+        {
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+        }
+      );
+
+      const json = (await res.json()) as AwsApiResponse;
+
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.message || `HTTP ${res.status}`);
+      }
+
+      setAwsItem(json.data?.[0] ?? null);
+    } catch (e: unknown) {
+      setAwsItem(null);
+      setAwsError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setAwsLoading(false);
+    }
+  };
+
   const loadProvince = async (provinceThai?: string) => {
     setLoading(true);
     setError(null);
 
     try {
-      const ok = await fetchDashboard(provinceThai);
+      const ok = await fetchDashboardDirect(provinceThai); // ✅ เรียก /api/dashboard ตรง ๆ
       applyOK(ok);
+
+      const key = provinceThai || ok.province?.provinceNameThai || "";
+      if (key) void loadAws(key);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Unknown error");
       setProvinceData(null);
@@ -199,14 +276,12 @@ function DashboardPage() {
   const shownProvinceOptions = useMemo(() => {
     const q = provinceQuery.trim().toLowerCase();
     if (!q) return provinceOptions;
-
     return provinceOptions.filter((o) => o.label.toLowerCase().includes(q));
   }, [provinceOptions, provinceQuery]);
 
-  /** เปิด dropdown แล้ว focus input + เคลียร์คำค้น (ถ้าต้องการ) */
+  /** เปิด dropdown แล้ว focus input */
   useEffect(() => {
     if (!provinceOpen) return;
-    // โฟกัสช่องค้นหา
     const t = window.setTimeout(() => {
       searchInputRef.current?.focus();
     }, 0);
@@ -238,40 +313,54 @@ function DashboardPage() {
     ? formatThaiFullDateBE(selectedDateObj)
     : "";
 
-  return (
-    <main className="flex justify-center px-5 py-10 text-slate-900
-    bg-gradient-to-br from-sky-200 via-white to-fuchsia-200">
+  /** AWS: format วันที่/เวลาแบบไทย + 24 ชม. */
+  const awsUpdatedText = useMemo(() => {
+    const dt = awsItem?.dateTimeUtc7 ? parseUtc7(awsItem.dateTimeUtc7) : null;
+    if (!dt) return "";
+    return `${formatThaiFullDateBE(dt)} เวลา ${formatTime24(dt)} น.`;
+  }, [awsItem?.dateTimeUtc7]);
 
-      <section>
+  /* icon */
+  const awsView = useMemo(() => {
+    return {
+      stationName: awsItem?.stationNameTh ?? "-",
+      temperatureText: awsItem?.temperature != null ? `${awsItem.temperature} °C` : "-",
+      windSpeedText: awsItem?.windSpeed != null ? `${awsItem.windSpeed} m/s` : "-",
+      precip15Text: awsItem?.precip15Mins != null ? `${awsItem.precip15Mins} มม.` : "-",
+      precipTodayText: awsItem?.precipToday != null ? `${awsItem.precipToday} มม.` : "-",
+      precipTodayNote: "(ตั้งแต่ 07:00 น.)",
+    };
+  }, [awsItem]);
+
+  return (
+    <main className="flex justify-center px-5 py-10 text-slate-900 
+    bg-gradient-to-br from-sky-200 via-white to-fuchsia-200"
+    >
+      <section className="w-full relative">
         {/* Province select */}
-        <header className="w-full">
+        <header className="w-full max-w-sm mx-auto">
           <label className="sr-only">เลือกจังหวัด</label>
-          <div ref={provinceWrapRef} className="relative w-full">
+          <div ref={provinceWrapRef} className="relative">
             <button
               type="button"
               onClick={() => {
                 setProvinceOpen((v) => !v);
-                // เปิดแล้วเริ่มค้นหาใหม่ (ถ้าไม่อยากเคลียร์ ให้ลบบรรทัดนี้ออก)
                 if (!provinceOpen) setProvinceQuery("");
               }}
               disabled={loading || provinceOptions.length === 0}
               aria-expanded={provinceOpen}
-              className={[
-                "h-11 w-full cursor-pointer rounded-full px-4 pr-4 text-sm outline-none",
-                "relative flex items-center",
-                "border border-slate-900/10 bg-white text-slate-800 shadow-sm",
-                "focus:ring-2 focus:ring-emerald-600",
-                "disabled:cursor-not-allowed disabled:opacity-60",
-              ].join(" ")}
+              className="flex items-center w-full sm:w-80 h-11 px-4 text-sm
+              bg-white rounded-full border border-slate-900/10 shadow-sm text-slate-800
+              focus:ring-2 focus:ring-emerald-600 outline-none cursor-pointer
+              disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 truncate text-center">{selectedProvinceLabel}</span>
+              <span className="min-w-0 flex-1 truncate pr-3 text-center">
+                {selectedProvinceLabel}
+              </span>
 
               <FiChevronDown
-                className={[
-                  "ml-auto h-5 w-5 shrink-0 transition-transform",
-                  "text-slate-600",
-                  provinceOpen ? "rotate-180" : "",
-                ].join(" ")}
+                className={`h-5 w-5 shrink-0 transition-transform text-slate-600
+                ${provinceOpen ? "rotate-180" : "rotate-0"}`}
                 aria-hidden="true"
               />
             </button>
@@ -279,7 +368,6 @@ function DashboardPage() {
             {provinceOpen && (
               <div className="absolute left-0 top-full z-50 mt-2 w-full">
                 <div className="overflow-hidden rounded-2xl border border-slate-900/10 bg-white shadow-lg">
-                  {/* ✅ Search box */}
                   <div className="border-b border-slate-900/10 p-3">
                     <div className="relative">
                       <FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -310,7 +398,6 @@ function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* ✅ List (เรียง ก-ฮ แล้ว + ถูก filter แล้ว) */}
                   <div className="max-h-80 overflow-auto py-2">
                     {shownProvinceOptions.length === 0 ? (
                       <div className="px-5 py-4 text-sm text-slate-600">
@@ -351,8 +438,8 @@ function DashboardPage() {
           </div>
         </header>
 
-        {/* Loading */}
-        <section className="mt-8 flex flex-1 flex-col items-center justify-start text-center">
+        {/* UI Loading */}
+        <section className="mt-4 flex flex-1 flex-col items-center justify-start text-center">
           {loading ? (
             <div className="w-full max-w-xl rounded-3xl border border-slate-900/10 bg-white p-6 text-slate-800 shadow-sm">
               <div className="animate-pulse space-y-4">
@@ -374,40 +461,91 @@ function DashboardPage() {
           ) : (
             <>
 
-              {/* provinceName section*/}
-              <div className="mt-4 text-xl font-semibold leading-none text-gray-700
-              sm:text-2xl">
-                {provinceData.provinceNameThai}
-              </div>
+              {/* Section Card */}
+              <section className="flex items-stretch mt-6 gap-4"
+              >
+                {/* Section AWS */}
+                <div className="rounded-3xl border border-slate-900/10
+                  bg-white p-4 shadow-sm backdrop-blur
+                  "
+                >
+                  {/* Header */}
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="text-left">
+                      <div className="text-sm font-semibold text-slate-800">
+                        สภาพอากาศปัจจุบัน
+                      </div>
 
-              {/* WeatherIcon section*/}
-              <div className="mt-5 flex items-center justify-center gap-4 ">
-                <span className="truncate text-sm sm:text-base text-gray-700">
-                  {shortCondition(selectedDay?.descriptionThai)}
-                </span>
-                <WeatherIcon className="h-7 w-7 sm:h-9 sm:w-9 text-slate-700" />
-                {isTodaySelected ? (
-                  <span className="ml-1 rounded-full bg-slate-900/5 px-2 py-0.5 text-sm text-gray-700">
-                    วันนี้
-                  </span>
-                ) : null}
-              </div>
-              {/* ✅ ใต้แถว icon: แสดงวันเดือนปี พ.ศ. (มาจาก forecastDate) */}
-              {selectedDateFullBE ? (
-                <div className="mt-2 text-sm text-slate-600">
-                  วันที่ {selectedDateFullBE}
-                </div>
-              ) : null}
-
-              {/* Temp section */}
-              <section className="mt-8">
-                <div className="flex items-center justify-center gap-3">
-                  <div className="flex flex-col items-center leading-none">
-                    <div className="text-6xl sm:text-7xl font-light tracking-tight text-gray-700">
-                      {selectedDay?.maxTempC ?? "-"}°
+                      {awsItem?.stationNameTh ? (
+                        <div className="mt-1 truncate text-xs text-slate-500">
+                          {awsItem.stationNameTh}
+                        </div>
+                      ) : null}
                     </div>
-                    <div className="text-6xl sm:text-7xl font-light tracking-tight text-gray-600">
-                      {selectedDay?.minTempC ?? "-"}°
+
+                    <div className="text-xs text-slate-600 text-left sm:text-right">
+                      {awsLoading ? "กำลังโหลด..." : awsUpdatedText || "-"}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  {awsError ? (
+                    <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                      โหลด AWS ไม่สำเร็จ: {awsError}
+                    </div>
+                  ) : (
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <div className="flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-900/10 bg-white/80 px-3 py-2 text-center text-sm leading-tight text-slate-700">
+                        {awsView.temperatureText}
+                      </div>
+
+                      <div className="flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-900/10 bg-white/80 px-3 py-2 text-center text-sm leading-tight text-slate-700">
+                        {awsView.windSpeedText}
+                      </div>
+
+                      <div className="flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-900/10 bg-white/80 px-3 py-2 text-center text-sm leading-tight text-slate-700">
+                        {awsView.precip15Text}
+                      </div>
+
+                      <div className="flex min-h-[48px] flex-col items-center justify-center rounded-2xl border border-slate-900/10 bg-white/80 px-3 py-2 text-center leading-tight">
+                        <span className="text-sm text-slate-700">
+                          {awsView.precipTodayText}
+                        </span>
+                        <span className="text-xs text-slate-500 sm:text-xs">
+                          {awsView.precipTodayNote}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Section Weather 7 day */}
+                <div
+                  className="rounded-3xl border border-slate-900/10
+                  bg-white p-4 text-slate-800 shadow-sm
+                  flex flex-col items-center justify-between
+                  "
+                >
+                  <div className="flex flex-col items-center justify-center gap-4">
+                    <span className="text-center text-xs text-gray-700">
+                      {shortCondition(selectedDay?.descriptionThai)}
+                    </span>
+                    <WeatherIcon className="h-7 w-7 text-slate-700" />
+                    {isTodaySelected ? (
+                      <span className="rounded-xl bg-gray-200 px-2 text-xs text-slate-600">
+                        วันนี้
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-8 flex items-center justify-center">
+                    <div className="flex flex-col items-center leading-none">
+                      <div className="text-2xl font-light tracking-tight text-gray-700">
+                        {selectedDay?.maxTempC ?? "-"}°
+                      </div>
+                      <div className="mt-2 text-2xl font-light tracking-tight text-gray-600">
+                        {selectedDay?.minTempC ?? "-"}°
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -417,36 +555,30 @@ function DashboardPage() {
               <div className="mt-14 flex items-end justify-center gap-10">
                 <div className="flex flex-col items-center">
                   <FiCompass className="h-7 w-7 text-slate-800" />
-                  <div className="mt-2 text-[11px] text-slate-600">
-                    ทิศทางลม
-                  </div>
+                  <div className="mt-2 text-[11px] text-slate-600">ทิศทางลม</div>
                   <div className="mt-1 text-xs font-medium text-slate-900">
                     {(selectedDay?.windDirectionDeg ?? "-") + "°"}
                   </div>
                 </div>
-                
+
                 <div className="flex flex-col items-center">
                   <FiWind className="h-7 w-7 text-slate-800" />
-                  <div className="mt-2 text-[11px] text-slate-600">
-                    ความเร็วลม
-                  </div>
+                  <div className="mt-2 text-[11px] text-slate-600">ความเร็วลม</div>
                   <div className="mt-1 text-xs font-medium text-slate-900">
-                    {selectedDay?.windSpeedKmh ?? "-"} กม./ชม.
+                    {windToKmh(selectedDay?.windSpeedKmh) ?? "-"} กม./ชม.
                   </div>
                 </div>
 
                 <div className="flex flex-col items-center">
                   <FiDroplet className="h-7 w-7 text-slate-800" />
-                  <div className="mt-2 text-[11px] text-slate-600">
-                    พื้นที่ฝนตก
-                  </div>
+                  <div className="mt-2 text-[11px] text-slate-600">พื้นที่ฝนตก</div>
                   <div className="mt-1 text-xs font-medium text-slate-900">
                     {selectedDay?.percentRainCover ?? "-"} %
                   </div>
                 </div>
               </div>
 
-              {/* 7 Day Card */}
+              {/* Next 7 Day Card */}
               <div className="mt-10 w-full">
                 <div className="text-center text-sm text-slate-800">
                   อุณหภูมิสูงสุด-ต่ำสุด สัปดาห์นี้
@@ -468,15 +600,8 @@ function DashboardPage() {
                           "focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70",
                           "active:scale-[0.98]",
                           isActive
-                            ? [
-                              "border-emerald-500/70 bg-emerald-600 text-white",
-                              "hover:bg-emerald-600 active:bg-emerald-700",
-                            ].join(" ")
-                            : [
-                              "border-slate-900/10 bg-white text-slate-800",
-                              "hover:border-emerald-400/50 hover:bg-emerald-500/10",
-                              "active:bg-emerald-500/20",
-                            ].join(" "),
+                            ? "border-emerald-500/70 bg-emerald-600 text-white hover:bg-emerald-600 active:bg-emerald-700"
+                            : "border-slate-900/10 bg-white text-slate-800 hover:border-emerald-400/50 hover:bg-emerald-500/10 active:bg-emerald-500/20",
                         ].join(" ")}
                       >
                         <div
@@ -514,84 +639,8 @@ function DashboardPage() {
           )}
         </section>
       </section>
-
     </main>
   );
 }
 
 export default DashboardPage;
-
-// <section>
-//   {/* ✅ Desktop: Date selector box (ย้ายมาซ้าย) */}
-//   <aside className="hidden lg:block lg:w-72">
-//     <div className="text-left text-sm font-medium text-slate-800">
-//       อุณหภูมิสูงสุด-ต่ำสุด สัปดาห์นี้
-//     </div>
-
-//     <div className="mt-3 overflow-hidden rounded-3xl border border-slate-900/10 bg-white shadow-sm">
-//       {sevenDaysForShow.slice(0, 7).map((d, idx) => {
-//         const isActive = idx === selectedIdx;
-//         const dt = parseDDMMYYYY(d.forecastDate);
-//         const dow = dt ? TH_DOW.format(dt) : "";
-//         const md = dt ? TH_MD.format(dt) : "";
-
-//         return (
-//           <button
-//             key={`desktop-${provinceData.provinceNameThai}-${d.forecastDate}`}
-//             type="button"
-//             onClick={() => setSelectedIdx(idx)}
-//             className={[
-//               "w-full text-left transition",
-//               "focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70",
-//               "active:scale-[0.99]",
-//               idx !== 0 ? "border-t border-slate-900/10" : "",
-//               isActive
-//                 ? "bg-emerald-600 text-white"
-//                 : "bg-white text-slate-800 hover:bg-emerald-500/10",
-//             ].join(" ")}
-//           >
-//             <div className="flex items-center justify-between gap-4 px-4 py-3">
-//               <div className="min-w-0">
-//                 <div
-//                   className={[
-//                     "text-sm font-semibold",
-//                     isActive ? "text-white" : "text-slate-800",
-//                   ].join(" ")}
-//                 >
-//                   {dow || "-"}
-//                 </div>
-//                 <div
-//                   className={[
-//                     "mt-0.5 text-xs",
-//                     isActive ? "text-white/80" : "text-slate-500",
-//                   ].join(" ")}
-//                 >
-//                   {md || ""}
-//                 </div>
-//               </div>
-
-//               <div className="text-right">
-//                 <div
-//                   className={[
-//                     "text-sm font-semibold",
-//                     isActive ? "text-white" : "text-slate-900",
-//                   ].join(" ")}
-//                 >
-//                   {d.maxTempC ?? "-"}°
-//                 </div>
-//                 <div
-//                   className={[
-//                     "text-xs",
-//                     isActive ? "text-white/80" : "text-slate-600",
-//                   ].join(" ")}
-//                 >
-//                   {d.minTempC ?? "-"}°
-//                 </div>
-//               </div>
-//             </div>
-//           </button>
-//         );
-//       })}
-//     </div>
-//   </aside>
-// </section>
