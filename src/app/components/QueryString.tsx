@@ -9,9 +9,17 @@ const BASE_PATH = process.env.NEXT_PUBLIC_API_ROUTE ?? "";
 function QueryString() {
   const searchParams = useSearchParams();
   const { setUser } = useAuth();
-
   // เก็บสถานะการทำงาน โดยใช้ useRef ไม่ทำให้ re-render หากทำเสร็จแล้วจะตั้งเป็น false
   const inFlightRef = useRef(false);
+  const backBtnSetRef = useRef(false); // กันรันซ้ำ (Dev strict mode)
+
+  // เปิดปุ่ม Back “True”
+  useEffect(() => {
+    if (backBtnSetRef.current) return;
+    backBtnSetRef.current = true;
+
+    window.czpSdk?.setBackButtonVisible?.(true);
+  }, []);
 
   // รับค่า appId, mToken จาก URL Params (Query String)
   useEffect(() => {
