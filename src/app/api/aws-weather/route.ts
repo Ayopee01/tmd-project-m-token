@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { AwsApiResponse, AwsErrorResponse } from "@/app/types/aws-weather";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -12,44 +13,6 @@ const NO_STORE_HEADERS = {
   Expires: "0",
 };
 
-export type AwsWeatherItem = {
-  provinceId: number;
-  provinceNameTh: string;
-  provinceNameEn: string;
-  regionNameTh: string;
-  regionNameEn: string;
-  stationId: number;
-  stationNameTh: string;
-  stationNameEn: string;
-  stationLat: number;
-  stationLon: number;
-  temperature: number | null;
-  temperatureMinToday: number | null;
-  temperatureMaxToday: number | null;
-  humidity: number | null;
-  windDirection: number | null;
-  windSpeed: number | null;
-  precip15Mins: number | null;
-  precip1Hr: number | null;
-  precipToday: number | null;
-  pressure: number | null;
-  weatherType: string | null;
-  tempType: string | null;
-  waveType: string | null;
-  dateTimeUtc7: string;
-};
-
-export type AwsApiResponse = {
-  success: boolean;
-  data: AwsWeatherItem[];
-  message: string;
-};
-
-type AwsErrorResponse = {
-  success: false;
-  data: [];
-  message: string;
-};
 
 const PROVINCE_81 = [
   "เชียงราย",

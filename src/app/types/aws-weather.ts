@@ -46,6 +46,12 @@ export type AwsApiResponse = {
   message: string;
 };
 
+export type AwsErrorResponse = {
+  success: false;
+  data: [];
+  message: string;
+};
+
 /** response ตอนเรียก /api/aws-weather?all=1 */
 export type AwsAllResponse = {
   success: true;
@@ -55,3 +61,4 @@ export type AwsAllResponse = {
     AwsApiResponse | { success: false; data: []; message: string }
   >;
 };
+
