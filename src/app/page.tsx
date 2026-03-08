@@ -48,18 +48,35 @@ function parseDDMMYYYY(s: string): Date | null {
 
 const TH_DOW = new Intl.DateTimeFormat("th-TH", { weekday: "short" });
 
-function formatThaiFullDateBE(d: Date) {
+function formatThaiShortDate2DigitYear(d: Date) {
   const parts = new Intl.DateTimeFormat("th-TH", {
     day: "numeric",
-    month: "long",
+    month: "short",
     year: "numeric",
   }).formatToParts(d);
 
   const day = parts.find((p) => p.type === "day")?.value ?? "";
   const month = parts.find((p) => p.type === "month")?.value ?? "";
   const year = parts.find((p) => p.type === "year")?.value ?? "";
+
   if (!day || !month || !year) return "";
 
+  const year2 = year.slice(-2);
+  return `${day} ${month} ${year2}`;
+}
+
+function formatThaiShortDateBE(d: Date) {
+  const parts = new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).formatToParts(d);
+
+  const day = parts.find((p) => p.type === "day")?.value ?? "";
+  const month = parts.find((p) => p.type === "month")?.value ?? "";
+  const year = parts.find((p) => p.type === "year")?.value ?? "";
+
+  if (!day || !month || !year) return "";
   return `${day} ${month} พ.ศ. ${year}`;
 }
 
@@ -308,15 +325,15 @@ function DashboardPage() {
     ? parseDDMMYYYY(selectedDay.forecastDate)
     : null;
 
-  const selectedDateFullBE = selectedDateObj
-    ? formatThaiFullDateBE(selectedDateObj)
-    : "";
+const selectedDateShortBE = selectedDateObj
+  ? formatThaiShortDate2DigitYear(selectedDateObj)
+  : "";
 
   /** AWS: format วันที่/เวลาแบบไทย + 24 ชม. */
   const awsUpdatedText = useMemo(() => {
     const dt = awsItem?.dateTimeUtc7 ? parseUtc7(awsItem.dateTimeUtc7) : null;
     if (!dt) return "";
-    return `${formatThaiFullDateBE(dt)} เวลา ${formatTime24(dt)} น.`;
+    return `${formatThaiShortDate2DigitYear(dt)} เวลา ${formatTime24(dt)} น.`;
   }, [awsItem?.dateTimeUtc7]);
 
   /* icon */
@@ -482,7 +499,7 @@ function DashboardPage() {
                       ) : null}
                     </div>
 
-                    <div className="text-xs text-slate-600 text-left sm:text-right">
+                    <div className="text-xs text-slate-600 text-left sm:text-right mt-0.5">
                       {awsLoading ? "กำลังโหลด..." : awsUpdatedText || "-"}
                     </div>
                   </div>
@@ -493,24 +510,30 @@ function DashboardPage() {
                       โหลด AWS ไม่สำเร็จ: {awsError}
                     </div>
                   ) : (
-                    <div className="mt-4 grid grid-cols-2 gap-3">
-                      <div className="flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-900/10 bg-white/80 px-3 py-2 text-center text-sm leading-tight text-slate-700">
-                        {awsView.temperatureText}
+                    <div className="mt-6 grid grid-cols-2 gap-3">
+                      <div className="flex items-center justify-center rounded-2xl border border-slate-900/10 bg-white/80 px-3 py-2 text-center text-sm leading-tight text-slate-700">
+                        <span className="flex items-center text-sm text-slate-700 h-8">
+                          {awsView.temperatureText}
+                        </span>
                       </div>
 
-                      <div className="flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-900/10 bg-white/80 px-3 py-2 text-center text-sm leading-tight text-slate-700">
-                        {awsView.windSpeedText}
+                      <div className="flex items-center justify-center rounded-2xl border border-slate-900/10 bg-white/80 px-3 py-2 text-center text-sm leading-tight text-slate-700">
+                        <span className="flex items-center text-sm text-slate-700 h-8">
+                          {awsView.windSpeedText}
+                        </span>
                       </div>
 
-                      <div className="flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-900/10 bg-white/80 px-3 py-2 text-center text-sm leading-tight text-slate-700">
-                        {awsView.precip15Text}
+                      <div className="flex items-center justify-center rounded-2xl border border-slate-900/10 bg-white/80 px-3 py-2 text-center text-sm leading-tight text-slate-700">
+                        <span className="flex items-center text-sm text-slate-700 h-8">
+                          {awsView.precip15Text}
+                        </span>
                       </div>
 
-                      <div className="flex min-h-[48px] flex-col items-center justify-center rounded-2xl border border-slate-900/10 bg-white/80 px-3 py-2 text-center leading-tight">
+                      <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-900/10 bg-white/80 px-3 py-2 text-center leading-tight">
                         <span className="text-sm text-slate-700">
                           {awsView.precipTodayText}
                         </span>
-                        <span className="text-xs text-slate-500 sm:text-xs">
+                        <span className="text-xs text-slate-500">
                           {awsView.precipTodayNote}
                         </span>
                       </div>
@@ -519,8 +542,7 @@ function DashboardPage() {
                 </div>
 
                 {/* Section Weather 7 day */}
-                <div
-                  className="rounded-3xl border border-slate-900/10
+                <div className="rounded-3xl border border-slate-900/10
                   bg-white p-4 text-slate-800 shadow-sm
                   flex flex-col items-center justify-between
                   "
@@ -529,12 +551,12 @@ function DashboardPage() {
                     <span className="text-center text-xs text-gray-700">
                       {shortCondition(selectedDay?.descriptionThai)}
                     </span>
+
                     <WeatherIcon className="h-7 w-7 text-slate-700" />
-                    {isTodaySelected ? (
-                      <span className="rounded-xl bg-gray-200 px-2 text-xs text-slate-600">
-                        วันนี้
-                      </span>
-                    ) : null}
+
+                    <span className="rounded-xl bg-gray-200 px-2 text-xs text-slate-600">
+                      {isTodaySelected ? "วันนี้" : selectedDateShortBE || selectedDay?.forecastDate || "-"}
+                    </span>
                   </div>
 
                   <div className="mt-8 flex items-center justify-center">
@@ -605,7 +627,15 @@ function DashboardPage() {
                       >
                         <div
                           className={[
-                            "text-[12px] font-medium",
+                            "text-xs",
+                            isActive ? "text-white/90" : "text-slate-500",
+                          ].join(" ")}
+                        >
+                          {dow}
+                        </div>
+                        <div
+                          className={[
+                            "text-xs font-light",
                             isActive ? "text-white" : "text-slate-800",
                           ].join(" ")}
                         >
@@ -614,20 +644,11 @@ function DashboardPage() {
 
                         <div
                           className={[
-                            "mt-0.5 text-[11px]",
+                            "text-xs font-light mt-0.5",
                             isActive ? "text-white/90" : "text-slate-600",
                           ].join(" ")}
                         >
                           {d.minTempC ?? "-"}°
-                        </div>
-
-                        <div
-                          className={[
-                            "mt-2 text-[10px]",
-                            isActive ? "text-white/90" : "text-slate-500",
-                          ].join(" ")}
-                        >
-                          {dow}
                         </div>
                       </button>
                     );
