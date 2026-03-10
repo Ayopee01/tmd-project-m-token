@@ -325,9 +325,9 @@ function DashboardPage() {
     ? parseDDMMYYYY(selectedDay.forecastDate)
     : null;
 
-const selectedDateShortBE = selectedDateObj
-  ? formatThaiShortDate2DigitYear(selectedDateObj)
-  : "";
+  const selectedDateShortBE = selectedDateObj
+    ? formatThaiShortDate2DigitYear(selectedDateObj)
+    : "";
 
   /** AWS: format วันที่/เวลาแบบไทย + 24 ชม. */
   const awsUpdatedText = useMemo(() => {
@@ -478,7 +478,7 @@ const selectedDateShortBE = selectedDateObj
             <>
 
               {/* Section Card */}
-              <section className="flex items-stretch mt-6 gap-4"
+              <section className="flex flex-col items-stretch mt-6 gap-4"
               >
                 {/* Section AWS */}
                 <div className="rounded-3xl border border-slate-900/10
@@ -541,14 +541,12 @@ const selectedDateShortBE = selectedDateObj
                   )}
                 </div>
 
-                {/* Section Weather 7 day */}
-                <div className="rounded-3xl border border-slate-900/10
-                  bg-white p-4 text-slate-800 shadow-sm
-                  flex flex-col items-center justify-between
-                  "
+                {/* Section Weather 7 day Card */}
+                <div className="flex flex-col items-center justify-between
+                rounded-3xl border border-slate-900/10 bg-white p-4 shadow-sm"
                 >
                   <div className="flex flex-col items-center justify-center gap-4">
-                    <span className="text-center text-xs text-gray-700">
+                    <span className="text-center text-xs text-slate-700">
                       {shortCondition(selectedDay?.descriptionThai)}
                     </span>
 
@@ -569,92 +567,35 @@ const selectedDateShortBE = selectedDateObj
                       </div>
                     </div>
                   </div>
+
+                  {/* Metrics row */}
+                  <div className="mt-14 flex items-end justify-center gap-10">
+                    <div className="flex flex-col items-center">
+                      <FiCompass className="h-7 w-7 text-slate-800" />
+                      <div className="mt-2 text-[11px] text-slate-600">ทิศทางลม</div>
+                      <div className="mt-1 text-xs font-medium text-slate-900">
+                        {(selectedDay?.windDirectionDeg ?? "-") + "°"}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-center">
+                      <FiWind className="h-7 w-7 text-slate-800" />
+                      <div className="mt-2 text-[11px] text-slate-600">ความเร็วลม</div>
+                      <div className="mt-1 text-xs font-medium text-slate-900">
+                        {windToKmh(selectedDay?.windSpeedKmh) ?? "-"} กม./ชม.
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-center">
+                      <FiDroplet className="h-7 w-7 text-slate-800" />
+                      <div className="mt-2 text-[11px] text-slate-600">พื้นที่ฝนตก</div>
+                      <div className="mt-1 text-xs font-medium text-slate-900">
+                        {selectedDay?.percentRainCover ?? "-"} %
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </section>
-
-              {/* Metrics row */}
-              <div className="mt-14 flex items-end justify-center gap-10">
-                <div className="flex flex-col items-center">
-                  <FiCompass className="h-7 w-7 text-slate-800" />
-                  <div className="mt-2 text-[11px] text-slate-600">ทิศทางลม</div>
-                  <div className="mt-1 text-xs font-medium text-slate-900">
-                    {(selectedDay?.windDirectionDeg ?? "-") + "°"}
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-center">
-                  <FiWind className="h-7 w-7 text-slate-800" />
-                  <div className="mt-2 text-[11px] text-slate-600">ความเร็วลม</div>
-                  <div className="mt-1 text-xs font-medium text-slate-900">
-                    {windToKmh(selectedDay?.windSpeedKmh) ?? "-"} กม./ชม.
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-center">
-                  <FiDroplet className="h-7 w-7 text-slate-800" />
-                  <div className="mt-2 text-[11px] text-slate-600">พื้นที่ฝนตก</div>
-                  <div className="mt-1 text-xs font-medium text-slate-900">
-                    {selectedDay?.percentRainCover ?? "-"} %
-                  </div>
-                </div>
-              </div>
-
-              {/* Next 7 Day Card */}
-              <div className="mt-10 w-full">
-                <div className="text-center text-sm text-slate-800">
-                  อุณหภูมิสูงสุด-ต่ำสุด สัปดาห์นี้
-                </div>
-
-                <div className="mx-auto mt-4 grid max-w-105 grid-cols-7 gap-2">
-                  {sevenDaysForShow.slice(0, 7).map((d, idx) => {
-                    const isActive = idx === selectedIdx;
-                    const dt = parseDDMMYYYY(d.forecastDate);
-                    const dow = dt ? TH_DOW.format(dt) : "";
-
-                    return (
-                      <button
-                        key={`${provinceData.provinceNameThai}-${d.forecastDate}`}
-                        type="button"
-                        onClick={() => setSelectedIdx(idx)}
-                        className={[
-                          "group cursor-pointer rounded-2xl border px-2 py-3 text-center transition",
-                          "focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70",
-                          "active:scale-[0.98]",
-                          isActive
-                            ? "border-emerald-500/70 bg-emerald-600 text-white hover:bg-emerald-600 active:bg-emerald-700"
-                            : "border-slate-900/10 bg-white text-slate-800 hover:border-emerald-400/50 hover:bg-emerald-500/10 active:bg-emerald-500/20",
-                        ].join(" ")}
-                      >
-                        <div
-                          className={[
-                            "text-xs",
-                            isActive ? "text-white/90" : "text-slate-500",
-                          ].join(" ")}
-                        >
-                          {dow}
-                        </div>
-                        <div
-                          className={[
-                            "text-xs font-light",
-                            isActive ? "text-white" : "text-slate-800",
-                          ].join(" ")}
-                        >
-                          {d.maxTempC ?? "-"}°
-                        </div>
-
-                        <div
-                          className={[
-                            "text-xs font-light mt-0.5",
-                            isActive ? "text-white/90" : "text-slate-600",
-                          ].join(" ")}
-                        >
-                          {d.minTempC ?? "-"}°
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
             </>
           )}
         </section>
