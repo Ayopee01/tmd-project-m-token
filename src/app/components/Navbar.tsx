@@ -24,6 +24,9 @@ function Navbar({ onOpenMenu }: Props) {
   const fullName = [user?.firstName].filter(Boolean).join(' ').trim();
   // , user?.lastName
 
+  const navStyle = "group relative h-full flex items-center px-1 font-normal text-base leading-6 tracking-normal text-gray-900";
+  const navUnderline = "absolute left-0 bottom-0 h-1 w-full origin-left bg-emerald-600 transition-transform duration-500 ease-out";
+
   return (
     <nav className="top-0 z-30 border-b border-gray-100 bg-white backdrop-blur shadow-lg sticky">
       <div className="flex h-18 w-full items-center justify-between px-4 md:h-22">
@@ -41,7 +44,7 @@ function Navbar({ onOpenMenu }: Props) {
         </Link>
 
         {/* Center: Desktop menu */}
-        <div className="hidden xl:flex h-full items-center gap-8">
+        <div className="hidden min-[1440px]:flex h-full items-center gap-8">
           <Link
             href="/landing/daily"
             className="group relative h-full flex items-center px-1 font-normal text-base leading-6 tracking-normal text-gray-900"
@@ -59,60 +62,52 @@ function Navbar({ onOpenMenu }: Props) {
 
           <Link
             href="/landing/map"
-            className={`group relative h-full flex items-center px-1 font-normal text-base leading-6 tracking-normal text-gray-900`}
+            className={navStyle}
           >
             แผนที่อากาศพื้นผิว
             <span
-              className={`absolute left-0 bottom-0 h-1 w-full origin-left bg-emerald-600
-              transition-transform duration-500 ease-out
-              ${isActivePath(pathname, "/landing/map")
-                  ? "scale-x-100"
-                  : "scale-x-0 group-hover:scale-x-100"
+              className={`${navUnderline} ${isActivePath(pathname, "/landing/map")
+                ? "scale-x-100"
+                : "scale-x-0 group-hover:scale-x-100"
                 }`}
             />
           </Link>
 
           <Link
             href="/landing/week"
-            className={`group relative h-full flex items-center px-1 font-normal text-base leading-6 tracking-normal text-gray-900`}
+            className={navStyle}
           >
             สรุปลักษณะอากาศรายสัปดาห์
             <span
-              className={`absolute left-0 bottom-0 h-1 w-full origin-left bg-emerald-600
-              transition-transform duration-500 ease-out
-              ${isActivePath(pathname, "/landing/week")
-                  ? "scale-x-100"
-                  : "scale-x-0 group-hover:scale-x-100"
+              className={`${navUnderline} ${isActivePath(pathname, "/landing/week")
+                ? "scale-x-100"
+                : "scale-x-0 group-hover:scale-x-100"
                 }`}
             />
           </Link>
 
           <Link
             href="/landing/monthly"
-            className={`group relative h-full flex items-center px-1 font-normal text-base leading-6 tracking-normal text-gray-900`}
+            className={navStyle}
           >
             สรุปลักษณะอากาศรายเดือน
             <span
-              className={`absolute left-0 bottom-0 h-1 w-full origin-left bg-emerald-600
-              transition-transform duration-500 ease-out
-              ${isActivePath(pathname, "/landing/monthly")
-                  ? "scale-x-100"
-                  : "scale-x-0 group-hover:scale-x-100"
+              className={`${navUnderline} ${isActivePath(pathname, "/landing/monthly")
+                ? "scale-x-100"
+                : "scale-x-0 group-hover:scale-x-100"
                 }`}
             />
           </Link>
 
           <Link
             href="/landing/agroforecast"
-            className={`group relative h-full flex items-center px-1 font-normal text-base leading-6 tracking-normal text-gray-900`}
+            className={navStyle}
           >
             พยากรณ์อากาศเพื่อการเกษตรราย 7 วัน
             <span
-              className={`absolute left-0 bottom-0 h-1 w-full origin-left bg-emerald-600
-              transition-transform duration-500 ease-out
-              ${isActivePath(pathname, "/landing/agroforecast")
-                  ? "scale-x-100"
-                  : "scale-x-0 group-hover:scale-x-100"
+              className={`${navUnderline} ${isActivePath(pathname, "/landing/agroforecast")
+                ? "scale-x-100"
+                : "scale-x-0 group-hover:scale-x-100"
                 }`}
             />
           </Link>
@@ -121,7 +116,7 @@ function Navbar({ onOpenMenu }: Props) {
         {/* Right: User + Mobile hamburger */}
         <div className="flex items-center gap-3">
           {/* User (ขวาสุด) */}
-          <div className="hidden xl:flex items-center gap-2 rounded-lg  bg-gray-200 px-6 py-3 text-sm text-gray-800 shadow-sm dark:border-gray-700">
+          <div className="hidden min-[1440px]:flex items-center gap-2 rounded-lg  bg-gray-200 px-6 py-3 text-sm text-gray-800 shadow-sm dark:border-gray-700">
             {loading ? (
               <span className="max-w-55 truncate font-medium">...</span>
             ) : user ? (
@@ -137,7 +132,7 @@ function Navbar({ onOpenMenu }: Props) {
           </div>
 
           <button
-            className="cursor-pointer inline-flex h-11 w-11 items-center justify-center rounded-full xl:hidden"
+            className="cursor-pointer inline-flex h-11 w-11 items-center justify-center rounded-full min-[1440px]:hidden"
             onClick={onOpenMenu}
             aria-label="Open Menu"
             type="button"

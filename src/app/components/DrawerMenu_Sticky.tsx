@@ -67,7 +67,7 @@ function DrawerMenu({ open, onClose }: Props) {
     }, [open, onClose]);
 
     return (
-        <section className="w-full xl:hidden">
+        <section className="w-full min-[1440px]:hidden">
             {/* Overlay: fade in/out + คลิกปิด */}
             <button
                 type="button"
