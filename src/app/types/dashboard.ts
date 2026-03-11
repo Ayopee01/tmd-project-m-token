@@ -1,3 +1,5 @@
+import type { IconType } from "react-icons";
+
 // พยากรณ์อากาศจากกรมอุตุนิยมวิทยา (TMD)
 export type DailyForecast = {
   forecastDate: string;
@@ -54,6 +56,15 @@ export type NominatimResponse = {
 // ตัวเลือกการทำงานของฟังก์ชัน normalizeProvinceThai
 export type NormalizeProvinceOptions = {
   forKey?: boolean; // true = ใช้เทียบ/ค้นหา, false = ใช้แสดงผล
+};
+// ข้อมูลที่ใช้แสดงใน WeatherCard
+export type WeatherDay = ProvinceForecast["sevenDays"][number];
+
+export type WeatherCardData = {
+  day: WeatherDay | null;
+  isToday: boolean;
+  WeatherIcon: IconType | null;
+  dateShortBE: string;
 };
 
 export type JsonRecord = Record<string, unknown>;
