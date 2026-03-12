@@ -17,17 +17,18 @@ import type { Swiper as SwiperType } from "swiper";
 import type { IconType } from "react-icons";
 
 /* -------------------- Config API routes -------------------- */
+
 const DASHBOARD_ROUTE = "/api/dashboard";
 const AWS_ROUTE = "/api/aws-weather";
 
 /* -------------------- Config pure helpers -------------------- */
+
 const TH_COLLATOR = new Intl.Collator("th", { sensitivity: "base" });
-const TH_DOW = new Intl.DateTimeFormat("th-TH", { weekday: "short" });
 const KNOT_TO_KMH = 1.852;
 
 /* -------------------- Functions -------------------- */
 
-// Function เลือก icon ให้ตรง description TH ใน API
+// Function เลือก icon ให้ตรง Description TH ใน API
 function pickWeatherIcon(desc?: string): IconType | null {
   const t = (desc ?? "").trim();
 
@@ -545,7 +546,7 @@ function DashboardPage() {
               </section>
 
               {/* Weather 7 day Card */}
-              <div>
+              <section className="mt-4 w-full max-w-xs mx-auto">
                 <Swiper
                   key={`${provinceData?.provinceNameThai}-${sevenDaysForShow.length}`}
                   modules={[Pagination]}
@@ -554,7 +555,7 @@ function DashboardPage() {
                   onSlideChange={handleWeatherSlideChange}
                   slidesPerView={1}
                   spaceBetween={12}
-                  className="weather-swiper mt-4 w-full max-w-xs mx-auto"
+                  className="weather-swiper w-full"
                 >
                   {sevenDaysForShow.slice(0, 7).map((d, idx) => {
                     const isToday = d.forecastDate === todayStr;
@@ -567,18 +568,19 @@ function DashboardPage() {
                     return (
                       <SwiperSlide
                         key={`${provinceData?.provinceNameThai}-${d.forecastDate}-${idx}`}
+                        className="!w-full"
                       >
-                        <div className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
-                          <div className="flex items-center justify-center gap-4">
-                            <span className="text-center text-xs text-slate-700">
+                        <div className="w-full rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
+                          <div className="flex items-center justify-center gap-2">
+                            <span className="min-w-0 flex-1 truncate text-center text-xs text-slate-700">
                               {shortCondition(d.descriptionThai)}
                             </span>
 
                             {SlideWeatherIcon && (
-                              <SlideWeatherIcon className="h-7 w-7 text-slate-700" />
+                              <SlideWeatherIcon className="h-7 w-7 shrink-0 text-slate-700" />
                             )}
 
-                            <span className="rounded-xl bg-gray-200 px-2 text-xs text-slate-600">
+                            <span className="shrink-0 rounded-xl bg-gray-200 px-2 text-xs text-slate-600">
                               {isToday ? "วันนี้" : slideDateShortBE || d.forecastDate || "-"}
                             </span>
                           </div>
@@ -594,8 +596,8 @@ function DashboardPage() {
                             </div>
                           </div>
 
-                          <div className="mt-4 flex items-end justify-center gap-10">
-                            <div className="flex flex-col items-center">
+                          <div className="mt-4 grid grid-cols-3 gap-3">
+                            <div className="min-w-0 flex flex-col items-center text-center">
                               <FiCompass className="h-7 w-7 text-slate-800" />
                               <div className="mt-2 text-[11px] text-slate-600">ทิศทางลม</div>
                               <div className="mt-1 text-xs font-medium text-slate-900">
@@ -603,7 +605,7 @@ function DashboardPage() {
                               </div>
                             </div>
 
-                            <div className="flex flex-col items-center">
+                            <div className="min-w-0 flex flex-col items-center text-center">
                               <FiWind className="h-7 w-7 text-slate-800" />
                               <div className="mt-2 text-[11px] text-slate-600">ความเร็วลม</div>
                               <div className="mt-1 text-xs font-medium text-slate-900">
@@ -611,7 +613,7 @@ function DashboardPage() {
                               </div>
                             </div>
 
-                            <div className="flex flex-col items-center">
+                            <div className="min-w-0 flex flex-col items-center text-center">
                               <FiDroplet className="h-7 w-7 text-slate-800" />
                               <div className="mt-2 text-[11px] text-slate-600">พื้นที่ฝนตก</div>
                               <div className="mt-1 text-xs font-medium text-slate-900">
@@ -624,8 +626,7 @@ function DashboardPage() {
                     );
                   })}
                 </Swiper>
-              </div>
-
+              </section>
             </>
           )}
         </section>
