@@ -382,30 +382,25 @@ function AgroforecastPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="
-                          group flex w-auto items-center justify-center gap-2
+                          group flex w-auto items-center justify-center
                           rounded-lg border border-emerald-600 bg-white
                           px-3 py-2 lg:px-3 lg:py-3
                           cursor-pointer transition duration-150
                           hover:bg-emerald-700 active:bg-emerald-800
-                          whitespace-nowrap
                         "
                       >
-                        <FiDownload
-                          className="
-                            h-5 w-5 lg:h-6 lg:w-6
-                            text-emerald-600 transition-colors
-                            group-hover:text-gray-100 group-active:text-gray-100
-                          "
-                          aria-hidden="true"
-                        />
-                        <span
-                          className="text-xs lg:text-sm leading-none font-semibold
-                          text-emerald-600 transition-colors
-                          group-hover:text-gray-100 group-active:text-gray-100
-                          "
-                        >
-                          ดาวน์โหลดเอกสาร
-                        </span>
+                        <div className="flex gap-2 items-center text-emerald-600 transition-colors
+                            group-hover:text-gray-100 group-active:text-gray-100">
+                          <FiDownload
+                            className="h-5 w-5 lg:h-6 lg:w-6"
+                            aria-hidden="true"
+                          />
+                          <span
+                            className="text-xs lg:text-sm leading-none font-semibold"
+                          >
+                            ดาวน์โหลดเอกสาร
+                          </span>
+                        </div>
                       </a>
                     </div>
 
