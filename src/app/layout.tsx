@@ -1,6 +1,7 @@
 // app/layout.tsx
 import "./globals.css";
 import { Inter, Noto_Sans_Thai } from "next/font/google";
+import type { Metadata } from "next";
 import LayoutClient from "./layout-client";
 import Script from "next/script";
 
@@ -16,6 +17,11 @@ const notoThai = Noto_Sans_Thai({
   weight: ["400", "700"],
   display: "swap",
 });
+
+export const metadata: Metadata = {
+  title: "กรมอุตุนิยมวิทยา",
+  description: "พยากรณ์อากาศและข้อมูลสภาพอากาศ",
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
