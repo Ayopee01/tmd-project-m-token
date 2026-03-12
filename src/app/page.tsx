@@ -513,7 +513,7 @@ function DashboardPage() {
                       โหลด AWS ไม่สำเร็จ: {awsError}
                     </div>
                   ) : (
-                    <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div className="mt-4 grid grid-cols-2 gap-3">
                       <div className="flex items-center justify-center rounded-2xl border border-gray-200 bg-white/80 px-3 py-2 text-center text-sm leading-tight text-slate-700">
                         <span className="flex items-center text-sm text-slate-700 h-8">
                           {awsItem?.temperature != null ? `${awsItem.temperature} °C` : "-"}

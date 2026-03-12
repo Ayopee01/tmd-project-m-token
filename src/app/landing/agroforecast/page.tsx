@@ -19,6 +19,7 @@ const PAGE_SIZE = 6;
 
 type YearFilter = "all" | `${number}`;
 
+// Function แปลง string เป็น Date โดยพยายามแก้ไขรูปแบบให้เป็น ISO ถ้าเป็นไปได้
 function toDate(raw: string): Date | null {
   if (!raw) return null;
   const isoLike = raw.trim().replace(" ", "T").replace(/\.\d+$/, "");
@@ -26,24 +27,29 @@ function toDate(raw: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+// Function แปลง Date เป็น string
+function thaiDate(d: Date): string {
+  return TH_DATE.format(d);
+}
+
+// Format วันที่แบบไทย (พ.ศ.)
 const TH_DATE = new Intl.DateTimeFormat("th-TH-u-ca-buddhist", {
   day: "numeric",
   month: "long",
   year: "numeric",
 });
 
-function thaiDate(d: Date): string {
-  return TH_DATE.format(d);
-}
-
+// Function แปลงปี ค.ศ. เป็น พ.ศ.
 function beYear(d: Date): number {
   return d.getFullYear() + 543;
 }
 
+// Function หาชื่อเรื่องจาก item โดยดูจาก title > alt > "—"
 function titleOf(it: Agro7DaysItem): string {
   return (it.title || it.alt || "—").trim() || "—";
 }
 
+// Function สร้าง pagination 
 function pageTokens(current: number, total: number): Array<number | "…"> {
   if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
 
@@ -136,7 +142,7 @@ function AgroforecastPage() {
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, pageSafe]);
 
-  // Close dropdown when click outside / ESC (ไม่มี any)
+  // Close dropdown when click outside / ESC
   useEffect(() => {
     if (!yearOpen) return;
 
@@ -252,7 +258,7 @@ function AgroforecastPage() {
           </div>
 
 
-          {/* Filter + Download (เหมือน UI ตัวอย่าง) */}
+          {/* Filter + Download */}
           <div className="flex flex-col gap-2 mt-12 sm:flex-row sm:items-center sm:justify-between sm:mt-10">
             {/* Year dropdown */}
             <div ref={yearDropRef} className="relative w-full max-w-sm">
@@ -376,12 +382,11 @@ function AgroforecastPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="
-                          group flex w-full items-center justify-center gap-2
+                          group flex w-auto items-center justify-center gap-2
                           rounded-lg border border-emerald-600 bg-white
                           px-3 py-2 lg:px-3 lg:py-3
                           cursor-pointer transition duration-150
                           hover:bg-emerald-700 active:bg-emerald-800
-                          sm:w-auto sm:min-w-38
                           whitespace-nowrap
                         "
                       >
@@ -394,10 +399,9 @@ function AgroforecastPage() {
                           aria-hidden="true"
                         />
                         <span
-                          className="
-                            text-xs lg:text-sm leading-none font-semibold
-                            text-emerald-600 transition-colors
-                            group-hover:text-gray-100 group-active:text-gray-100
+                          className="text-xs lg:text-sm leading-none font-semibold
+                          text-emerald-600 transition-colors
+                          group-hover:text-gray-100 group-active:text-gray-100
                           "
                         >
                           ดาวน์โหลดเอกสาร
