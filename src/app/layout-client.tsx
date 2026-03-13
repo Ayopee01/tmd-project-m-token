@@ -8,7 +8,8 @@ import DrawerMenu from "./components/DrawerMenu_Sticky";
 import Footer from "./components/Footer";
 import QueryString from "@/app/components/QueryString";
 import { AuthProvider } from "@/app/hooks/auth-hook";
-// import SwipeBack from "@/app/components/SwipeBack";
+import ScrollTopButton from "@/app/components/ScrollTop";
+import SwipeBack from "@/app/components/SwipeBack";
 
 export default function RootLayoutClient({
   children,
@@ -24,19 +25,18 @@ export default function RootLayoutClient({
 
   return (
     <AuthProvider>
-      {/* ปัดขวาเพื่อย้อนกลับ */}
-      {/* <SwipeBack disabled={open} /> */}
-
       <Suspense fallback={null}>
         <QueryString />
       </Suspense>
 
-      <Navbar onOpenMenu={() => setOpen((i) => !i)} />
-      <DrawerMenu open={open} onClose={() => setOpen(false)} />
+      <SwipeBack disabled={open} fallbackHref="/">
+        <Navbar onOpenMenu={() => setOpen((i) => !i)} />
+        <DrawerMenu open={open} onClose={() => setOpen(false)} />
+        {children}
+        <Footer />
+      </SwipeBack>
 
-      {children}
-
-      <Footer />
+      <ScrollTopButton />
     </AuthProvider>
   );
 }

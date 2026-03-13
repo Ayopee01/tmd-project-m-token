@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 24.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 100 100" style="enable-background:new 0 0 100 100;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:url(#SVGID_1_);}
+</style>
+<symbol  id="moon" viewBox="-26.7 -28.5 53.3 56.9">
+	
+		<linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="7535.6504" y1="-8550.9307" x2="7536.6504" y2="-8551.4307" gradientTransform="matrix(53.3472 0 0 56.9472 -402026.5 486964.8438)">
+		<stop  offset="0" style="stop-color:#686E73"/>
+		<stop  offset="1" style="stop-color:#6A7075"/>
+	</linearGradient>
+	<path class="st0" d="M1.8-28.5c2.5,4.3,3.9,9.3,3.9,14.3C5.6,1.6-7.2,14.5-23,14.5c-1.2,0-2.5-0.1-3.7-0.3
+		c7.9,13.7,25.4,18.3,39.1,10.4S30.7-0.8,22.8-14.4C18.4-22.1,10.6-27.3,1.8-28.5z"/>
+</symbol>
+<symbol  id="s01n" viewBox="-26.7 -28.5 53.3 56.9">
+	<use xlink:href="#moon"  width="53.3" height="56.9" x="-26.7" y="-28.5" style="overflow:visible;"/>
+</symbol>
+<use xlink:href="#s01n"  width="53.3" height="56.9" x="-26.7" y="-28.5" transform="matrix(1 0 0 1 45.6736 47.4736)" style="overflow:visible;"/>
+</svg>

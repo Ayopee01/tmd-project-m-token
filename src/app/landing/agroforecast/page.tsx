@@ -362,8 +362,9 @@ function AgroforecastPage() {
                   className="h-full rounded-2xl bg-white shadow-sm ring-1 ring-black/5"
                 >
                   <div className="flex h-full flex-col p-5">
-                    {/* ทำให้การ์ด 2 คอลัมน์ “เริ่มต้นเสมอ” (md+) */}
+                    {/* Card */}
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      {/* Title Card */}
                       <h3
                         className="
                           flex-1 min-w-0
@@ -376,31 +377,30 @@ function AgroforecastPage() {
                         {titleOf(it)}
                       </h3>
 
-                      {/* ปุ่มดาวน์โหลด (เหมือน UI ตัวอย่าง + responsive <lg) */}
+                      {/* Button ดาวน์โหลดเอกสาร */}
                       <a
                         href={it.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="
-                          group flex w-auto items-center justify-center
-                          rounded-lg border border-emerald-600 bg-white
-                          px-3 py-2 lg:px-3 lg:py-3
-                          cursor-pointer transition duration-150
-                          hover:bg-emerald-700 active:bg-emerald-800
-                        "
+                        className="group inline-flex items-center justify-center gap-2
+                        rounded-lg border border-emerald-600 bg-white
+                        px-3 py-2 lg:px-3 lg:py-3
+                        transition duration-150
+                        hover:bg-emerald-700 active:bg-emerald-800"
                       >
-                        <div className="flex gap-2 items-center text-emerald-600 transition-colors
-                            group-hover:text-gray-100 group-active:text-gray-100">
-                          <FiDownload
-                            className="h-5 w-5 lg:h-6 lg:w-6"
-                            aria-hidden="true"
-                          />
-                          <span
-                            className="text-xs lg:text-sm leading-none font-semibold"
-                          >
-                            ดาวน์โหลดเอกสาร
-                          </span>
-                        </div>
+                        <FiDownload
+                          className="h-5 w-5 text-emerald-600 transition-colors
+                          group-hover:text-gray-100 group-active:text-gray-100
+                          lg:h-6 lg:w-6"
+                          aria-hidden="true"
+                        />
+                        <span
+                          className="text-xs lg:text-sm leading-none font-semibold
+                          text-emerald-600 transition-colors
+                          group-hover:text-gray-100 group-active:text-gray-100"
+                        >
+                          ดาวน์โหลดเอกสาร
+                        </span>
                       </a>
                     </div>
 

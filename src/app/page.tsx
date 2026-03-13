@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 // Swiper
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
@@ -9,12 +10,10 @@ import "swiper/css";
 import { STORAGE_KEY, fetchGPSProvince, rotateToToday, toDDMMYYYY, } from "@/app/lib/gps";
 // icons
 import { FiChevronDown, FiDroplet, FiCompass, FiWind, FiSearch, FiX, } from "react-icons/fi";
-import { WiDaySunny, WiRain, WiThunderstorm, WiDayCloudy, WiStormShowers } from "react-icons/wi";
 // types
-import type { DashboardOK, ProvinceForecast, WeatherDay, WeatherCardData } from "@/app/types/dashboard";
+import type { DashboardOK, ProvinceForecast, WeatherDay} from "@/app/types/dashboard";
 import type { AwsWeatherItem, AwsApiResponse } from "@/app/types/aws-weather";
 import type { Swiper as SwiperType } from "swiper";
-import type { IconType } from "react-icons";
 
 /* -------------------- Config API routes -------------------- */
 
@@ -28,19 +27,38 @@ const KNOT_TO_KMH = 1.852;
 
 /* -------------------- Functions -------------------- */
 
-// Function เลือก icon ให้ตรง Description TH ใน API
-function pickWeatherIcon(desc?: string): IconType | null {
+// Function เลือก icon path ให้ตรง Description TH ใน API
+function pickWeatherIconPath(desc?: string, isNight = false): string | null {
   const t = (desc ?? "").trim();
 
   if (!t) return null;
 
-  if (t.includes("พายุฝนฟ้าคะนอง")) return WiThunderstorm;
-  if (t.includes("ฝนฟ้าคะนอง")) return WiStormShowers;
-  if (t.includes("ฝน")) return WiRain;
-  if (t.includes("ท้องฟ้ามีเมฆบางส่วน")) return WiDayCloudy;
-  if (t.includes("ท้องฟ้าโปร่ง")) return WiDaySunny;
+  // กลุ่มพายุ / ฝน ใช้ icon คงที่
+  if (t.includes("พายุฝนฟ้าคะนอง")) return "/icon_weather/6.ThundersRain.svg";
+  if (t.includes("ฝนฟ้าคะนอง")) return "/icon_weather/5.ThundersStorm.svg";
+  if (t.includes("ฝน")) return "/icon_weather/5.Rain.svg";
+
+  // กลุ่มที่สลับกลางวัน/กลางคืน
+  if (t.includes("ท้องฟ้ามีเมฆบางส่วน")) {
+    return isNight
+      ? "/icon_weather/4.CloudyNight.svg"
+      : "/icon_weather/3.CloudyDay.svg";
+  }
+
+  if (t.includes("ท้องฟ้าโปร่ง")) {
+    return isNight
+      ? "/icon_weather/2.Night.svg"
+      : "/icon_weather/1.Day.svg";
+  }
 
   return null;
+}
+
+// Function เช็กว่าเป็นช่วงกลางคืนหรือไม่
+// 05:00 - 17:59 = กลางวัน
+// 18:00 - 04:59 = กลางคืน
+function isNightHour(hour: number) {
+  return hour >= 18 || hour < 5;
 }
 
 // Function แปลงค่าเวลา ISO string ที่เป็น UTC+7 ให้เป็น Date object (ถ้าแปลงไม่ได้ให้คืนค่า null)
@@ -164,6 +182,8 @@ function DashboardPage() {
 
   const [selectedProvinceKey, setSelectedProvinceKey] = useState("");
   const [todayStr, setTodayStr] = useState("");
+
+  const [deviceHour, setDeviceHour] = useState(() => new Date().getHours());
 
   const weatherSwiperRef = useRef<SwiperType | null>(null);
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -305,6 +325,18 @@ function DashboardPage() {
       cancelled = true;
     };
   }, []);
+
+  // ดูเวลาเครื่องของผู้ใช้ แล้วอัปเดตทุก 1 นาที
+  useEffect(() => {
+    const updateHour = () => setDeviceHour(new Date().getHours());
+
+    updateHour();
+    const timer = window.setInterval(updateHour, 60_000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const isNightNow = isNightHour(deviceHour);
 
   /* -------------------- useMemo -------------------- */
 
@@ -563,7 +595,11 @@ function DashboardPage() {
                     const slideDateShortBE = slideDateObj
                       ? formatThaiShortDate2DigitYear(slideDateObj)
                       : "";
-                    const SlideWeatherIcon = pickWeatherIcon(d.descriptionThai);
+
+                    // วันนี้ค่อยดูเวลาเครื่อง ส่วนวันอื่นใช้กลางวันไว้ก่อน
+                    const useNightIcon = isToday ? isNightNow : false;
+
+                    const slideIconSrc = pickWeatherIconPath(d.descriptionThai, useNightIcon);
 
                     return (
                       <SwiperSlide
@@ -576,8 +612,14 @@ function DashboardPage() {
                               {shortCondition(d.descriptionThai)}
                             </span>
 
-                            {SlideWeatherIcon && (
-                              <SlideWeatherIcon className="h-7 w-7 shrink-0 text-slate-700" />
+                            {slideIconSrc && (
+                              <Image
+                                src={slideIconSrc}
+                                alt={shortCondition(d.descriptionThai)}
+                                width={28}
+                                height={28}
+                                className="h-7 w-7 shrink-0"
+                              />
                             )}
 
                             <span className="shrink-0 rounded-xl bg-gray-200 px-2 text-xs text-slate-600">

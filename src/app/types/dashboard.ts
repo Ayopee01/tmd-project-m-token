@@ -60,11 +60,4 @@ export type NormalizeProvinceOptions = {
 // ข้อมูลที่ใช้แสดงใน WeatherCard
 export type WeatherDay = ProvinceForecast["sevenDays"][number];
 
-export type WeatherCardData = {
-  day: WeatherDay | null;
-  isToday: boolean;
-  WeatherIcon: IconType | null;
-  dateShortBE: string;
-};
-
 export type JsonRecord = Record<string, unknown>;

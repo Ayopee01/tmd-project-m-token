@@ -1,0 +1,30 @@
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #0062bf;
+      }
+
+      .cls-2 {
+        fill: #999;
+      }
+
+      .cls-3 {
+        fill: #ffdd15;
+      }
+    </style>
+    <symbol id="raindrop" data-name="raindrop" viewBox="0 0 8.47 12.84">
+      <path class="cls-1" d="M2.49,0A2.49,2.49,0,0,0,0,2.51a2.56,2.56,0,0,0,.2,1l3.55,8a2.51,2.51,0,0,0,3.38,1.06A2.48,2.48,0,0,0,8.32,9.49l-3.55-8A2.49,2.49,0,0,0,2.49,0Z"/>
+    </symbol>
+  </defs>
+  <title>22</title>
+  <g id="s22">
+    <g id="lightning">
+      <path class="cls-2" d="M79.26,41.91A23.92,23.92,0,0,0,34.37,35,9.91,9.91,0,0,0,21.59,40.6a16.34,16.34,0,0,0-1.71-.1A14.85,14.85,0,0,0,9.2,45,14.62,14.62,0,0,0,5,55.16v.21A14.83,14.83,0,0,0,19.88,70.05H40.7l1.63-6.22-3.9-1.66a4,4,0,0,1-2-5.59L47,37.09a4,4,0,0,1,7.45,2.62L52.24,52l4,1.76a4,4,0,0,1,1.87,5.61l-6,10.68H75.59a14.3,14.3,0,0,0,3.67-28.14Z"/>
+      <polygon class="cls-3" points="42.49 79 47.08 61.51 40 58.49 50.55 39 47.74 54.39 54.6 57.42 42.49 79"/>
+    </g>
+    <use width="8.47" height="12.84" transform="matrix(1, 0, 0, -1, 27, 89.64)" xlink:href="#raindrop"/>
+    <use width="8.47" height="12.84" transform="matrix(1, 0, 0, -1, 48, 98.64)" xlink:href="#raindrop"/>
+    <use width="8.47" height="12.84" transform="matrix(1, 0, 0, -1, 63, 89.64)" xlink:href="#raindrop"/>
+  </g>
+</svg>
