@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useState, Suspense, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  Suspense,
+  type ReactNode,
+} from "react";
 import { usePathname } from "next/navigation";
 
 import Navbar from "@/app/components/Navbar";
@@ -10,7 +17,9 @@ import QueryString from "@/app/components/QueryString";
 import { AuthProvider } from "@/app/hooks/auth-hook";
 import ScrollTopButton from "@/app/components/ScrollTop";
 import SwipeBack from "@/app/components/SwipeBack";
-import RouteSnapshotStack from "@/app/components/RouteSnapshotStack";
+import PageSnapshotRecorder from "@/app/components/PageSnapshotRecorder";
+import usePreviousPathInStack from "@/app/hooks/usePreviousPathInStack";
+import { getPageSnapshot } from "@/app/lib/page-snapshot-store";
 
 type LayoutChromeProps = {
   children: ReactNode;
@@ -37,7 +46,7 @@ function LayoutChrome({
 
 function isSwipeBlocked(pathname: string) {
   return pathname === "/";
-  // เพิ่ม route อื่นได้ เช่น:
+  // ตัวอย่าง:
   // return pathname === "/" || pathname.startsWith("/map");
 }
 
@@ -48,6 +57,9 @@ export default function RootLayoutClient({
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const shellRef = useRef<HTMLDivElement | null>(null);
+
+  const previousPath = usePreviousPathInStack(pathname);
 
   useEffect(() => {
     window.czpSdk?.setBackButtonVisible?.(true);
@@ -57,24 +69,33 @@ export default function RootLayoutClient({
     setOpen(false);
   }, [pathname]);
 
+  const previousSnapshot = useMemo(() => {
+    if (!previousPath) return null;
+    return getPageSnapshot(previousPath);
+  }, [previousPath, pathname]);
+
   const currentShell = (
-    <LayoutChrome
-      open={open}
-      onToggleMenu={() => setOpen((v) => !v)}
-      onCloseMenu={() => setOpen(false)}
-    >
-      {children}
-    </LayoutChrome>
+    <div ref={shellRef} className="min-h-screen bg-white">
+      <LayoutChrome
+        open={open}
+        onToggleMenu={() => setOpen((v) => !v)}
+        onCloseMenu={() => setOpen(false)}
+      >
+        {children}
+      </LayoutChrome>
+    </div>
   );
 
-  const snapshotSourceShell = (
-    <LayoutChrome
-      open={false}
-      onToggleMenu={() => { }}
-      onCloseMenu={() => { }}
-    >
-      {children}
-    </LayoutChrome>
+  const underlay = previousSnapshot ? (
+    <img
+      src={previousSnapshot}
+      alt=""
+      aria-hidden="true"
+      className="h-full w-full select-none object-cover object-top"
+      draggable={false}
+    />
+  ) : (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50" />
   );
 
   return (
@@ -83,28 +104,29 @@ export default function RootLayoutClient({
         <QueryString />
       </Suspense>
 
-      <RouteSnapshotStack pathname={pathname} current={snapshotSourceShell}>
-        {(previousRouteSnapshot) => (
-          <SwipeBack
-            enabled={!open && !isSwipeBlocked(pathname)}
-            fallbackHref="/"
-            mobileOnly
-            mobileMaxWidth={1024}
-            edge={20}
-            threshold={92}
-            velocityThreshold={620}
-            underlay={
-              previousRouteSnapshot ?? (
-                <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50" />
-              )
-            }
-          >
-            {currentShell}
-          </SwipeBack>
-        )}
-      </RouteSnapshotStack>
+      <PageSnapshotRecorder
+        pathname={pathname}
+        targetRef={shellRef}
+        enabled={!open}
+        delay={280}
+      />
 
-      <ScrollTopButton />
+      <SwipeBack
+        enabled={!open && !isSwipeBlocked(pathname)}
+        fallbackHref="/"
+        mobileOnly
+        mobileMaxWidth={1024}
+        edge={20}
+        threshold={92}
+        velocityThreshold={620}
+        underlay={underlay}
+      >
+        {currentShell}
+      </SwipeBack>
+
+      <div data-snapshot-ignore>
+        <ScrollTopButton />
+      </div>
     </AuthProvider>
   );
 }
