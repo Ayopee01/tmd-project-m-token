@@ -29,7 +29,13 @@ export default function RootLayoutClient({
         <QueryString />
       </Suspense>
 
-      <SwipeBack disabled={open} fallbackHref="/">
+      <SwipeBack
+        disabled={open}
+        fallbackHref="/"
+        underlay={
+          <div className="h-full w-full bg-gradient-to-br from-slate-100 via-white to-emerald-50" />
+        }
+      >
         <Navbar onOpenMenu={() => setOpen((i) => !i)} />
         <DrawerMenu open={open} onClose={() => setOpen(false)} />
         {children}
