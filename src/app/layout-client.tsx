@@ -11,10 +11,7 @@ import { AuthProvider } from "@/app/hooks/auth-hook";
 import ScrollTopButton from "@/app/components/ScrollTop";
 import SwipeBack from "@/app/components/SwipeBack";
 import usePreviousPathInStack from "@/app/hooks/usePreviousPathInStack";
-
-function isSwipeBlocked(pathname: string) {
-  return pathname === "/";
-}
+import useCanGoBack from "@/app/hooks/useCanGoBack";
 
 export default function RootLayoutClient({
   children,
@@ -24,6 +21,7 @@ export default function RootLayoutClient({
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const previousPath = usePreviousPathInStack(pathname);
+  const canGoBack = useCanGoBack();
 
   useEffect(() => {
     window.czpSdk?.setBackButtonVisible?.(true);
@@ -39,13 +37,12 @@ export default function RootLayoutClient({
         <QueryString />
       </Suspense>
 
-      {/* Navbar ไม่ปัดไปด้วย */}
+      {/* Navbar อยู่นอก SwipeBack */}
       <Navbar onOpenMenu={() => setOpen((v) => !v)} />
       <DrawerMenu open={open} onClose={() => setOpen(false)} />
 
-      {/* ปัดเฉพาะเนื้อหา */}
       <SwipeBack
-        enabled={!open && !isSwipeBlocked(pathname)}
+        enabled={!open && canGoBack}
         fallbackHref="/"
         mobileOnly
         mobileMaxWidth={1024}
@@ -54,7 +51,7 @@ export default function RootLayoutClient({
         velocityThreshold={620}
         previousHref={previousPath}
       >
-        <main className="min-h-screen bg-white">
+        <main className="min-h-screen bg-white pt-16">
           {children}
           <Footer />
         </main>
