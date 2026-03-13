@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense, type ReactNode } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { usePathname } from "next/navigation";
 
 import Navbar from "@/app/components/Navbar";
@@ -12,33 +12,8 @@ import ScrollTopButton from "@/app/components/ScrollTop";
 import SwipeBack from "@/app/components/SwipeBack";
 import usePreviousPathInStack from "@/app/hooks/usePreviousPathInStack";
 
-type LayoutChromeProps = {
-  children: ReactNode;
-  open: boolean;
-  onToggleMenu: () => void;
-  onCloseMenu: () => void;
-};
-
-function LayoutChrome({
-  children,
-  open,
-  onToggleMenu,
-  onCloseMenu,
-}: LayoutChromeProps) {
-  return (
-    <>
-      <Navbar onOpenMenu={onToggleMenu} />
-      <DrawerMenu open={open} onClose={onCloseMenu} />
-      {children}
-      <Footer />
-    </>
-  );
-}
-
 function isSwipeBlocked(pathname: string) {
   return pathname === "/";
-  // เพิ่ม route ได้ เช่น:
-  // return pathname === "/" || pathname.startsWith("/map");
 }
 
 export default function RootLayoutClient({
@@ -64,6 +39,11 @@ export default function RootLayoutClient({
         <QueryString />
       </Suspense>
 
+      {/* Navbar ไม่ปัดไปด้วย */}
+      <Navbar onOpenMenu={() => setOpen((v) => !v)} />
+      <DrawerMenu open={open} onClose={() => setOpen(false)} />
+
+      {/* ปัดเฉพาะเนื้อหา */}
       <SwipeBack
         enabled={!open && !isSwipeBlocked(pathname)}
         fallbackHref="/"
@@ -74,13 +54,10 @@ export default function RootLayoutClient({
         velocityThreshold={620}
         previousHref={previousPath}
       >
-        <LayoutChrome
-          open={open}
-          onToggleMenu={() => setOpen((v) => !v)}
-          onCloseMenu={() => setOpen(false)}
-        >
+        <main className="min-h-screen bg-white">
           {children}
-        </LayoutChrome>
+          <Footer />
+        </main>
       </SwipeBack>
 
       <ScrollTopButton />
