@@ -10,7 +10,7 @@ import QueryString from "@/app/components/QueryString";
 import { AuthProvider } from "@/app/hooks/auth-hook";
 import ScrollTopButton from "@/app/components/ScrollTop";
 import SwipeBack from "@/app/components/SwipeBack";
-import RouteSnapshotStack from "@/app/components/RouteSnapshot";
+import RouteSnapshotStack from "@/app/components/RouteSnapshotStack";
 
 type LayoutChromeProps = {
   children: ReactNode;
@@ -37,7 +37,7 @@ function LayoutChrome({
 
 function isSwipeBlocked(pathname: string) {
   return pathname === "/";
-  // เพิ่ม route อื่นได้ เช่น
+  // เพิ่ม route อื่นได้ เช่น:
   // return pathname === "/" || pathname.startsWith("/map");
 }
 
@@ -67,12 +67,11 @@ export default function RootLayoutClient({
     </LayoutChrome>
   );
 
-  // shell สำหรับ snapshot ควรคงที่และไม่พ่วง state เมนู
   const snapshotSourceShell = (
     <LayoutChrome
       open={false}
-      onToggleMenu={() => {}}
-      onCloseMenu={() => {}}
+      onToggleMenu={() => { }}
+      onCloseMenu={() => { }}
     >
       {children}
     </LayoutChrome>

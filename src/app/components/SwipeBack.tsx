@@ -1,10 +1,20 @@
 "use client";
 
-import { animate, motion, useDragControls, useMotionTemplate, useMotionValue, useReducedMotion, useTransform, } from "motion/react";
+import {
+    animate,
+    motion,
+    useDragControls,
+    useMotionTemplate,
+    useMotionValue,
+    useReducedMotion,
+    useTransform,
+} from "motion/react";
 import type { PanInfo } from "motion/react";
 import { useRouter } from "next/navigation";
 import {
-    useEffect, useState,
+    useEffect,
+    useRef,
+    useState,
     type PointerEvent as ReactPointerEvent,
     type ReactNode,
 } from "react";
@@ -52,9 +62,9 @@ export default function SwipeBack({
     underlay,
     enabled = true,
     fallbackHref = "/",
-    edge = 22,
-    threshold = 96,
-    velocityThreshold = 650,
+    edge = 20,
+    threshold = 92,
+    velocityThreshold = 620,
     mobileOnly = true,
     mobileMaxWidth = 1024,
     className = "",
@@ -69,7 +79,7 @@ export default function SwipeBack({
     const x = useMotionValue(0);
     const [dragging, setDragging] = useState(false);
     const [viewportWidth, setViewportWidth] = useState(420);
-    const animatingRef = useState({ current: false })[0];
+    const animatingRef = useRef(false);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -84,26 +94,16 @@ export default function SwipeBack({
     }, []);
 
     const completeDistance = viewportWidth + 48;
+    const progress = useTransform(x, [0, completeDistance], [0, 1]);
 
-    const progress = useTransform(
-        x,
-        [0, completeDistance],
-        [0, 1]
-    );
-
-    // หน้าด้านล่าง
     const underlayX = useTransform(progress, [0, 1], [-34, 0]);
     const underlayScale = useTransform(progress, [0, 1], [0.965, 1]);
     const underlayOpacity = useTransform(progress, [0, 1], [0.82, 1]);
-
-    // ม่านมืดทับหน้าด้านล่าง
     const scrimOpacity = useTransform(progress, [0, 1], [0.16, 0]);
 
-    // หน้าปัจจุบัน
     const pageRadius = useTransform(progress, [0, 0.08, 1], [0, 16, 18]);
     const pageShadowBlur = useTransform(progress, [0, 1], [0, 42]);
     const pageShadowOpacity = useTransform(progress, [0, 1], [0, 0.18]);
-
     const pageShadow = useMotionTemplate`0 10px ${pageShadowBlur}px rgba(15, 23, 42, ${pageShadowOpacity})`;
 
     async function goBack() {
