@@ -2,7 +2,6 @@
 
 import {
   useEffect,
-  useMemo,
   useRef,
   useState,
   Suspense,
@@ -19,7 +18,7 @@ import ScrollTopButton from "@/app/components/ScrollTop";
 import SwipeBack from "@/app/components/SwipeBack";
 import PageSnapshotRecorder from "@/app/components/PageSnapshotRecorder";
 import usePreviousPathInStack from "@/app/hooks/usePreviousPathInStack";
-import { getPageSnapshot } from "@/app/lib/page-snapshot-store";
+import { usePageSnapshot } from "@/app/lib/page-snapshot-store";
 
 type LayoutChromeProps = {
   children: ReactNode;
@@ -46,8 +45,6 @@ function LayoutChrome({
 
 function isSwipeBlocked(pathname: string) {
   return pathname === "/";
-  // ตัวอย่าง:
-  // return pathname === "/" || pathname.startsWith("/map");
 }
 
 export default function RootLayoutClient({
@@ -60,6 +57,7 @@ export default function RootLayoutClient({
   const shellRef = useRef<HTMLDivElement | null>(null);
 
   const previousPath = usePreviousPathInStack(pathname);
+  const previousSnapshot = usePageSnapshot(previousPath);
 
   useEffect(() => {
     window.czpSdk?.setBackButtonVisible?.(true);
@@ -68,11 +66,6 @@ export default function RootLayoutClient({
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
-
-  const previousSnapshot = useMemo(() => {
-    if (!previousPath) return null;
-    return getPageSnapshot(previousPath);
-  }, [previousPath, pathname]);
 
   const currentShell = (
     <div ref={shellRef} className="min-h-screen bg-white">
@@ -95,7 +88,7 @@ export default function RootLayoutClient({
       draggable={false}
     />
   ) : (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50" />
+    <div className="min-h-screen bg-white" />
   );
 
   return (
@@ -108,7 +101,7 @@ export default function RootLayoutClient({
         pathname={pathname}
         targetRef={shellRef}
         enabled={!open}
-        delay={280}
+        delay={180}
       />
 
       <SwipeBack
