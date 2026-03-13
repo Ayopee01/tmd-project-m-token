@@ -10,7 +10,7 @@ import QueryString from "@/app/components/QueryString";
 import { AuthProvider } from "@/app/hooks/auth-hook";
 import ScrollTopButton from "@/app/components/ScrollTop";
 import SwipeBack from "@/app/components/SwipeBack";
-import RouteSnapshot from "@/app/components/RouteSnapshot";
+import RouteSnapshotStack from "@/app/components/RouteSnapshot";
 
 type LayoutChromeProps = {
   children: ReactNode;
@@ -37,7 +37,7 @@ function LayoutChrome({
 
 function isSwipeBlocked(pathname: string) {
   return pathname === "/";
-  // เพิ่ม route ที่ไม่อยากให้ swipe back ได้ตรงนี้ เช่น
+  // เพิ่ม route อื่นได้ เช่น
   // return pathname === "/" || pathname.startsWith("/map");
 }
 
@@ -57,52 +57,53 @@ export default function RootLayoutClient({
     setOpen(false);
   }, [pathname]);
 
+  const currentShell = (
+    <LayoutChrome
+      open={open}
+      onToggleMenu={() => setOpen((v) => !v)}
+      onCloseMenu={() => setOpen(false)}
+    >
+      {children}
+    </LayoutChrome>
+  );
+
+  // shell สำหรับ snapshot ควรคงที่และไม่พ่วง state เมนู
+  const snapshotSourceShell = (
+    <LayoutChrome
+      open={false}
+      onToggleMenu={() => {}}
+      onCloseMenu={() => {}}
+    >
+      {children}
+    </LayoutChrome>
+  );
+
   return (
     <AuthProvider>
       <Suspense fallback={null}>
         <QueryString />
       </Suspense>
 
-      <RouteSnapshot pathname={pathname} current={children}>
-        {(snapshotChildren) => {
-          const currentShell = (
-            <LayoutChrome
-              open={open}
-              onToggleMenu={() => setOpen((v) => !v)}
-              onCloseMenu={() => setOpen(false)}
-            >
-              {children}
-            </LayoutChrome>
-          );
-
-          const underlayShell = snapshotChildren ? (
-            <LayoutChrome
-              open={false}
-              onToggleMenu={() => {}}
-              onCloseMenu={() => {}}
-            >
-              {snapshotChildren}
-            </LayoutChrome>
-          ) : (
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50" />
-          );
-
-          return (
-            <SwipeBack
-              enabled={!open && !isSwipeBlocked(pathname)}
-              fallbackHref="/"
-              mobileOnly
-              mobileMaxWidth={1024}
-              edge={20}
-              threshold={92}
-              velocityThreshold={620}
-              underlay={underlayShell}
-            >
-              {currentShell}
-            </SwipeBack>
-          );
-        }}
-      </RouteSnapshot>
+      <RouteSnapshotStack pathname={pathname} current={snapshotSourceShell}>
+        {(previousRouteSnapshot) => (
+          <SwipeBack
+            enabled={!open && !isSwipeBlocked(pathname)}
+            fallbackHref="/"
+            mobileOnly
+            mobileMaxWidth={1024}
+            edge={20}
+            threshold={92}
+            velocityThreshold={620}
+            underlay={
+              previousRouteSnapshot ?? (
+                <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50" />
+              )
+            }
+          >
+            {currentShell}
+          </SwipeBack>
+        )}
+      </RouteSnapshotStack>
 
       <ScrollTopButton />
     </AuthProvider>
