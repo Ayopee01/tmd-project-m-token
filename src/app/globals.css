@@ -1,8 +1,12 @@
 @import "tailwindcss";
 
+/* -------------------- Global Styles -------------------- */
+
 body {
   font-family: var(--font-inter), var(--font-thai), system-ui, sans-serif;
 }
+
+/* -------------------- Weather Swiper Custom Styles -------------------- */
 
 .weather-swiper {
   padding-bottom: 28px;

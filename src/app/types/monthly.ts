@@ -12,3 +12,10 @@ export type ClimateMonthlyResponse = {
   data: ClimateMonthlyItem[];
   message?: string;
 };
+
+export type Norm = {
+  item: ClimateMonthlyItem;
+  date: Date;
+  yearBE: number;
+  monthIndex: number; // 0-11
+};

@@ -5,10 +5,14 @@ import ZoomableImage from "@/app/components/ZoomableImage";
 import type { DailyForecastItem, DailyForecastResponse } from "@/app/types/daily";
 import { DAILY_SECTIONS } from "@/app/types/daily";
 
+/* -------------------- Config API routes -------------------- */
+
 const basePath = process.env.NEXT_PUBLIC_API_ROUTE ?? "";
 const DAILY_API_ROUTE = `${basePath}/api/daily`;
 
-// Function
+/* -------------------- Functions -------------------- */
+
+// Function สำหรับแปลง string เป็น Date
 function parseContentDate(raw: string): Date | null {
   if (!raw) return null;
   const cleaned = raw.trim().replace(" ", "T").replace(/\.\d+$/, "");
@@ -16,7 +20,7 @@ function parseContentDate(raw: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-// Function
+// Function สำหรับแปลง Date เป็นรูปแบบวันที่ภาษาไทย
 function thaiDate(d: Date): string {
   return d.toLocaleDateString("th-TH", {
     year: "numeric",
@@ -25,7 +29,7 @@ function thaiDate(d: Date): string {
   });
 }
 
-// Function
+// Function สำหรับแปลง Date เป็นรูปแบบเวลาภาษาไทย (24 ชั่วโมง)
 function thaiTime(d: Date): string {
   return d.toLocaleTimeString("th-TH", {
     hour: "2-digit",
@@ -34,12 +38,14 @@ function thaiTime(d: Date): string {
   });
 }
 
-// Function
+// Function สำหรับตัดข้อความให้สั้นลงและเติม "…" ถ้าข้อความยาวเกิน max (สำหรับ preview ใน card)
 function shortText(s: string, max = 140): string {
   const t = (s ?? "").trim().replace(/\s+/g, " ");
   if (t.length <= max) return t;
   return t.slice(0, max).trimEnd() + "…";
 }
+
+/* -------------------- component -------------------- */
 
 function DailyPage() {
   const [items, setItems] = useState<DailyForecastItem[]>([]);
@@ -50,6 +56,8 @@ function DailyPage() {
   const [dateOpen, setDateOpen] = useState(false);
   const dateWrapRef = useRef<HTMLDivElement | null>(null);
   const [openSectionKey, setOpenSectionKey] = useState<string | null>(null);
+
+  /* -------------------- API fetchers -------------------- */
 
   async function load() {
     setLoading(true);
@@ -79,6 +87,8 @@ function DailyPage() {
     }
   }
 
+  /* -------------------- useEffect -------------------- */
+
   useEffect(() => {
     load();
   }, []);
@@ -100,15 +110,20 @@ function DailyPage() {
     };
   }, []);
 
+  /* -------------------- useMemo -------------------- */
+
+  // การหา item ที่ถูกเลือกจาก selectedKey เพื่อใช้แสดงข้อมูลในส่วนต่างๆ ของ UI
   const selected = useMemo(() => {
     return items.find((x) => x.contentdate === selectedKey) ?? items[0] ?? null;
   }, [items, selectedKey]);
 
+  // การหา label ที่จะแสดงในปุ่มเลือกวันที่ โดยใช้ title ของ item ที่ถูกเลือก
   const selectedLabel = useMemo(() => {
     const selected = items.find((x) => x.contentdate === selectedKey);
     return selected?.title ?? "";
   }, [items, selectedKey]);
 
+  // เมื่อ selectedKey เปลี่ยน เราจะรีเซ็ตการแสดงรายละเอียดเพิ่มเติมและปิด section ที่เปิดอยู่ (ถ้ามี)
   useEffect(() => {
     setShowGeneral(false);
     setOpenSectionKey(null);
@@ -129,9 +144,10 @@ function DailyPage() {
 
     const toggle = () => setOpenSectionKey((prev) => (prev === id ? null : id));
 
-    {/* UI Card Section */ }
+    /* -------------------- UI section -------------------- */
+
     return (
-      <div
+      <section
         key={id}
         role="button"
         tabIndex={0}
@@ -198,11 +214,11 @@ function DailyPage() {
             </div>
           </div>
         </div>
-      </div>
+      </section>
     );
   };
 
-  {/* UI Loading Section */ }
+  {/* UI Loading */ }
   if (loading) {
     return (
       <main className="mx-auto max-w-5xl px-4 py-6">
@@ -218,7 +234,7 @@ function DailyPage() {
     );
   }
 
-  {/* UI Error Section */ }
+  {/* UI Error */ }
   if (error || !selected) {
     return (
       <main className="min-h-screen bg-white">
@@ -233,8 +249,6 @@ function DailyPage() {
               <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
                 ข่าวพยากรณ์อากาศประจำวัน
               </h1>
-
-              {/* จะมีหรือไม่มีก็ได้ แต่ช่วยให้หน้าตาดู “เหมือนหน้าโหลดเสร็จ” */}
               <p className="mt-1 text-sm text-gray-700 sm:text-base">
                 ไม่สามารถโหลดข้อมูลได้ในขณะนี้
               </p>
@@ -415,7 +429,6 @@ function DailyPage() {
                   width={600}
                   height={1200}
                   className="h-auto w-full"
-                  // desktop: เปิดผ่านไอคอนอย่างเดียว (ตาม requirement)
                   clickAnywhereOnDesktop={false}
                 />
               </div>

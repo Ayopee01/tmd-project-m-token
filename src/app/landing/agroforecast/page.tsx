@@ -9,15 +9,19 @@ import {
   FiDownload,
 } from "react-icons/fi";
 
-import type { Agro7DaysItem, Agro7DaysResponse } from "@/app/types/agroforecast";
+import type { Agro7DaysItem, Agro7DaysResponse, YearFilter } from "@/app/types/agroforecast";
+
+/* -------------------- Config API routes -------------------- */
 
 const basePath = process.env.NEXT_PUBLIC_API_ROUTE ?? "";
 const AGRO_API_ROUTE = `${basePath}/api/agroforecast`;
 
+/* -------------------- Config pure helpers -------------------- */
+
 //กำหนดจำนวน Card ใน Page
 const PAGE_SIZE = 6;
 
-type YearFilter = "all" | `${number}`;
+/* -------------------- Functions -------------------- */
 
 // Function แปลง string เป็น Date โดยพยายามแก้ไขรูปแบบให้เป็น ISO ถ้าเป็นไปได้
 function toDate(raw: string): Date | null {
@@ -63,6 +67,8 @@ function pageTokens(current: number, total: number): Array<number | "…"> {
   return [1, "…", current - 1, current, current + 1, "…", last];
 }
 
+/* -------------------- component -------------------- */
+
 function AgroforecastPage() {
   const [items, setItems] = useState<Agro7DaysItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -77,6 +83,8 @@ function AgroforecastPage() {
 
   // Pagination
   const [page, setPage] = useState<number>(1);
+
+  /* -------------------- API fetchers -------------------- */
 
   async function load(): Promise<void> {
     setLoading(true);
@@ -108,41 +116,18 @@ function AgroforecastPage() {
     }
   }
 
+  /* -------------------- useEffect -------------------- */
+
   useEffect(() => {
     load();
   }, []);
 
-  const yearOptions = useMemo<number[]>(() => {
-    const set = new Set<number>();
-    for (const it of items) {
-      const d = toDate(it.contentdate);
-      if (d) set.add(beYear(d));
-    }
-    return Array.from(set).sort((a, b) => b - a);
-  }, [items]);
-
-  const filtered = useMemo<Agro7DaysItem[]>(() => {
-    if (yearFilter === "all") return items;
-    const y = Number(yearFilter);
-    return items.filter((it) => {
-      const d = toDate(it.contentdate);
-      return d ? beYear(d) === y : false;
-    });
-  }, [items, yearFilter]);
-
+  // เมื่อเปลี่ยน filter ให้กลับไปหน้าแรกเสมอ
   useEffect(() => {
     setPage(1);
   }, [yearFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageSafe = Math.min(Math.max(1, page), totalPages);
-
-  const pageItems = useMemo<Agro7DaysItem[]>(() => {
-    const start = (pageSafe - 1) * PAGE_SIZE;
-    return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, pageSafe]);
-
-  // Close dropdown when click outside / ESC
+  // Close dropdown เมื่อ click outside / ESC
   useEffect(() => {
     if (!yearOpen) return;
 
@@ -172,7 +157,37 @@ function AgroforecastPage() {
 
   const yearLabel = yearFilter === "all" ? "เอกสารทั้งหมด" : `ปี ${yearFilter}`;
 
-  /** ===== Loading ===== */
+  /* -------------------- useMemo -------------------- */
+
+  // หา list ปีทั้งหมดจาก items เพื่อใช้ใน dropdown filter
+  const yearOptions = useMemo<number[]>(() => {
+    const set = new Set<number>();
+    for (const it of items) {
+      const d = toDate(it.contentdate);
+      if (d) set.add(beYear(d));
+    }
+    return Array.from(set).sort((a, b) => b - a);
+  }, [items]);
+
+  // กรอง items ตามปีที่เลือกใน filter
+  const filtered = useMemo<Agro7DaysItem[]>(() => {
+    if (yearFilter === "all") return items;
+    const y = Number(yearFilter);
+    return items.filter((it) => {
+      const d = toDate(it.contentdate);
+      return d ? beYear(d) === y : false;
+    });
+  }, [items, yearFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageSafe = Math.min(Math.max(1, page), totalPages);
+
+  const pageItems = useMemo<Agro7DaysItem[]>(() => {
+    const start = (pageSafe - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, pageSafe]);
+
+  {/* UI Loading */ }
   if (loading) {
     return (
       <main className="min-h-screen bg-white">
@@ -202,7 +217,7 @@ function AgroforecastPage() {
     );
   }
 
-  /** ===== Error ===== */
+  {/* UI Error */ }
   if (error) {
     return (
       <main className="min-h-screen bg-white">
@@ -238,7 +253,8 @@ function AgroforecastPage() {
     );
   }
 
-  /** ===== UI ===== */
+  /* -------------------- UI section -------------------- */
+
   return (
     <main className="min-h-screen bg-white">
       {/* Header */}

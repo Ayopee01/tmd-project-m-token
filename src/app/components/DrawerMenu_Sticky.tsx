@@ -21,18 +21,6 @@ const MENUS: MenuItem[] = [
     { href: "/landing/week", label: "สรุปลักษณะอากาศรายสัปดาห์" },
     { href: "/landing/monthly", label: "สรุปลักษณะอากาศรายเดือน" },
     { href: "/landing/agroforecast", label: "พยากรณ์อากาศเพื่อการเกษตรราย 7 วัน" },
-    // { href: "/", label: "Mock1" },
-    // { href: "/", label: "Mock2" },
-    // { href: "/", label: "Mock3" },
-    // { href: "/", label: "Mock4" },
-    // { href: "/", label: "Mock5" },
-    // { href: "/", label: "Mock6" },
-    // { href: "/", label: "Mock7" },
-    // { href: "/", label: "Mock8" },
-    // { href: "/", label: "Mock9" },
-    // { href: "/", label: "Mock10" },
-    // { href: "/", label: "Mock11" },
-    // { href: "/", label: "Mock12" },
 ];
 
 // ตำแหน่งของ Topbar

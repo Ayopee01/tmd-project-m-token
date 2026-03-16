@@ -2,12 +2,15 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FiCalendar, FiChevronDown, FiDownload } from "react-icons/fi";
-import type { ClimateMonthlyItem, ClimateMonthlyResponse } from "@/app/types/monthly";
+import type { ClimateMonthlyResponse, Norm } from "@/app/types/monthly";
+
+/* -------------------- Config API routes -------------------- */
 
 const basePath = process.env.NEXT_PUBLIC_API_ROUTE ?? "";
 const MONTH_API_ROUTE = `${basePath}/api/monthly`;
 
-/** ===== minimal helpers ===== */
+/* -------------------- Config pure helpers -------------------- */
+
 const THAI_MONTHS = [
   "มกราคม",
   "กุมภาพันธ์",
@@ -22,6 +25,8 @@ const THAI_MONTHS = [
   "พฤศจิกายน",
   "ธันวาคม",
 ];
+
+/* -------------------- Functions -------------------- */
 
 function txt(v: unknown) {
   return String(v ?? "").trim().replace(/\s+/g, " ");
@@ -48,12 +53,7 @@ function thaiDate(d: Date) {
   return `${day} ${month} ${year}`;
 }
 
-type Norm = {
-  item: ClimateMonthlyItem;
-  date: Date;
-  yearBE: number;
-  monthIndex: number; // 0-11
-};
+/* -------------------- component -------------------- */
 
 function MonthlyPage() {
   const [rows, setRows] = useState<Norm[]>([]);
@@ -71,6 +71,8 @@ function MonthlyPage() {
   // header year dropdown
   const [yearOpen, setYearOpen] = useState(false);
   const yearWrapRef = useRef<HTMLDivElement | null>(null);
+
+  /* -------------------- API fetchers -------------------- */
 
   async function load() {
     setLoading(true);
@@ -108,6 +110,8 @@ function MonthlyPage() {
     }
   }
 
+  /* -------------------- useEffect -------------------- */
+
   useEffect(() => {
     load();
   }, []);
@@ -135,6 +139,8 @@ function MonthlyPage() {
       document.removeEventListener("keydown", onKey);
     };
   }, []);
+
+  /* -------------------- useMemo -------------------- */
 
   const years = useMemo(() => {
     const set = new Set<number>();
@@ -176,7 +182,7 @@ function MonthlyPage() {
   const monthLabel = selected ? THAI_MONTHS[selected.monthIndex] ?? "-" : "-";
   const pageSubTitle = yearBE ? `ข้อมูลของปี ${yearBE}` : "—";
 
-  /** ===== Loading ===== */
+  {/* UI Loading */ }
   if (loading) {
     return (
       <main className="min-h-screen bg-white">
@@ -202,7 +208,7 @@ function MonthlyPage() {
     );
   }
 
-  /** ===== Error ===== */
+  {/* UI Error */ }
   if (error || !selected) {
     return (
       <main className="min-h-screen bg-white">
@@ -234,7 +240,8 @@ function MonthlyPage() {
     );
   }
 
-  /** ===== UI ===== */
+  /* -------------------- UI section -------------------- */
+
   return (
     <main className="min-h-screen bg-white">
       {/* Header */}

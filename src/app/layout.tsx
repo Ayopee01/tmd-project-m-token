@@ -1,9 +1,10 @@
-// app/layout.tsx
 import "./globals.css";
 import { Inter, Noto_Sans_Thai } from "next/font/google";
 import type { Metadata } from "next";
 import LayoutClient from "./layout-client";
 import Script from "next/script";
+
+/* -------------------- Font configuration -------------------- */
 
 const inter = Inter({
   subsets: ["latin"],
@@ -18,12 +19,16 @@ const notoThai = Noto_Sans_Thai({
   display: "swap",
 });
 
+/* -------------------- Metadata -------------------- */
+
 export const metadata: Metadata = {
   title: "กรมอุตุนิยมวิทยา",
   description: "พยากรณ์อากาศและข้อมูลสภาพอากาศ",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+/* -------------------- Root layout component -------------------- */
+
+function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="th">
       <body className={`${inter.variable} ${notoThai.variable} antialiased`}>
@@ -38,3 +43,5 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+
+export default RootLayout;

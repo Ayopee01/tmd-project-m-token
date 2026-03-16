@@ -1,25 +1,22 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  FiArrowDown,
-  FiArrowUp,
-  FiCalendar,
-  FiChevronDown,
-  FiCloudRain,
-  FiDownload,
-} from "react-icons/fi";
+import { FiArrowDown, FiArrowUp, FiCalendar, FiChevronDown, FiCloudRain, FiDownload } from "react-icons/fi";
 import type { ClimateWeeklyItem, ClimateWeeklyResponse, WeekRegionKey } from "@/app/types/week";
+
+/* -------------------- Config API routes -------------------- */
 
 const basePath = process.env.NEXT_PUBLIC_API_ROUTE ?? "";
 const WEEK_API_ROUTE = `${basePath}/api/week`;
 
-/** ===== helpers ===== */
+/* -------------------- Functions -------------------- */
+
 function cleanText(v: unknown): string {
   return String(v ?? "").trim().replace(/\s+/g, " ");
 }
 
-/** ===== region config ===== */
+/* -------------------- Config pure helpers -------------------- */
+
 const REGION_LIST: Array<{ key: WeekRegionKey; label: string }> = [
   { key: "north", label: "ภาคเหนือ" },
   { key: "northeast", label: "ภาคตะวันออกเฉียงเหนือ" },
@@ -29,6 +26,8 @@ const REGION_LIST: Array<{ key: WeekRegionKey; label: string }> = [
   { key: "south_west_coast", label: "ภาคใต้ฝั่งตะวันตก" },
   { key: "bangkok_vicinity", label: "กรุงเทพมหานครและปริมณฑล" },
 ];
+
+/* -------------------- component -------------------- */
 
 function WeekPage() {
   const [items, setItems] = useState<ClimateWeeklyItem[]>([]);
@@ -40,6 +39,8 @@ function WeekPage() {
   // Dropdown
   const [dateOpen, setDateOpen] = useState(false);
   const dateWrapRef = useRef<HTMLDivElement | null>(null);
+
+  /* -------------------- API fetchers -------------------- */
 
   async function load() {
     setLoading(true);
@@ -74,6 +75,8 @@ function WeekPage() {
       setLoading(false);
     }
   }
+
+  /* -------------------- useEffect -------------------- */
 
   useEffect(() => {
     load();
@@ -129,7 +132,7 @@ function WeekPage() {
     });
   }, [selected]);
 
-  /** ===== Loading ===== */
+  {/* UI Loading */ }
   if (loading) {
     return (
       <main className="min-h-screen bg-white">
@@ -159,7 +162,7 @@ function WeekPage() {
     );
   }
 
-  /** ===== Error ===== */
+  {/* UI Error */ }
   if (error || !selected) {
     return (
       <main className="min-h-screen bg-white">
@@ -195,7 +198,8 @@ function WeekPage() {
     );
   }
 
-  /** ===== UI ===== */
+  /* -------------------- UI section -------------------- */
+
   return (
     <main className="min-h-screen bg-white">
       {/* Header */}

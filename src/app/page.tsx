@@ -7,11 +7,12 @@ import { Pagination } from "swiper/modules";
 import "swiper/css/pagination";
 import "swiper/css";
 // lib
-import { STORAGE_KEY, fetchGPSProvince, rotateToToday, toDDMMYYYY, } from "@/app/lib/gps";
+import { STORAGE_KEY, fetchGPSProvince, rotateToToday, toDDMMYYYY } from "@/app/lib/gps";
 // icons
-import { FiChevronDown, FiDroplet, FiCompass, FiWind, FiSearch, FiX, } from "react-icons/fi";
+import { FiChevronDown, FiDroplet, FiWind, FiSearch, FiX } from "react-icons/fi";
+import { IoNavigateCircleOutline } from "react-icons/io5";
 // types
-import type { DashboardOK, ProvinceForecast, WeatherDay} from "@/app/types/dashboard";
+import type { DashboardOK, ProvinceForecast, WeatherDay } from "@/app/types/dashboard";
 import type { AwsWeatherItem, AwsApiResponse } from "@/app/types/aws-weather";
 import type { Swiper as SwiperType } from "swiper";
 
@@ -52,6 +53,11 @@ function pickWeatherIconPath(desc?: string, isNight = false): string | null {
   }
 
   return null;
+}
+
+// Function ตั้งค่า icon เข็มทิศ -45°
+function getWindRotateDeg(deg?: number | string | null) {
+  return Number(deg ?? 0) - 45;
 }
 
 // Function เช็กว่าเป็นช่วงกลางคืนหรือไม่
@@ -628,19 +634,39 @@ function DashboardPage() {
                           </div>
 
                           <div className="mt-2 flex items-center justify-center">
-                            <div className="flex items-center gap-2 leading-none">
-                              <div className="text-2xl font-light tracking-tight text-gray-700">
-                                {d.maxTempC ?? "-"}°
+
+                            <div className="flex items-center gap-4 leading-none">
+                              <div className="flex items-center gap-1">
+                                <Image
+                                  src="/icon_temp/1.tmax.svg"
+                                  alt="Max temperature"
+                                  width={20}
+                                  height={20}
+                                />
+                                <div className="text-2xl font-light tracking-tight text-gray-700">
+                                  {d.maxTempC ?? "-"}°
+                                </div>
                               </div>
-                              <div className="text-2xl font-light tracking-tight text-gray-600">
-                                {d.minTempC ?? "-"}°
+
+                              <div className="flex items-center gap-1">
+                                <Image
+                                  src="/icon_temp/2.tmin.svg"
+                                  alt="Min temperature"
+                                  width={20}
+                                  height={20}
+                                />
+                                <div className="text-2xl font-light tracking-tight text-gray-600">
+                                  {d.minTempC ?? "-"}°
+                                </div>
                               </div>
                             </div>
                           </div>
 
                           <div className="mt-4 grid grid-cols-3 gap-3">
                             <div className="min-w-0 flex flex-col items-center text-center">
-                              <FiCompass className="h-7 w-7 text-slate-800" />
+                              <IoNavigateCircleOutline className="h-8 w-8 text-slate-800"
+                                style={{ transform: `rotate(${getWindRotateDeg(d.windDirectionDeg)}deg)` }}
+                              />
                               <div className="mt-2 text-[11px] text-slate-600">ทิศทางลม</div>
                               <div className="mt-1 text-xs font-medium text-slate-900">
                                 {(d.windDirectionDeg ?? "-") + "°"}
@@ -648,7 +674,7 @@ function DashboardPage() {
                             </div>
 
                             <div className="min-w-0 flex flex-col items-center text-center">
-                              <FiWind className="h-7 w-7 text-slate-800" />
+                              <FiWind className="h-8 w-8 text-slate-800" />
                               <div className="mt-2 text-[11px] text-slate-600">ความเร็วลม</div>
                               <div className="mt-1 text-xs font-medium text-slate-900">
                                 {windToKmh(d.windSpeedKmh) ?? "-"} กม./ชม.
@@ -656,7 +682,7 @@ function DashboardPage() {
                             </div>
 
                             <div className="min-w-0 flex flex-col items-center text-center">
-                              <FiDroplet className="h-7 w-7 text-slate-800" />
+                              <FiDroplet className="h-8 w-8 text-slate-800" />
                               <div className="mt-2 text-[11px] text-slate-600">พื้นที่ฝนตก</div>
                               <div className="mt-1 text-xs font-medium text-slate-900">
                                 {d.percentRainCover ?? "-"} %

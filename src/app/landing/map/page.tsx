@@ -1,18 +1,19 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+// Components
 import ZoomableImage from "@/app/components/ZoomableImage";
-import {
-  FiCalendar,
-  FiChevronDown,
-  FiChevronLeft,
-  FiChevronRight,
-  FiMap,
-} from "react-icons/fi";
-import type { UpperWindItem, UpperWindResponse } from "@/app/types/map";
+// icons
+import { FiCalendar, FiChevronDown, FiChevronLeft, FiChevronRight, FiMap } from "react-icons/fi";
+// types
+import type { UpperWindItem, UpperWindResponse, SoundingStation, ScrollDir } from "@/app/types/map";
+
+/* -------------------- Config API routes -------------------- */
 
 const basePath = process.env.NEXT_PUBLIC_API_ROUTE ?? "";
 const MAP_API_ROUTE = `${basePath}/api/map`;
+
+/* -------------------- Config pure helpers -------------------- */
 
 const SOUNDING_SCROLL_DURATION_MS = 550;
 
@@ -71,25 +72,21 @@ const SOUNDING_TITLE_FALLBACK: Record<string, string> = {
   Chumphon: "ชุมพร",
 };
 
-type SoundingStation = {
-  id: string;
-  title: string;
-  imagePath: string;
-};
+/* -------------------- Functions -------------------- */
 
-type ScrollDir = -1 | 1;
-
+// Function ตรวจสอบ type ว่าเป็น Record<string, unknown> หรือไม่
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
 }
 
+// Function อ่านค่า string ที่ไม่ใช่ empty หรือ whitespace เท่านั้น ถ้าไม่ใช่หรือเป็น empty ให้คืนค่า null
 function readNonEmptyString(v: unknown): string | null {
   if (typeof v !== "string") return null;
   const s = v.trim();
   return s ? s : null;
 }
 
-/** ดึงรายการจังหวัดจาก AirMapWeather: xxxTitle + xxxImagePath (คงลำดับเดิมตาม key ใน API) */
+// Function ดึงข้อมูลสถานี sounding จาก item ของ API โดยดูจาก key ที่ลงท้ายด้วย "Title" และคู่ของมันที่ลงท้ายด้วย "ImagePath"
 function extractSoundingStations(item: UpperWindItem | null): SoundingStation[] {
   if (!item || !isRecord(item)) return [];
 
@@ -117,7 +114,7 @@ function extractSoundingStations(item: UpperWindItem | null): SoundingStation[] 
   return out;
 }
 
-/** แปลง "2026-0x-x0 0x:00:00.0000000" -> Date */
+// Function แปลง contentdate จาก API เป็น Date object โดยรองรับรูปแบบ "2026-02-09 10:57:00.0000000" และถ้าแปลงไม่ได้ให้คืนค่า null
 function parseContentDate(raw: string): Date | null {
   if (!raw) return null;
   const cleaned = raw.replace(" ", "T").replace(/\.\d+$/, "");
@@ -125,7 +122,7 @@ function parseContentDate(raw: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/** แสดงวันเวลาแบบไทย + ปี พ.ศ. */
+// Function แปลง Date object เป็น string รูปแบบ "9 กุมภาพันธ์ 2569 10:57 น." โดยใช้ชื่อเดือนภาษาไทย และปีเป็น พ.ศ.
 function thaiDateTime(d: Date): string {
   const day = d.getDate();
   const month = THAI_MONTHS[d.getMonth()] ?? "";
@@ -138,10 +135,7 @@ function thaiDateTime(d: Date): string {
   return `${day} ${month} ${yearBE} ${time} น.`;
 }
 
-/** ทำ data -> list entries
- *  - ปกติ: เก็บเฉพาะที่มี url
- *  - AirMapWeather: ไม่มี url แต่ต้องเก็บเพื่อเลือกวัน/เวลา + การ์ดจังหวัด
- */
+// Function แปลงข้อมูลจาก API ที่อาจจะเป็น UpperWindItem เดี่ยว หรือ array ของ UpperWindItem หรือ null/undefined ให้เป็น array ของ { apiKey, item } ที่ filter ออกมาเฉพาะที่มี url และรองรับกรณีของ Sounding ที่ไม่ต้องมี url ก็ได้
 function normalizeToEntries(
   data: UpperWindResponse["data"] | null | undefined
 ): Array<{ apiKey: string; item: UpperWindItem }> {
@@ -166,6 +160,7 @@ function normalizeToEntries(
   return out;
 }
 
+// Function ตรวจสอบว่า entry จาก API ตรงกับ menu label ที่กำหนดหรือไม่ โดยเช็คจาก title/alt ของ item และ apiKey เพื่อให้ตรงกับประเภทของแผนที่ที่เลือก
 function isMatchType(menuLabel: string, entry: { apiKey: string; item: UpperWindItem }): boolean {
   const label = menuLabel;
   const title = entry.item.title ?? "";
@@ -189,7 +184,7 @@ function isMatchType(menuLabel: string, entry: { apiKey: string; item: UpperWind
   return false;
 }
 
-/** สร้างตัวเลือกเวลา (unique) จาก contentdate + เรียงล่าสุดก่อน */
+// Function สร้างตัวเลือกเวลา (unique) จาก contentdate + เรียงล่าสุดก่อน
 function getTimeOptions(items: UpperWindItem[]) {
   const times = new Map<string, Date>();
 
@@ -204,11 +199,12 @@ function getTimeOptions(items: UpperWindItem[]) {
     .map(([key, date]) => ({ key, label: thaiDateTime(date) }));
 }
 
-/** easing สำหรับ animate scroll */
+// Function easing แบบ cubic in-out สำหรับใช้ในการ animate scroll ให้ดูนุ่มนวลขึ้น
 function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
+// Function คำนวณระยะเลื่อนแบบ "เป็นชุด" ตามจำนวนการ์ดที่พอดีใน viewport โดยดูจากความกว้างของการ์ดและช่องว่างระหว่างการ์ด เพื่อให้เลื่อนทีละจำนวนการ์ดที่เหมาะสม
 function getGapPx(el: HTMLElement): number {
   const cs = window.getComputedStyle(el);
   const raw = cs.columnGap || cs.gap || "0px";
@@ -216,13 +212,14 @@ function getGapPx(el: HTMLElement): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+// Function หาความกว้างของการ์ดใบแรกในแถว โดยใช้ getBoundingClientRect() เพื่อให้ได้ค่าที่แม่นยำ รวมถึงรองรับกรณีที่มี padding/margin หรือขนาดที่ไม่ใช่จำนวนเต็ม และถ้าไม่เจอการ์ดเลยให้ fallback เป็นความกว้างของแถวทั้งหมด
 function getFirstCardWidthPx(row: HTMLElement): number {
   const first = row.querySelector<HTMLElement>("button");
   if (!first) return row.clientWidth;
   return first.getBoundingClientRect().width;
 }
 
-/** คำนวณระยะเลื่อนแบบ "เป็นชุด" ตามจำนวนการ์ดที่พอดีใน viewport */
+// Function คำนวณระยะเลื่อนแบบ "เป็นชุด" โดยดูจากความกว้างของการ์ดใบแรกและช่องว่างระหว่างการ์ด เพื่อให้เลื่อนทีละจำนวนการ์ดที่พอดีใน viewport และถ้าเกิดข้อผิดพลาดในการคำนวณให้ fallback เป็นความกว้างของแถวทั้งหมด
 function calcPageDeltaPx(row: HTMLElement): number {
   const gap = getGapPx(row);
   const cardW = getFirstCardWidthPx(row);
@@ -234,7 +231,7 @@ function calcPageDeltaPx(row: HTMLElement): number {
   return pageSize * unit;
 }
 
-/** animate scrollLeft แบบกำหนด duration ได้ */
+// Function animate scrollLeft ของ element ไปยัง target ด้วยระยะเวลา durationMs และใช้ easing แบบ cubic in-out เพื่อให้การเลื่อนดูนุ่มนวลขึ้น และถ้า prefers-reduced-motion เปิดอยู่หรือ duration เป็น 0 จะเลื่อนไปทันทีโดยไม่ใช้ animation
 function animateScrollLeft(
   el: HTMLElement,
   target: number,
@@ -274,6 +271,8 @@ function animateScrollLeft(
   requestAnimationFrame(tick);
 }
 
+/* -------------------- component -------------------- */
+
 function MapPage() {
   // type dropdown
   const [typeOpen, setTypeOpen] = useState(false);
@@ -293,6 +292,8 @@ function MapPage() {
 
   // apply เมื่อกดปุ่ม “แสดงแผนที่”
   const [applied, setApplied] = useState<{ typeLabel: string; timeKey: string } | null>(null);
+
+  /* -------------------- API fetchers -------------------- */
 
   async function load() {
     setLoading(true);
@@ -328,6 +329,8 @@ function MapPage() {
     }
   }
 
+  /* -------------------- useEffect -------------------- */
+
   useEffect(() => {
     load();
   }, []);
@@ -354,6 +357,8 @@ function MapPage() {
       document.removeEventListener("keydown", onKey);
     };
   }, []);
+
+  /* -------------------- useMemo -------------------- */
 
   const entries = useMemo(() => normalizeToEntries(raw?.data), [raw]);
 
@@ -544,7 +549,7 @@ function MapPage() {
     };
   }, [isSoundingApplied, soundingStations.length]);
 
-  /** ===== Loading ===== */
+  {/* UI Loading */ }
   if (loading) {
     return (
       <main className="min-h-screen bg-white">
@@ -570,7 +575,7 @@ function MapPage() {
     );
   }
 
-  /** ===== Error ===== */
+  {/* UI Error */ }
   if (error || !raw) {
     return (
       <main className="min-h-screen bg-white">
@@ -605,7 +610,7 @@ function MapPage() {
     );
   }
 
-  /** ===== UI ===== */
+  /* -------------------- UI section -------------------- */
   return (
     <main className="min-h-screen bg-white">
       {/* Header */}

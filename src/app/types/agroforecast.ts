@@ -11,3 +11,5 @@ export type Agro7DaysResponse = {
   data: Agro7DaysItem[];
   message?: string;
 };
+
+export type YearFilter = "all" | `${number}`;

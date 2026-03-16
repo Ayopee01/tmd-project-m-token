@@ -24,12 +24,12 @@ function ZoomableImage({
 }: Props) {
   const [open, setOpen] = useState(false);
 
-  // ✅ md ลงไป (<768px) = กดตรงไหนของรูปก็เปิดได้ + ซ่อนไอคอน
-  const [isMdDown, setIsMdDown] = useState(false);
+  // หน้าจอขนาด lg=1024px ลงไป ให้คลิกที่รูปเพื่อซูมได้เลย (ไม่ต้องกดไอคอน)
+  const [isLgDown, setIsLgDown] = useState(false);
 
   useEffect(() => {
     const mql = window.matchMedia("(max-width: 1024px)"); // lg=1024px ลงไป
-    const apply = () => setIsMdDown(mql.matches);
+    const apply = () => setIsLgDown(mql.matches);
 
     apply();
     mql.addEventListener("change", apply);
@@ -37,8 +37,8 @@ function ZoomableImage({
   }, []);
 
   const canClickAnywhere = useMemo(() => {
-    return isMdDown || clickAnywhereOnDesktop;
-  }, [isMdDown, clickAnywhereOnDesktop]);
+    return isLgDown || clickAnywhereOnDesktop;
+  }, [isLgDown, clickAnywhereOnDesktop]);
 
   // ปิดด้วย ESC + ล็อกสกอลตอนเปิด overlay
   useEffect(() => {
@@ -90,7 +90,7 @@ function ZoomableImage({
           className={className}
         />
 
-        {/* Icon Zoom (✅ ซ่อนบน md ลงไป, โชว์ md+ ) */}
+        {/* Icon Zoom */}
         <button
           type="button"
           aria-label="Icon Zoom"

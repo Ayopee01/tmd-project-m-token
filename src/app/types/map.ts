@@ -12,3 +12,11 @@ export type UpperWindResponse = {
   data: Record<string, UpperWindItem | UpperWindItem[] | null | undefined>;
   message?: string;
 };
+
+export type SoundingStation = {
+  id: string;
+  title: string;
+  imagePath: string;
+};
+
+export type ScrollDir = -1 | 1;
