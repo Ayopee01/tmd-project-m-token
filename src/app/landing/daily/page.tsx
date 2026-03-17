@@ -1,7 +1,11 @@
 "use client";
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { FiDownload, FiPlus, FiCalendar, FiChevronDown } from "react-icons/fi";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+// Components
 import ZoomableImage from "@/app/components/ZoomableImage";
+// icons
+import { FiDownload, FiPlus, FiCalendar, FiChevronDown } from "react-icons/fi";
+// types
 import type { DailyForecastItem, DailyForecastResponse } from "@/app/types/daily";
 import { DAILY_SECTIONS } from "@/app/types/daily";
 
@@ -12,7 +16,7 @@ const DAILY_API_ROUTE = `${basePath}/api/daily`;
 
 /* -------------------- Functions -------------------- */
 
-// Function สำหรับแปลง string เป็น Date
+// Function แปลงวันที่จาก API ให้เป็น Date ที่ใช้งานได้
 function parseContentDate(raw: string): Date | null {
   if (!raw) return null;
   const cleaned = raw.trim().replace(" ", "T").replace(/\.\d+$/, "");
@@ -20,7 +24,7 @@ function parseContentDate(raw: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-// Function สำหรับแปลง Date เป็นรูปแบบวันที่ภาษาไทย
+// Function แปลง Date เป็นข้อความวันที่ภาษาไทย
 function thaiDate(d: Date): string {
   return d.toLocaleDateString("th-TH", {
     year: "numeric",
@@ -29,122 +33,175 @@ function thaiDate(d: Date): string {
   });
 }
 
-// Function สำหรับแปลง Date เป็นรูปแบบเวลาภาษาไทย (24 ชั่วโมง)
-function thaiTime(d: Date): string {
-  return d.toLocaleTimeString("th-TH", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
-
-// Function สำหรับตัดข้อความให้สั้นลงและเติม "…" ถ้าข้อความยาวเกิน max (สำหรับ preview ใน card)
+// Function ตัดข้อความให้สั้นลงเพื่อใช้เป็น preview บน card
 function shortText(s: string, max = 140): string {
   const t = (s ?? "").trim().replace(/\s+/g, " ");
   if (t.length <= max) return t;
   return t.slice(0, max).trimEnd() + "…";
 }
 
+// Function เรียงข้อมูลพยากรณ์จากใหม่สุด -> เก่าสุด
+function sortItems(items: DailyForecastItem[]) {
+  return [...items].sort((a, b) => {
+    const da = parseContentDate(a.contentdate)?.getTime() ?? 0;
+    const db = parseContentDate(b.contentdate)?.getTime() ?? 0;
+    return db - da;
+  });
+}
+
 /* -------------------- component -------------------- */
 
 function DailyPage() {
-  const [items, setItems] = useState<DailyForecastItem[]>([]);
-  const [selectedKey, setSelectedKey] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showGeneral, setShowGeneral] = useState(false);
-  const [dateOpen, setDateOpen] = useState(false);
-  const dateWrapRef = useRef<HTMLDivElement | null>(null);
-  const [openSectionKey, setOpenSectionKey] = useState<string | null>(null);
+  const [items, setItems] = useState<DailyForecastItem[]>([]); // เก็บรายการข่าวพยากรณ์ทั้งหมด
+  const [selectedKey, setSelectedKey] = useState(""); // เก็บ contentdate ของรายการที่กำลังเลือก
+  const [loading, setLoading] = useState(true); // ใช้ตอนหน้าโหลดครั้งแรก
+  const [loadingMore, setLoadingMore] = useState(false); // ใช้ตอนโหลดข้อมูลเต็มต่อจาก initial
+  const [error, setError] = useState<string | null>(null); // เก็บข้อความ error ถ้าโหลดไม่สำเร็จ
+  const [showGeneral, setShowGeneral] = useState(false); // คุมการแสดงข้อความทั่วไปแบบเต็ม
+  const [dateOpen, setDateOpen] = useState(false); // เปิด/ปิด dropdown วันที่
+  const dateWrapRef = useRef<HTMLDivElement | null>(null); // ใช้เช็กว่าคลิกนอก dropdown หรือไม่
+  const [openSectionKey, setOpenSectionKey] = useState<string | null>(null); // เก็บ key ของ card รายภาคที่กำลังเปิด
 
   /* -------------------- API fetchers -------------------- */
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
+    setLoadingMore(false);
     setError(null);
-    try {
-      const res = await fetch(DAILY_API_ROUTE);
-      const json = (await res.json()) as DailyForecastResponse;
 
-      if (!res.ok) throw new Error(`Request failed (${res.status})`);
-      if (!json?.success || !Array.isArray(json.data)) {
-        throw new Error(json?.message || "Bad response shape");
+    try {
+      const initialRes = await fetch(`${DAILY_API_ROUTE}?mode=initial`, {
+        cache: "no-store",
+      });
+      const initialJson = (await initialRes.json()) as DailyForecastResponse;
+
+      if (!initialRes.ok) throw new Error(`Request failed (${initialRes.status})`);
+      if (!initialJson?.success || !Array.isArray(initialJson.data)) {
+        throw new Error(initialJson?.message || "Bad response shape");
       }
 
-      const sorted = [...json.data].sort((a, b) => {
-        const da = parseContentDate(a.contentdate)?.getTime() ?? 0;
-        const db = parseContentDate(b.contentdate)?.getTime() ?? 0;
-        return db - da;
-      });
+      const initialItems = sortItems(initialJson.data);
 
-      setItems(sorted);
-      setSelectedKey(sorted[0]?.contentdate ?? "");
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Failed to load";
-      setError(msg);
-    } finally {
+      setItems(initialItems);
+      setSelectedKey((prev) =>
+        prev && initialItems.some((item) => item.contentdate === prev)
+          ? prev
+          : (initialItems[0]?.contentdate ?? "")
+      );
       setLoading(false);
+    } catch (initialError) {
+      try {
+        const fullRes = await fetch(DAILY_API_ROUTE, { cache: "no-store" });
+        const fullJson = (await fullRes.json()) as DailyForecastResponse;
+
+        if (!fullRes.ok) throw new Error(`Request failed (${fullRes.status})`);
+        if (!fullJson?.success || !Array.isArray(fullJson.data)) {
+          throw new Error(fullJson?.message || "Bad response shape");
+        }
+
+        const fullItems = sortItems(fullJson.data);
+
+        setItems(fullItems);
+        setSelectedKey((prev) =>
+          prev && fullItems.some((item) => item.contentdate === prev)
+            ? prev
+            : (fullItems[0]?.contentdate ?? "")
+        );
+      } catch (fullError) {
+        const msg = fullError instanceof Error ? fullError.message : "Failed to load";
+        setError(msg);
+      } finally {
+        setLoading(false);
+      }
+
+      return;
     }
-  }
+
+    try {
+      setLoadingMore(true);
+
+      const fullRes = await fetch(DAILY_API_ROUTE, { cache: "no-store" });
+      const fullJson = (await fullRes.json()) as DailyForecastResponse;
+
+      if (!fullRes.ok) throw new Error(`Request failed (${fullRes.status})`);
+      if (!fullJson?.success || !Array.isArray(fullJson.data)) {
+        throw new Error(fullJson?.message || "Bad response shape");
+      }
+
+      const fullItems = sortItems(fullJson.data);
+
+      setItems(fullItems);
+      setSelectedKey((prev) =>
+        prev && fullItems.some((item) => item.contentdate === prev)
+          ? prev
+          : (fullItems[0]?.contentdate ?? "")
+      );
+    } catch (fullError) {
+      console.error("Failed to load full daily data:", fullError);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, []);
 
   /* -------------------- useEffect -------------------- */
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
+  // ปิด dropdown เมื่อคลิกนอกกรอบ / กด Escape
   useEffect(() => {
     const onMouseDown = (e: MouseEvent) => {
       if (!dateWrapRef.current) return;
-      if (!dateWrapRef.current.contains(e.target as Node)) setDateOpen(false);
+      if (!dateWrapRef.current.contains(e.target as Node)) {
+        setDateOpen(false);
+      }
     };
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setDateOpen(false);
     };
 
     document.addEventListener("mousedown", onMouseDown);
     document.addEventListener("keydown", onKeyDown);
+
     return () => {
       document.removeEventListener("mousedown", onMouseDown);
       document.removeEventListener("keydown", onKeyDown);
     };
   }, []);
 
-  /* -------------------- useMemo -------------------- */
-
-  // การหา item ที่ถูกเลือกจาก selectedKey เพื่อใช้แสดงข้อมูลในส่วนต่างๆ ของ UI
-  const selected = useMemo(() => {
-    return items.find((x) => x.contentdate === selectedKey) ?? items[0] ?? null;
-  }, [items, selectedKey]);
-
-  // การหา label ที่จะแสดงในปุ่มเลือกวันที่ โดยใช้ title ของ item ที่ถูกเลือก
-  const selectedLabel = useMemo(() => {
-    const selected = items.find((x) => x.contentdate === selectedKey);
-    return selected?.title ?? "";
-  }, [items, selectedKey]);
-
-  // เมื่อ selectedKey เปลี่ยน เราจะรีเซ็ตการแสดงรายละเอียดเพิ่มเติมและปิด section ที่เปิดอยู่ (ถ้ามี)
+  // รีเซ็ต UI เมื่อเปลี่ยนรายการที่เลือก
   useEffect(() => {
     setShowGeneral(false);
     setOpenSectionKey(null);
   }, [selectedKey]);
 
-  const issueDate = selected ? parseContentDate(selected.contentdate) : null;
-  const hasGeneral = Boolean((selected?.general_climate ?? "").trim());
+  /* -------------------- useMemo -------------------- */
+
+  // หา item ที่ตรงกับ selectedKey
+  const selected = useMemo(() => {
+    return items.find((item) => item.contentdate === selectedKey) ?? items[0] ?? null;
+  }, [items, selectedKey]);
+
+  const selectedLabel = selected?.title ?? ""; // ใช้ title ของรายการที่เลือกเอาไปแสดงบนปุ่ม dropdown
+  const issueDate = selected ? parseContentDate(selected.contentdate) : null; // แปลง contentdate ของตัวที่เลือกเป็น Date ใช้แสดงวันที่ในหัวข้อ infographic
+  const hasGeneral = Boolean((selected?.general_climate ?? "").trim()); // เช็กว่ามีข้อความ general climate หรือไม่ เช็กว่ามีข้อความ general climate หรือไม่
 
   const renderCard = (section: { key: keyof DailyForecastItem; label: string }) => {
     if (!selected) return null;
 
     const { key, label } = section;
     const value = String(selected[key] ?? "").trim();
+
     if (!value) return null;
 
     const id = String(key);
     const isOpen = openSectionKey === id;
 
-    const toggle = () => setOpenSectionKey((prev) => (prev === id ? null : id));
-
-    /* -------------------- UI section -------------------- */
+    const toggle = () => {
+      setOpenSectionKey((prev) => (prev === id ? null : id));
+    };
 
     return (
       <section
@@ -208,7 +265,7 @@ function DailyPage() {
             isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
           ].join(" ")}
         >
-          <div className="overflow-hidden min-w-0 select-text">
+          <div className="min-w-0 overflow-hidden select-text">
             <div className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-gray-500">
               {value}
             </div>
@@ -218,7 +275,8 @@ function DailyPage() {
     );
   };
 
-  {/* UI Loading */ }
+  /* -------------------- UI Loading -------------------- */
+
   if (loading) {
     return (
       <main className="mx-auto max-w-5xl px-4 py-6">
@@ -234,17 +292,18 @@ function DailyPage() {
     );
   }
 
-  {/* UI Error */ }
+  /* -------------------- UI Error -------------------- */
+
   if (error || !selected) {
     return (
       <main className="min-h-screen bg-white">
-        {/* Header */}
         <section className="relative min-h-60 border-b border-gray-200">
-          {/* Background layer */}
-          <div className="hidden sm:block absolute inset-0 bg-no-repeat bg-top-right bg-contain"
+          <div
+            className="absolute inset-0 hidden bg-contain bg-no-repeat bg-top-right sm:block"
             style={{ backgroundImage: `url(${basePath}/bg_top.png)` }}
-          ></div>
-          <div className="mx-auto max-w-7xl px-4 py-6 relative z-10">
+          />
+
+          <div className="relative z-10 mx-auto max-w-7xl px-4 py-6">
             <div className="flex flex-col gap-1">
               <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
                 ข่าวพยากรณ์อากาศประจำวัน
@@ -254,7 +313,6 @@ function DailyPage() {
               </p>
             </div>
 
-            {/* กล่อง Error */}
             <div className="mt-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
               <p className="text-sm font-semibold text-red-600">
                 {error || "ไม่พบข้อมูล"}
@@ -274,16 +332,18 @@ function DailyPage() {
     );
   }
 
-  {/* UI Section */ }
+  /* -------------------- UI -------------------- */
+
   return (
     <main>
       {/* Header */}
       <section className="relative min-h-60 border-b border-gray-200">
-        {/* Background layer */}
-        <div className="hidden sm:block absolute inset-0 bg-no-repeat bg-top-right bg-contain"
+        <div
+          className="absolute inset-0 hidden bg-contain bg-no-repeat bg-top-right sm:block"
           style={{ backgroundImage: `url(${basePath}/bg_top.png)` }}
-        ></div>
-        <div className="mx-auto max-w-7xl px-4 py-6 relative z-10">
+        />
+
+        <div className="relative z-10 mx-auto max-w-7xl px-4 py-6">
           <div className="flex flex-col gap-1">
             <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
               ข่าวพยากรณ์อากาศประจำวัน
@@ -297,8 +357,8 @@ function DailyPage() {
                 ].join(" ")}
               >
                 <div className="overflow-hidden">
-                  <p className="text-sm text-gray-800 whitespace-pre-line line-clamp-2 sm:text-base">
-                    {(selected?.description ?? "").trim()}
+                  <p className="line-clamp-2 whitespace-pre-line text-sm text-gray-800 sm:text-base">
+                    {(selected.description ?? "").trim()}
                   </p>
                 </div>
               </div>
@@ -306,12 +366,12 @@ function DailyPage() {
               <div
                 className={[
                   "grid transition-[grid-template-rows,opacity,margin-top] duration-300 ease-in-out",
-                  showGeneral ? "grid-rows-[1fr] opacity-100 mt-0" : "grid-rows-[0fr] opacity-0 mt-0",
+                  showGeneral ? "mt-0 grid-rows-[1fr] opacity-100" : "mt-0 grid-rows-[0fr] opacity-0",
                 ].join(" ")}
               >
                 <div className="overflow-hidden">
-                  <p className="text-sm text-gray-800 whitespace-pre-line sm:text-base">
-                    {(selected?.general_climate ?? "").trim()}
+                  <p className="whitespace-pre-line text-sm text-gray-800 sm:text-base">
+                    {(selected.general_climate ?? "").trim()}
                   </p>
                 </div>
               </div>
@@ -319,8 +379,8 @@ function DailyPage() {
               {hasGeneral ? (
                 <button
                   type="button"
-                  onClick={() => setShowGeneral((v) => !v)}
-                  className="cursor-pointer mt-2 text-sm font-semibold text-emerald-700 hover:underline"
+                  onClick={() => setShowGeneral((prev) => !prev)}
+                  className="mt-2 cursor-pointer text-sm font-semibold text-emerald-700 hover:underline"
                 >
                   {showGeneral ? "ซ่อนรายละเอียด" : "อ่านเพิ่มเติม"}
                 </button>
@@ -328,70 +388,68 @@ function DailyPage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 mt-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div ref={dateWrapRef} className="relative w-full max-w-sm">
               <button
                 type="button"
-                onClick={() => setDateOpen((v) => !v)}
+                onClick={() => setDateOpen((prev) => !prev)}
                 aria-expanded={dateOpen}
-                className="flex py-3 w-full items-center justify-between
-                cursor-pointer rounded-lg border border-gray-300 bg-white
-                px-5 text-left text-sm font-medium text-gray-800 outline-none
-                focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-gray-300 bg-white px-5 py-3 text-left text-sm font-medium text-gray-800 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               >
-                <span className="flex items-center justify-start gap-4 min-w-0">
+                <span className="flex min-w-0 items-center justify-start gap-4">
                   <FiCalendar className="h-6 w-6 shrink-0 text-gray-800" />
                   <span className="block truncate">{selectedLabel}</span>
                 </span>
 
                 <FiChevronDown
-                  className={`h-6 w-6 shrink-0 text-gray-500 transition-transform ${dateOpen ? "rotate-180" : ""
-                    }`}
+                  className={[
+                    "h-6 w-6 shrink-0 text-gray-500 transition-transform",
+                    dateOpen ? "rotate-180" : "",
+                  ].join(" ")}
                   aria-hidden="true"
                 />
               </button>
 
-              {dateOpen && (
+              {dateOpen ? (
                 <div className="absolute left-0 top-full z-50 mt-2 w-full">
                   <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg">
                     <div className="max-h-105 overflow-auto py-2">
-                      {items.map((it) => {
-                        const d = parseContentDate(it.contentdate);
-                        const label = d ? `${thaiDate(d)} ${thaiTime(d)} น.` : it.contentdate;
-                        const active = it.contentdate === selectedKey;
+                      {items.map((item) => {
+                        const active = item.contentdate === selectedKey;
 
                         return (
                           <button
-                            key={it.contentdate}
+                            key={item.contentdate}
                             type="button"
                             onClick={() => {
-                              setSelectedKey(it.contentdate);
+                              setSelectedKey(item.contentdate);
                               setDateOpen(false);
                             }}
                             className={[
-                              "w-full text-left px-5 py-3 text-sm font-medium cursor-pointer",
-                              active ? "bg-emerald-600 text-white" : "text-gray-800 hover:bg-gray-50",
+                              "w-full cursor-pointer px-5 py-3 text-left text-sm font-medium",
+                              active
+                                ? "bg-emerald-600 text-white"
+                                : "text-gray-800 hover:bg-gray-50",
                             ].join(" ")}
                           >
-                            {it.title}
+                            {item.title}
                           </button>
                         );
                       })}
                     </div>
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
 
-            <div>
+            <div className="flex flex-col items-start gap-2 sm:items-end">
               {selected.pdf_url ? (
                 <button
                   type="button"
-                  onClick={() => window.open(selected.pdf_url, "_blank", "noopener,noreferrer")}
-                  className="group flex items-center gap-2
-                  rounded-lg border border-emerald-600 bg-white px-3 py-3
-                  cursor-pointer transition duration-150
-                  hover:bg-emerald-700 active:bg-emerald-800"
+                  onClick={() =>
+                    window.open(selected.pdf_url, "_blank", "noopener,noreferrer")
+                  }
+                  className="group flex cursor-pointer items-center gap-2 rounded-lg border border-emerald-600 bg-white px-3 py-3 transition duration-150 hover:bg-emerald-700 active:bg-emerald-800"
                 >
                   <FiDownload
                     className="h-6 w-6 text-emerald-600 transition-colors group-hover:text-gray-100 group-active:text-gray-100"
@@ -402,11 +460,18 @@ function DailyPage() {
                   </span>
                 </button>
               ) : null}
+
+              {loadingMore ? (
+                <p className="text-xs font-medium text-gray-500">
+                  กำลังโหลดข้อมูลเพิ่มเติม...
+                </p>
+              ) : null}
             </div>
           </div>
         </div>
       </section>
 
+      {/* Infographic */}
       <section className="mx-auto max-w-7xl px-4 py-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="flex flex-wrap items-baseline gap-2 text-xl font-medium text-gray-900 sm:text-2xl">
@@ -432,6 +497,7 @@ function DailyPage() {
                   clickAnywhereOnDesktop={false}
                 />
               </div>
+
               <div>
                 <p className="text-sm font-medium text-gray-900">
                   รูปภาพ:พยากรณ์อากาศประจำวัน
@@ -444,6 +510,7 @@ function DailyPage() {
         )}
       </section>
 
+      {/* Regional forecast */}
       <section className="mx-auto max-w-7xl px-4 py-6">
         <h2 className="flex flex-wrap items-baseline gap-2 text-xl font-medium text-gray-900 sm:text-2xl">
           <span>พยากรณ์อากาศรายภาค</span>

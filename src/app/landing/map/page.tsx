@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 // Components
 import ZoomableImage from "@/app/components/ZoomableImage";
 // library
@@ -11,7 +11,7 @@ import "swiper/css";
 // icons
 import { FiCalendar, FiChevronDown, FiChevronLeft, FiChevronRight, FiMap } from "react-icons/fi";
 // types
-import type { UpperWindItem, UpperWindResponse, SoundingStation, ScrollDir } from "@/app/types/map";
+import type { UpperWindItem, UpperWindResponse, SoundingStation } from "@/app/types/map";
 
 /* -------------------- Config API routes -------------------- */
 
@@ -57,7 +57,7 @@ const THAI_MONTHS = [
   "ธันวาคม",
 ] as const;
 
-/* -------------------- Functions -------------------- */
+/* -------------------- Helpers -------------------- */
 
 function extractSoundingStations(item: UpperWindItem): SoundingStation[] {
   const seenTitle = new Set<string>();
@@ -70,24 +70,24 @@ function extractSoundingStations(item: UpperWindItem): SoundingStation[] {
     const title = item[key as keyof UpperWindItem] as string;
     const imagePath = item[`${base}ImagePath` as keyof UpperWindItem] as string;
 
-    if (seenTitle.has(title)) continue;
-    seenTitle.add(title);
+    if (!title || !imagePath || seenTitle.has(title)) continue;
 
+    seenTitle.add(title);
     out.push({ id: title, title, imagePath });
   }
 
   return out;
 }
 
-function parseContentDate(raw: string): Date {
-  return new Date(raw.replace(" ", "T").replace(/\.\d+$/, ""));
+function toDate(value: string) {
+  return new Date(value.replace(" ", "T").replace(/\.\d+$/, ""));
 }
 
-function thaiDateTime(d: Date): string {
-  const day = d.getDate();
-  const month = THAI_MONTHS[d.getMonth()];
-  const yearBE = d.getFullYear() + 543;
-  const time = d.toLocaleTimeString("th-TH", {
+function thaiDateTime(date: Date) {
+  const day = date.getDate();
+  const month = THAI_MONTHS[date.getMonth()];
+  const yearBE = date.getFullYear() + 543;
+  const time = date.toLocaleTimeString("th-TH", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -97,44 +97,42 @@ function thaiDateTime(d: Date): string {
 }
 
 function normalizeToEntries(data: UpperWindResponse["data"]) {
-  const out: Array<{ apiKey: string; item: UpperWindItem }> = [];
-
-  for (const [apiKey, value] of Object.entries(data)) {
-    const items = value as UpperWindItem[];
-    for (const item of items) {
-      out.push({ apiKey, item });
-    }
-  }
-
-  return out;
+  return Object.entries(data).flatMap(([apiKey, value]) =>
+    (Array.isArray(value) ? value : value ? [value] : []).map((item) => ({
+      apiKey,
+      item: item as UpperWindItem,
+    }))
+  );
 }
 
 function isMatchType(
   menuLabel: string,
   entry: { apiKey: string; item: UpperWindItem }
-): boolean {
-  const title = entry.item.title as string;
-  const alt = entry.item.alt as string;
-  const apiKey = entry.apiKey;
+) {
+  const text = `${entry.item.title ?? ""} ${entry.item.alt ?? ""}`;
 
-  if (menuLabel === SOUNDING_TYPE_LABEL && apiKey === SOUNDING_API_KEY) return true;
-  if (title.includes(menuLabel) || alt.includes(menuLabel)) return true;
+  if (menuLabel === SOUNDING_TYPE_LABEL) {
+    return entry.apiKey === SOUNDING_API_KEY;
+  }
 
-  const num = menuLabel.match(/(\d{3,4})\s*hPa/u)?.[1];
-  if (num && apiKey.includes(num)) return true;
+  const hpa = menuLabel.match(/(\d{3,4})\s*hPa/u)?.[1];
+  if (hpa) {
+    return entry.apiKey.includes(hpa) || text.includes(menuLabel);
+  }
 
-  const is600m = menuLabel.includes("600") && menuLabel.toLowerCase().includes("m");
-  if (is600m && apiKey.toLowerCase().includes("600")) return true;
+  if (menuLabel.includes("600 m")) {
+    return entry.apiKey.includes("600") || text.includes(menuLabel);
+  }
 
-  return false;
+  return text.includes(menuLabel);
 }
 
 function getTimeOptions(items: UpperWindItem[]) {
   const times = new Map<string, Date>();
 
-  for (const it of items) {
-    const key = it.contentdate as string;
-    times.set(key, parseContentDate(key));
+  for (const item of items) {
+    const key = item.contentdate as string;
+    if (key) times.set(key, toDate(key));
   }
 
   return Array.from(times.entries())
@@ -142,7 +140,24 @@ function getTimeOptions(items: UpperWindItem[]) {
     .map(([key, date]) => ({ key, label: thaiDateTime(date) }));
 }
 
-/* -------------------- component -------------------- */
+function getDefaultSelection(data: UpperWindResponse["data"]) {
+  const entries = normalizeToEntries(data);
+
+  const typeLabel =
+    Type_Menu.find((label) => entries.some((entry) => isMatchType(label, entry))) ??
+    Type_Menu[0];
+
+  const items = entries
+    .filter((entry) => isMatchType(typeLabel, entry))
+    .map(({ item }) => item);
+
+  return {
+    typeLabel,
+    timeKey: getTimeOptions(items)[0]?.key ?? "",
+  };
+}
+
+/* -------------------- Component -------------------- */
 
 function MapPage() {
   // type dropdown
@@ -159,6 +174,7 @@ function MapPage() {
     message: "",
   });
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // dropdown state
   const [selectedTypeLabel, setSelectedTypeLabel] = useState<string>(Type_Menu[0]);
@@ -173,45 +189,87 @@ function MapPage() {
   // Swiper ref
   const soundingSwiperRef = useRef<SwiperType | null>(null);
 
-  /* -------------------- API fetchers -------------------- */
-
-  async function load() {
-    setLoading(true);
-
-    const res = await fetch(MAP_API_ROUTE, { cache: "no-store" });
-    const json = (await res.json()) as UpperWindResponse;
-
-    setRaw(json);
-
-    const allEntries = normalizeToEntries(json.data);
-    const firstType =
-      Type_Menu.find((label) => allEntries.some((e) => isMatchType(label, e))) ?? Type_Menu[0];
-
-    const firstItems = allEntries.filter((e) => isMatchType(firstType, e)).map((e) => e.item);
-    const firstTimes = getTimeOptions(firstItems);
-    const firstTime = firstTimes[0].key;
-
-    setSelectedTypeLabel(firstType);
-    setSelectedTimeKey(firstTime);
-    setApplied({ typeLabel: firstType, timeKey: firstTime });
-
-    setTypeOpen(false);
-    setTimeOpen(false);
-    setLoading(false);
-  }
-
-  /* -------------------- useEffect -------------------- */
+  /* -------------------- Data loading -------------------- */
 
   useEffect(() => {
+    let ignore = false;
+
+    async function fetchMap(mode?: "initial") {
+      const url = mode ? `${MAP_API_ROUTE}?mode=${mode}` : MAP_API_ROUTE;
+      const res = await fetch(url, { cache: "no-store" });
+
+      if (!res.ok) {
+        throw new Error(`Map API error: ${res.status}`);
+      }
+
+      return (await res.json()) as UpperWindResponse;
+    }
+
+    async function load() {
+      try {
+        const initialJson = await fetchMap("initial");
+        if (ignore) return;
+
+        const initialSelection = getDefaultSelection(initialJson.data);
+
+        setRaw(initialJson);
+        setSelectedTypeLabel(initialSelection.typeLabel);
+        setSelectedTimeKey(initialSelection.timeKey);
+        setApplied(initialSelection);
+        setLoading(false);
+      } catch (error) {
+        console.error("initial map load error:", error);
+
+        try {
+          const fullJson = await fetchMap();
+          if (ignore) return;
+
+          const fallbackSelection = getDefaultSelection(fullJson.data);
+
+          setRaw(fullJson);
+          setSelectedTypeLabel(fallbackSelection.typeLabel);
+          setSelectedTimeKey(fallbackSelection.timeKey);
+          setApplied(fallbackSelection);
+        } catch (fallbackError) {
+          console.error("map load error:", fallbackError);
+        } finally {
+          if (!ignore) setLoading(false);
+        }
+
+        return;
+      }
+
+      try {
+        setLoadingMore(true);
+        const fullJson = await fetchMap();
+        if (!ignore) setRaw(fullJson);
+      } catch (error) {
+        console.error("full map load error:", error);
+      } finally {
+        if (!ignore) setLoadingMore(false);
+      }
+    }
+
     load();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
-  // ปิด dropdown เมื่อคลิกนอกกรอบ + Esc
+  /* -------------------- Close dropdown on outside click -------------------- */
+
   useEffect(() => {
     function onDown(e: MouseEvent) {
-      const t = e.target as Node;
-      if (typeWrapRef.current && !typeWrapRef.current.contains(t)) setTypeOpen(false);
-      if (timeWrapRef.current && !timeWrapRef.current.contains(t)) setTimeOpen(false);
+      const target = e.target as Node;
+
+      if (typeWrapRef.current && !typeWrapRef.current.contains(target)) {
+        setTypeOpen(false);
+      }
+
+      if (timeWrapRef.current && !timeWrapRef.current.contains(target)) {
+        setTimeOpen(false);
+      }
     }
 
     function onKey(e: KeyboardEvent) {
@@ -230,23 +288,24 @@ function MapPage() {
     };
   }, []);
 
-  /* -------------------- useMemo -------------------- */
+  /* -------------------- Derived data -------------------- */
 
-  const entries = useMemo(() => normalizeToEntries(raw.data), [raw]);
+  const entries = useMemo(() => normalizeToEntries(raw.data), [raw.data]);
 
   const itemsByTypeLabel = useMemo(() => {
     const map = new Map<string, UpperWindItem[]>();
 
     for (const label of Type_Menu) {
-      const items = entries.filter((e) => isMatchType(label, e)).map((e) => e.item);
+      const items = entries
+        .filter((entry) => isMatchType(label, entry))
+        .map(({ item }) => item)
+        .sort(
+          (a, b) =>
+            toDate(b.contentdate as string).getTime() -
+            toDate(a.contentdate as string).getTime()
+        );
 
-      const sorted = [...items].sort((a, b) => {
-        const da = parseContentDate(a.contentdate as string).getTime();
-        const db = parseContentDate(b.contentdate as string).getTime();
-        return db - da;
-      });
-
-      map.set(label, sorted);
+      map.set(label, items);
     }
 
     return map;
@@ -259,41 +318,42 @@ function MapPage() {
 
   const timeOptions = useMemo(() => getTimeOptions(selectedItems), [selectedItems]);
 
-  // เปลี่ยนประเภทแล้ว sync เวลา
   useEffect(() => {
-    if (!selectedTypeLabel) return;
+    const nextTimeKey = timeOptions[0]?.key ?? "";
 
-    const items = itemsByTypeLabel.get(selectedTypeLabel) ?? [];
-    if (!items.length) return;
+    if (!nextTimeKey) {
+      setSelectedTimeKey("");
+      setTimeOpen(false);
+      return;
+    }
 
-    const times = getTimeOptions(items);
-    const has = times.some((t) => t.key === selectedTimeKey);
+    if (!timeOptions.some((time) => time.key === selectedTimeKey)) {
+      setSelectedTimeKey(nextTimeKey);
+    }
 
-    if (!has) setSelectedTimeKey(times[0].key);
     setTimeOpen(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTypeLabel]);
+  }, [timeOptions, selectedTimeKey]);
 
   const selectedHasData = selectedItems.length > 0;
 
   const selectedTimeLabel =
-    timeOptions.find((t) => t.key === selectedTimeKey)?.label ?? timeOptions[0]?.label ?? "";
+    timeOptions.find((time) => time.key === selectedTimeKey)?.label ?? "";
 
-  const shown = useMemo(() => {
-    const items = itemsByTypeLabel.get(applied.typeLabel) ?? [];
-    return items.find((it) => it.contentdate === applied.timeKey) ?? items[0];
-  }, [applied, itemsByTypeLabel]);
+  const appliedItems = useMemo(
+    () => itemsByTypeLabel.get(applied.typeLabel) ?? [],
+    [itemsByTypeLabel, applied.typeLabel]
+  );
 
-  const shownDate = shown ? parseContentDate(shown.contentdate as string) : new Date();
+  const appliedTimeOptions = useMemo(() => getTimeOptions(appliedItems), [appliedItems]);
+
+  const shown = useMemo(
+    () => appliedItems.find((item) => item.contentdate === applied.timeKey) ?? appliedItems[0],
+    [appliedItems, applied.timeKey]
+  );
 
   const appliedTypeLabel = applied.typeLabel;
-  const appliedTimeKey = applied.timeKey;
-
-  const appliedItems = itemsByTypeLabel.get(appliedTypeLabel) ?? [];
-  const appliedTimeOptions = getTimeOptions(appliedItems);
-
   const appliedTimeLabel =
-    appliedTimeOptions.find((t) => t.key === appliedTimeKey)?.label ?? thaiDateTime(shownDate);
+    appliedTimeOptions.find((time) => time.key === applied.timeKey)?.label ?? "";
 
   // ===== Sounding (AirMapWeather) =====
   const isSoundingApplied = appliedTypeLabel === SOUNDING_TYPE_LABEL;
@@ -303,7 +363,7 @@ function MapPage() {
     [isSoundingApplied, shown]
   );
 
-  const [activeSoundingId, setActiveSoundingId] = useState<string>("");
+  const [activeSoundingId, setActiveSoundingId] = useState("");
 
   useEffect(() => {
     if (!isSoundingApplied || !soundingStations.length) {
@@ -312,13 +372,16 @@ function MapPage() {
     }
 
     setActiveSoundingId((prev) =>
-      prev && soundingStations.some((s) => s.id === prev) ? prev : soundingStations[0].id
+      prev && soundingStations.some((station) => station.id === prev)
+        ? prev
+        : soundingStations[0].id
     );
   }, [isSoundingApplied, soundingStations]);
 
   const activeSoundingIndex = useMemo(() => {
     if (!soundingStations.length) return 0;
-    const idx = soundingStations.findIndex((s) => s.id === activeSoundingId);
+
+    const idx = soundingStations.findIndex((station) => station.id === activeSoundingId);
     return idx >= 0 ? idx : 0;
   }, [soundingStations, activeSoundingId]);
 
@@ -391,7 +454,9 @@ function MapPage() {
             <p className="mt-1 text-sm font-medium text-gray-600 sm:text-base">
               <span className="flex flex-wrap items-baseline gap-x-2">
                 <span className="whitespace-nowrap">{appliedTypeLabel}</span>
-                <span className="whitespace-nowrap text-gray-600">- {appliedTimeLabel}</span>
+                {appliedTimeLabel ? (
+                  <span className="whitespace-nowrap text-gray-600">- {appliedTimeLabel}</span>
+                ) : null}
               </span>
             </p>
           </div>
@@ -403,7 +468,7 @@ function MapPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setTypeOpen((v) => !v);
+                  setTypeOpen((open) => !open);
                   setTimeOpen(false);
                 }}
                 aria-expanded={typeOpen}
@@ -423,7 +488,7 @@ function MapPage() {
                 />
               </button>
 
-              {typeOpen && (
+              {typeOpen ? (
                 <div className="absolute left-0 top-full z-50 mt-2 w-full">
                   <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg">
                     <div className="max-h-105 overflow-auto py-2">
@@ -443,9 +508,9 @@ function MapPage() {
                               setTimeOpen(false);
                             }}
                             className={[
-                              "w-full cursor-pointer px-5 py-3 text-left text-sm font-medium",
+                              "w-full px-5 py-3 text-left text-sm font-medium",
                               active ? "bg-emerald-600 text-white" : "text-gray-700 hover:bg-gray-50",
-                              !has ? "cursor-not-allowed opacity-40 hover:bg-white" : "",
+                              has ? "cursor-pointer" : "cursor-not-allowed opacity-40 hover:bg-white",
                             ].join(" ")}
                           >
                             {label}
@@ -455,7 +520,7 @@ function MapPage() {
                     </div>
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
 
             {/* Date/Time dropdown */}
@@ -465,7 +530,7 @@ function MapPage() {
                 disabled={!selectedHasData}
                 onClick={() => {
                   if (!selectedHasData) return;
-                  setTimeOpen((v) => !v);
+                  setTimeOpen((open) => !open);
                   setTypeOpen(false);
                 }}
                 aria-expanded={timeOpen}
@@ -498,19 +563,19 @@ function MapPage() {
                 />
               </button>
 
-              {selectedHasData && timeOptions.length > 1 && timeOpen && (
+              {selectedHasData && timeOptions.length > 1 && timeOpen ? (
                 <div className="absolute left-0 top-full z-50 mt-2 w-full">
                   <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg">
                     <div className="max-h-105 overflow-auto py-2">
-                      {timeOptions.map((t) => {
-                        const active = t.key === selectedTimeKey;
+                      {timeOptions.map((time) => {
+                        const active = time.key === selectedTimeKey;
 
                         return (
                           <button
-                            key={t.key}
+                            key={time.key}
                             type="button"
                             onClick={() => {
-                              setSelectedTimeKey(t.key);
+                              setSelectedTimeKey(time.key);
                               setTimeOpen(false);
                             }}
                             className={[
@@ -518,14 +583,14 @@ function MapPage() {
                               active ? "bg-emerald-600 text-white" : "text-gray-700 hover:bg-gray-50",
                             ].join(" ")}
                           >
-                            {t.label}
+                            {time.label}
                           </button>
                         );
                       })}
                     </div>
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
 
             {/* Button */}
@@ -538,15 +603,21 @@ function MapPage() {
                 setTimeOpen(false);
               }}
               className={[
-                "h-12 cursor-pointer whitespace-nowrap rounded-lg px-6 text-sm font-semibold text-white",
+                "h-12 whitespace-nowrap rounded-lg px-6 text-sm font-semibold text-white",
                 selectedHasData && selectedTimeKey
-                  ? "bg-emerald-600 hover:bg-emerald-700"
+                  ? "cursor-pointer bg-emerald-600 hover:bg-emerald-700"
                   : "cursor-not-allowed bg-gray-300",
               ].join(" ")}
             >
               แสดงแผนที่
             </button>
           </div>
+
+          {loadingMore ? (
+            <p className="mt-3 text-xs font-medium text-gray-500">
+              กำลังโหลดข้อมูลเพิ่มเติม...
+            </p>
+          ) : null}
         </div>
       </section>
 
@@ -559,9 +630,11 @@ function MapPage() {
                 {isSoundingApplied ? `${appliedTypeLabel} -` : appliedTypeLabel}
               </span>
 
-              <span className="whitespace-nowrap text-sm font-medium text-gray-600">
-                {isSoundingApplied ? appliedTimeLabel : `- ${appliedTimeLabel}`}
-              </span>
+              {appliedTimeLabel ? (
+                <span className="whitespace-nowrap text-sm font-medium text-gray-600">
+                  {isSoundingApplied ? appliedTimeLabel : `- ${appliedTimeLabel}`}
+                </span>
+              ) : null}
 
               {isSoundingApplied ? (
                 <span className="whitespace-nowrap text-sm font-medium text-gray-500">
@@ -624,10 +697,10 @@ function MapPage() {
             autoplay={
               soundingStations.length > 1
                 ? {
-                  delay: 10000,
-                  disableOnInteraction: false,
-                  pauseOnMouseEnter: true,
-                }
+                    delay: 10000,
+                    disableOnInteraction: false,
+                    pauseOnMouseEnter: true,
+                  }
                 : false
             }
             speed={550}
@@ -641,14 +714,17 @@ function MapPage() {
             }}
             className="!px-4 sm:!px-0"
           >
-            {soundingStations.map((s, idx) => {
+            {soundingStations.map((station, idx) => {
               const active = idx === activeSoundingIndex;
 
               return (
-                <SwiperSlide key={`${s.id}-${idx}`} className="!h-auto !w-[220px] sm:!w-72">
+                <SwiperSlide
+                  key={`${station.id}-${idx}`}
+                  className="!h-auto !w-[220px] sm:!w-72"
+                >
                   <button
                     type="button"
-                    onClick={() => setActiveSoundingId(s.id)}
+                    onClick={() => setActiveSoundingId(station.id)}
                     className={[
                       "relative h-24 w-full cursor-pointer overflow-hidden rounded-xl border p-4 text-left shadow-sm transition sm:h-auto",
                       active
@@ -665,14 +741,16 @@ function MapPage() {
 
                     <div className="flex h-full flex-col justify-center pl-2 sm:block">
                       <div className="text-sm font-semibold leading-tight text-gray-900">
-                        จังหวัด {s.title}
+                        จังหวัด {station.title}
                       </div>
                       <div className="mt-1 text-xs font-medium leading-tight text-gray-500">
                         แผนที่หยั่งอากาศ
                       </div>
-                      <div className="mt-1 text-xs font-medium leading-tight text-gray-500">
-                        วันที่ {appliedTimeLabel}
-                      </div>
+                      {appliedTimeLabel ? (
+                        <div className="mt-1 text-xs font-medium leading-tight text-gray-500">
+                          วันที่ {appliedTimeLabel}
+                        </div>
+                      ) : null}
                     </div>
                   </button>
                 </SwiperSlide>

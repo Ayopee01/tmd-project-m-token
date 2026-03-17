@@ -1,30 +1,44 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export const revalidate = 300; // cache api 300 วินาที/5 นาที
+export const revalidate = 300;
 
 // URL API พยากรณ์อากาศรายวัน
 const TMD_URL = "https://data.tmd.go.th/api/TMDForecastDaily/v1/";
 
-export async function GET() {
-    try {
-        const res = await fetch(TMD_URL, {
-            headers: { Accept: "application/json" },
-            next: { revalidate: 300 }, // cache upstream 300 วินาที/5 นาที
-        });
+export async function GET(req: NextRequest) {
+  try {
+    const mode = req.nextUrl.searchParams.get("mode");
 
-        if (!res.ok) {
-            return NextResponse.json(
-                { success: false, message: `Upstream error: ${res.status}` },
-                { status: 502 }
-            );
-        }
+    const res = await fetch(TMD_URL, {
+      headers: { Accept: "application/json" },
+      next: { revalidate },
+    });
 
-        const data = await res.json();
-        return NextResponse.json(data);
-    } catch {
-        return NextResponse.json(
-            { success: false, message: "Failed to fetch Daily API" },
-            { status: 500 }
-        );
+    if (!res.ok) {
+      return NextResponse.json(
+        { success: false, message: `Upstream error: ${res.status}` },
+        { status: 502 }
+      );
     }
+
+    const json = await res.json();
+    const sourceData = Array.isArray(json?.data) ? json.data : [];
+
+    const data = [...sourceData].sort(
+      (a, b) =>
+        new Date(String(b.contentdate).replace(" ", "T").replace(/\.\d+$/, "")).getTime() -
+        new Date(String(a.contentdate).replace(" ", "T").replace(/\.\d+$/, "")).getTime()
+    );
+
+    return NextResponse.json({
+      success: true,
+      data: mode === "initial" ? data.slice(0, 1) : data,
+      message: json?.message ?? "Successfully , Data found",
+    });
+  } catch {
+    return NextResponse.json(
+      { success: false, message: "Failed to fetch Daily API" },
+      { status: 500 }
+    );
+  }
 }

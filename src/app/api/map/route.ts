@@ -1,15 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export const revalidate = 300; // cache api 300 วินาที/5 นาที
+export const revalidate = 300;
 
-// URL API แผนที่ลมบน
 const TMD_URL = "https://data.tmd.go.th/api/TmdUpperWindMap/v1/";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const mode = req.nextUrl.searchParams.get("mode");
+
     const res = await fetch(TMD_URL, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 300 }, // cache upstream 300 วินาที/5 นาที
+      next: { revalidate },
     });
 
     if (!res.ok) {
@@ -19,8 +20,26 @@ export async function GET() {
       );
     }
 
-    const data = await res.json();
-    return NextResponse.json(data);
+    const json = await res.json();
+    const sourceData = json?.data;
+
+    if (!sourceData?.UpperWind925hPa) {
+      return NextResponse.json(
+        { success: false, message: "Invalid API response" },
+        { status: 500 }
+      );
+    }
+
+    const data =
+      mode === "initial"
+        ? { UpperWind925hPa: sourceData.UpperWind925hPa }
+        : sourceData;
+
+    return NextResponse.json({
+      success: true,
+      data,
+      message: json?.message ?? "Successfully , Data found",
+    });
   } catch {
     return NextResponse.json(
       { success: false, message: "Failed to fetch Map API" },
