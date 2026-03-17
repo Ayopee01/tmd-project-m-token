@@ -1,14 +1,11 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  FiCalendar,
-  FiChevronDown,
-  FiChevronLeft,
-  FiChevronRight,
-  FiDownload,
-} from "react-icons/fi";
-
+// library
+import ReactPaginate from "react-paginate";
+// icons
+import { FiCalendar, FiChevronDown, FiChevronLeft, FiChevronRight, FiDownload } from "react-icons/fi";
+// types
 import type { Agro7DaysItem, Agro7DaysResponse, YearFilter } from "@/app/types/agroforecast";
 
 /* -------------------- Config API routes -------------------- */
@@ -18,7 +15,7 @@ const AGRO_API_ROUTE = `${basePath}/api/agroforecast`;
 
 /* -------------------- Config pure helpers -------------------- */
 
-//กำหนดจำนวน Card ใน Page
+// กำหนดจำนวน Card ใน Page
 const PAGE_SIZE = 6;
 
 /* -------------------- Functions -------------------- */
@@ -53,20 +50,6 @@ function titleOf(it: Agro7DaysItem): string {
   return (it.title || it.alt || "—").trim() || "—";
 }
 
-// Function สร้าง pagination 
-function pageTokens(current: number, total: number): Array<number | "…"> {
-  if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
-
-  const last = total;
-
-  if (current <= 2) return [1, 2, 3, "…", last];
-  if (current === 3) return [1, 2, 3, 4, "…", last];
-  if (current >= last - 1) return [1, "…", last - 2, last - 1, last];
-  if (current === last - 2) return [1, "…", last - 3, last - 2, last - 1, last];
-
-  return [1, "…", current - 1, current, current + 1, "…", last];
-}
-
 /* -------------------- component -------------------- */
 
 function AgroforecastPage() {
@@ -74,7 +57,7 @@ function AgroforecastPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Dropdown filter (ตาม Figma: เอกสารทั้งหมด + ปี)
+  // Dropdown filter
   const [yearFilter, setYearFilter] = useState<YearFilter>("all");
 
   // Custom dropdown state
@@ -187,18 +170,31 @@ function AgroforecastPage() {
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, pageSafe]);
 
-  {/* UI Loading */ }
+  /* -------------------- Handlers -------------------- */
+
+  // Function เปลี่ยนหน้า และเลื่อนกลับไปบนสุดทุกครั้ง
+  function handlePageChange(selectedItem: { selected: number }): void {
+    const nextPage = selectedItem.selected + 1;
+    setPage(nextPage);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+  /* -------------------- UI Loading -------------------- */
+
   if (loading) {
     return (
       <main className="min-h-screen bg-white">
-        {/* Header */}
         <section className="relative min-h-60 border-b border-gray-200">
-          {/* Background layer */}
-          <div className="hidden sm:block absolute inset-0 bg-no-repeat bg-top-right bg-contain"
+          <div
+            className="absolute inset-0 hidden bg-contain bg-no-repeat bg-top-right sm:block"
             style={{ backgroundImage: `url(${basePath}/bg_top.png)` }}
-          ></div>
-          <div className="mx-auto max-w-7xl px-4 py-6 relative z-10">
-            <div className="animate-pulse space-y-3">
+          />
+          <div className="relative z-10 mx-auto max-w-7xl px-4 py-6">
+            <div className="space-y-3 animate-pulse">
               <div className="h-9 w-96 max-w-full rounded bg-gray-200" />
               <div className="h-5 w-80 max-w-full rounded bg-gray-200" />
               <div className="mt-6 h-11 w-full max-w-md rounded bg-gray-200" />
@@ -217,17 +213,17 @@ function AgroforecastPage() {
     );
   }
 
-  {/* UI Error */ }
+  /* -------------------- UI Error -------------------- */
+
   if (error) {
     return (
       <main className="min-h-screen bg-white">
-        {/* Header */}
         <section className="relative min-h-60 border-b border-gray-200">
-          {/* Background layer */}
-          <div className="hidden sm:block absolute inset-0 bg-no-repeat bg-top-right bg-contain"
+          <div
+            className="absolute inset-0 hidden bg-contain bg-no-repeat bg-top-right sm:block"
             style={{ backgroundImage: `url(${basePath}/bg_top.png)` }}
-          ></div>
-          <div className="mx-auto max-w-7xl px-4 py-6 relative z-10">
+          />
+          <div className="relative z-10 mx-auto max-w-7xl px-4 py-6">
             <div className="flex flex-col gap-1">
               <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
                 พยากรณ์อากาศเพื่อการเกษตรราย 7 วัน
@@ -259,11 +255,11 @@ function AgroforecastPage() {
     <main className="min-h-screen bg-white">
       {/* Header */}
       <section className="relative min-h-60 border-b border-gray-200">
-        {/* Background layer */}
-        <div className="hidden sm:block absolute inset-0 bg-no-repeat bg-top-right bg-contain"
+        <div
+          className="absolute inset-0 hidden bg-contain bg-no-repeat bg-top-right sm:block"
           style={{ backgroundImage: `url(${basePath}/bg_top.png)` }}
-        ></div>
-        <div className="mx-auto max-w-7xl px-4 py-6 relative z-10">
+        />
+        <div className="relative z-10 mx-auto max-w-7xl px-4 py-6">
           <div className="flex flex-col gap-1">
             <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
               พยากรณ์อากาศเพื่อการเกษตรราย 7 วัน
@@ -273,24 +269,17 @@ function AgroforecastPage() {
             </p>
           </div>
 
-
-          {/* Filter + Download */}
-          <div className="flex flex-col gap-2 mt-12 sm:flex-row sm:items-center sm:justify-between sm:mt-10">
-            {/* Year dropdown */}
+          {/* Filter */}
+          <div className="mt-12 flex flex-col gap-2 sm:mt-10 sm:flex-row sm:items-center sm:justify-between">
             <div ref={yearDropRef} className="relative w-full max-w-sm">
               <button
                 type="button"
                 onClick={() => setYearOpen((v) => !v)}
                 aria-expanded={yearOpen}
                 aria-haspopup="listbox"
-                className="
-                  flex py-3 w-full items-center justify-between
-                  cursor-pointer rounded-lg border border-gray-300 bg-white
-                  px-5 text-left text-sm font-medium text-gray-800 outline-none
-                  focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100
-                "
+                className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-gray-300 bg-white px-5 py-3 text-left text-sm font-medium text-gray-800 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               >
-                <span className="flex items-center justify-start gap-4 min-w-0">
+                <span className="flex min-w-0 items-center justify-start gap-4">
                   <FiCalendar className="h-6 w-6 shrink-0 text-gray-800" aria-hidden="true" />
                   <span className="block truncate">{yearLabel || "—"}</span>
                 </span>
@@ -315,7 +304,7 @@ function AgroforecastPage() {
                           setYearOpen(false);
                         }}
                         className={[
-                          "w-full cursor-pointer text-left px-5 py-3 text-sm font-medium",
+                          "w-full cursor-pointer px-5 py-3 text-left text-sm font-medium",
                           yearFilter === "all"
                             ? "bg-emerald-600 text-white"
                             : "text-gray-700 hover:bg-gray-50",
@@ -339,7 +328,7 @@ function AgroforecastPage() {
                               setYearOpen(false);
                             }}
                             className={[
-                              "w-full cursor-pointer text-left px-5 py-3 text-sm font-medium",
+                              "w-full cursor-pointer px-5 py-3 text-left text-sm font-medium",
                               active
                                 ? "bg-emerald-600 text-white"
                                 : "text-gray-700 hover:bg-gray-50",
@@ -378,50 +367,36 @@ function AgroforecastPage() {
                   className="h-full rounded-2xl bg-white shadow-sm ring-1 ring-black/5"
                 >
                   <div className="flex h-full flex-col p-5">
-                    {/* Card */}
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      {/* Title Card */}
                       <h3
                         className="
-                          flex-1 min-w-0
-                          font-semibold leading-snug text-gray-900
-                          text-base lg:text-lg
-                          md:min-h-11 lg:min-h-13
+                          min-w-0 flex-1
                           wrap-break-word
+                          text-base font-semibold leading-snug text-gray-900
+                          md:min-h-11 lg:min-h-13 lg:text-lg
                         "
                       >
                         {titleOf(it)}
                       </h3>
 
-                      {/* Button ดาวน์โหลดเอกสาร */}
                       <a
                         href={it.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group inline-flex items-center justify-center gap-2
-                        rounded-lg border border-emerald-600 bg-white
-                        px-3 py-2 lg:px-3 lg:py-3
-                        transition duration-150
-                        hover:bg-emerald-700 active:bg-emerald-800"
+                        className="group inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-600 bg-white px-3 py-2 transition duration-150 hover:bg-emerald-700 active:bg-emerald-800 lg:px-3 lg:py-3"
                       >
                         <FiDownload
-                          className="h-5 w-5 text-emerald-600 transition-colors
-                          group-hover:text-gray-100 group-active:text-gray-100
-                          lg:h-6 lg:w-6"
+                          className="h-5 w-5 text-emerald-600 transition-colors group-hover:text-gray-100 group-active:text-gray-100 lg:h-6 lg:w-6"
                           aria-hidden="true"
                         />
-                        <span
-                          className="text-xs lg:text-sm leading-none font-semibold
-                          text-emerald-600 transition-colors
-                          group-hover:text-gray-100 group-active:text-gray-100"
-                        >
+                        <span className="text-xs font-semibold leading-none text-emerald-600 transition-colors group-hover:text-gray-100 group-active:text-gray-100 lg:text-sm">
                           ดาวน์โหลดเอกสาร
                         </span>
                       </a>
                     </div>
 
                     <div className="mt-4 border-t border-gray-100 pt-3">
-                      <div className="flex flex-col gap-1 text-xs text-gray-500 lg:text-sm sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex flex-col gap-1 text-xs text-gray-500 sm:flex-row sm:items-center sm:justify-between lg:text-sm">
                         <div>
                           อัปเดต:{" "}
                           <span className="font-medium text-gray-700">{updated}</span>
@@ -443,57 +418,32 @@ function AgroforecastPage() {
 
         {/* Pagination */}
         {totalPages > 1 ? (
-          <nav className="mt-10 flex items-center justify-center gap-1 sm:justify-end">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={pageSafe === 1}
-              className="rounded-lg px-2 py-2 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
-              aria-label="ก่อนหน้า"
-            >
-              <FiChevronLeft className="h-5 w-5" />
-            </button>
-
-            {pageTokens(pageSafe, totalPages).map((t, idx) => {
-              if (t === "…") {
-                return (
-                  <span key={`dots-${idx}`} className="px-2 py-2 text-gray-400">
-                    …
-                  </span>
-                );
-              }
-
-              const n = t as number;
-              const active = n === pageSafe;
-
-              return (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setPage(n)}
-                  className={[
-                    "min-w-10 rounded-lg px-3 py-2 text-sm transition cursor-pointer",
-                    active
-                      ? "font-semibold text-gray-900"
-                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-900",
-                  ].join(" ")}
-                  aria-current={active ? "page" : undefined}
-                >
-                  {n}
-                </button>
-              );
-            })}
-
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={pageSafe === totalPages}
-              className="rounded-lg px-2 py-2 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
-              aria-label="ถัดไป"
-            >
-              <FiChevronRight className="h-5 w-5" />
-            </button>
-          </nav>
+          <div className="mt-10 flex justify-center sm:justify-end">
+            <ReactPaginate
+              breakLabel="…"
+              nextLabel={<FiChevronRight className="h-5 w-5" />}
+              previousLabel={<FiChevronLeft className="h-5 w-5" />}
+              onPageChange={handlePageChange}
+              pageCount={totalPages}
+              forcePage={pageSafe - 1}
+              pageRangeDisplayed={3}
+              marginPagesDisplayed={1}
+              renderOnZeroPageCount={null}
+              containerClassName="flex items-center justify-center gap-1"
+              pageClassName=""
+              pageLinkClassName="flex min-w-10 cursor-pointer items-center justify-center rounded-lg px-3 py-2 text-sm text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
+              activeClassName=""
+              activeLinkClassName="font-semibold text-gray-900"
+              previousClassName=""
+              previousLinkClassName="flex cursor-pointer items-center justify-center rounded-lg px-2 py-2 text-gray-500 transition hover:bg-gray-100"
+              nextClassName=""
+              nextLinkClassName="flex cursor-pointer items-center justify-center rounded-lg px-2 py-2 text-gray-500 transition hover:bg-gray-100"
+              breakClassName=""
+              breakLinkClassName="flex items-center justify-center px-2 py-2 text-gray-400"
+              disabledClassName="opacity-40 cursor-not-allowed"
+              disabledLinkClassName="pointer-events-none"
+            />
+          </div>
         ) : null}
       </section>
     </main>

@@ -3,6 +3,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 // Components
 import ZoomableImage from "@/app/components/ZoomableImage";
+// library
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Autoplay } from "swiper/modules";
+import type { Swiper as SwiperType } from "swiper";
+import "swiper/css";
 // icons
 import { FiCalendar, FiChevronDown, FiChevronLeft, FiChevronRight, FiMap } from "react-icons/fi";
 // types
@@ -14,8 +19,6 @@ const basePath = process.env.NEXT_PUBLIC_API_ROUTE ?? "";
 const MAP_API_ROUTE = `${basePath}/api/map`;
 
 /* -------------------- Config pure helpers -------------------- */
-
-const SOUNDING_SCROLL_DURATION_MS = 550;
 
 // กำหนด Menu ประเภทแผนที่
 const Type_Menu = [
@@ -38,7 +41,7 @@ const Type_Menu = [
 const SOUNDING_TYPE_LABEL = "แผนที่หยั่งอากาศ" as const;
 const SOUNDING_API_KEY = "AirMapWeather" as const;
 
-// ชื่อเดือนภาษาไทย (ใช้แสดง label เวลา)
+// ชื่อเดือนภาษาไทย
 const THAI_MONTHS = [
   "มกราคม",
   "กุมภาพันธ์",
@@ -54,57 +57,19 @@ const THAI_MONTHS = [
   "ธันวาคม",
 ] as const;
 
-// fallback กรณี Title เป็น null แต่ต้องโชว์เป็นไทย
-const SOUNDING_TITLE_FALLBACK: Record<string, string> = {
-  Bangkok: "กรุงเทพมหานคร",
-  ChiangMai: "เชียงใหม่",
-  KhonKaen: "ขอนแก่น",
-  UbonRatchaThani: "อุบลราชธานี",
-  Songkhla: "สงขลา",
-  Phuket: "ภูเก็ต",
-  ChanthaBuri: "จันทบุรี",
-  Chanthaburi: "จันทบุรี",
-  Phitsanulok: "พิษณุโลก",
-  NakhonRatchasima: "นครราชสีมา",
-  PrachuapKhiriKhan: "ประจวบคีรีขันธ์",
-  Chonburi: "ชลบุรี",
-  ChonBuri: "ชลบุรี",
-  Chumphon: "ชุมพร",
-};
-
 /* -------------------- Functions -------------------- */
 
-// Function ตรวจสอบ type ว่าเป็น Record<string, unknown> หรือไม่
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
-
-// Function อ่านค่า string ที่ไม่ใช่ empty หรือ whitespace เท่านั้น ถ้าไม่ใช่หรือเป็น empty ให้คืนค่า null
-function readNonEmptyString(v: unknown): string | null {
-  if (typeof v !== "string") return null;
-  const s = v.trim();
-  return s ? s : null;
-}
-
-// Function ดึงข้อมูลสถานี sounding จาก item ของ API โดยดูจาก key ที่ลงท้ายด้วย "Title" และคู่ของมันที่ลงท้ายด้วย "ImagePath"
-function extractSoundingStations(item: UpperWindItem | null): SoundingStation[] {
-  if (!item || !isRecord(item)) return [];
-
-  const rec: Record<string, unknown> = item;
+function extractSoundingStations(item: UpperWindItem): SoundingStation[] {
   const seenTitle = new Set<string>();
   const out: SoundingStation[] = [];
 
-  for (const key of Object.keys(rec)) {
+  for (const key of Object.keys(item)) {
     if (!key.endsWith("Title")) continue;
 
-    const base = key.slice(0, -"Title".length);
-    const rawTitle = readNonEmptyString(rec[key]);
-    const title = rawTitle ?? SOUNDING_TITLE_FALLBACK[base] ?? base;
+    const base = key.replace(/Title$/, "");
+    const title = item[key as keyof UpperWindItem] as string;
+    const imagePath = item[`${base}ImagePath` as keyof UpperWindItem] as string;
 
-    const imagePath = readNonEmptyString(rec[`${base}ImagePath`]);
-    if (!imagePath) continue; // เอาเฉพาะที่มีรูปจริง
-
-    // กันซ้ำแบบ ChanthaBuri/Chanthaburi -> "จันทบุรี" ให้เหลือใบเดียว
     if (seenTitle.has(title)) continue;
     seenTitle.add(title);
 
@@ -114,161 +79,67 @@ function extractSoundingStations(item: UpperWindItem | null): SoundingStation[] 
   return out;
 }
 
-// Function แปลง contentdate จาก API เป็น Date object โดยรองรับรูปแบบ "2026-02-09 10:57:00.0000000" และถ้าแปลงไม่ได้ให้คืนค่า null
-function parseContentDate(raw: string): Date | null {
-  if (!raw) return null;
-  const cleaned = raw.replace(" ", "T").replace(/\.\d+$/, "");
-  const d = new Date(cleaned);
-  return Number.isNaN(d.getTime()) ? null : d;
+function parseContentDate(raw: string): Date {
+  return new Date(raw.replace(" ", "T").replace(/\.\d+$/, ""));
 }
 
-// Function แปลง Date object เป็น string รูปแบบ "9 กุมภาพันธ์ 2569 10:57 น." โดยใช้ชื่อเดือนภาษาไทย และปีเป็น พ.ศ.
 function thaiDateTime(d: Date): string {
   const day = d.getDate();
-  const month = THAI_MONTHS[d.getMonth()] ?? "";
+  const month = THAI_MONTHS[d.getMonth()];
   const yearBE = d.getFullYear() + 543;
   const time = d.toLocaleTimeString("th-TH", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   });
+
   return `${day} ${month} ${yearBE} ${time} น.`;
 }
 
-// Function แปลงข้อมูลจาก API ที่อาจจะเป็น UpperWindItem เดี่ยว หรือ array ของ UpperWindItem หรือ null/undefined ให้เป็น array ของ { apiKey, item } ที่ filter ออกมาเฉพาะที่มี url และรองรับกรณีของ Sounding ที่ไม่ต้องมี url ก็ได้
-function normalizeToEntries(
-  data: UpperWindResponse["data"] | null | undefined
-): Array<{ apiKey: string; item: UpperWindItem }> {
+function normalizeToEntries(data: UpperWindResponse["data"]) {
   const out: Array<{ apiKey: string; item: UpperWindItem }> = [];
-  const d = data ?? {};
 
-  for (const [apiKey, value] of Object.entries(d)) {
-    const arr = Array.isArray(value) ? value : value ? [value] : [];
-    for (const it of arr) {
-      if (!it) continue;
-
-      if (apiKey === SOUNDING_API_KEY) {
-        out.push({ apiKey, item: it });
-        continue;
-      }
-
-      if (typeof it.url !== "string" || it.url === "") continue;
-      out.push({ apiKey, item: it });
+  for (const [apiKey, value] of Object.entries(data)) {
+    const items = value as UpperWindItem[];
+    for (const item of items) {
+      out.push({ apiKey, item });
     }
   }
 
   return out;
 }
 
-// Function ตรวจสอบว่า entry จาก API ตรงกับ menu label ที่กำหนดหรือไม่ โดยเช็คจาก title/alt ของ item และ apiKey เพื่อให้ตรงกับประเภทของแผนที่ที่เลือก
-function isMatchType(menuLabel: string, entry: { apiKey: string; item: UpperWindItem }): boolean {
-  const label = menuLabel;
-  const title = entry.item.title ?? "";
-  const alt = entry.item.alt ?? "";
-  const apiKey = entry.apiKey ?? "";
+function isMatchType(
+  menuLabel: string,
+  entry: { apiKey: string; item: UpperWindItem }
+): boolean {
+  const title = entry.item.title as string;
+  const alt = entry.item.alt as string;
+  const apiKey = entry.apiKey;
 
-  // Sounding: match ด้วย apiKey โดยตรง
-  if (label === SOUNDING_TYPE_LABEL && apiKey === SOUNDING_API_KEY) return true;
+  if (menuLabel === SOUNDING_TYPE_LABEL && apiKey === SOUNDING_API_KEY) return true;
+  if (title.includes(menuLabel) || alt.includes(menuLabel)) return true;
 
-  // หลัก: title/alt ต้องมี label
-  if (title.includes(label) || alt.includes(label)) return true;
-
-  // fallback เบาๆ: ดึงเลข hPa จากเมนูไปเช็คใน apiKey
-  const num = label.match(/(\d{3,4})\s*hPa/u)?.[1];
+  const num = menuLabel.match(/(\d{3,4})\s*hPa/u)?.[1];
   if (num && apiKey.includes(num)) return true;
 
-  // 600 m
-  const is600m = label.includes("600") && label.toLowerCase().includes("m");
+  const is600m = menuLabel.includes("600") && menuLabel.toLowerCase().includes("m");
   if (is600m && apiKey.toLowerCase().includes("600")) return true;
 
   return false;
 }
 
-// Function สร้างตัวเลือกเวลา (unique) จาก contentdate + เรียงล่าสุดก่อน
 function getTimeOptions(items: UpperWindItem[]) {
   const times = new Map<string, Date>();
 
   for (const it of items) {
-    const key = it.contentdate ?? "";
-    const dt = parseContentDate(key);
-    if (key && dt) times.set(key, dt);
+    const key = it.contentdate as string;
+    times.set(key, parseContentDate(key));
   }
 
   return Array.from(times.entries())
     .sort((a, b) => b[1].getTime() - a[1].getTime())
     .map(([key, date]) => ({ key, label: thaiDateTime(date) }));
-}
-
-// Function easing แบบ cubic in-out สำหรับใช้ในการ animate scroll ให้ดูนุ่มนวลขึ้น
-function easeInOutCubic(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
-
-// Function คำนวณระยะเลื่อนแบบ "เป็นชุด" ตามจำนวนการ์ดที่พอดีใน viewport โดยดูจากความกว้างของการ์ดและช่องว่างระหว่างการ์ด เพื่อให้เลื่อนทีละจำนวนการ์ดที่เหมาะสม
-function getGapPx(el: HTMLElement): number {
-  const cs = window.getComputedStyle(el);
-  const raw = cs.columnGap || cs.gap || "0px";
-  const n = Number.parseFloat(raw);
-  return Number.isFinite(n) ? n : 0;
-}
-
-// Function หาความกว้างของการ์ดใบแรกในแถว โดยใช้ getBoundingClientRect() เพื่อให้ได้ค่าที่แม่นยำ รวมถึงรองรับกรณีที่มี padding/margin หรือขนาดที่ไม่ใช่จำนวนเต็ม และถ้าไม่เจอการ์ดเลยให้ fallback เป็นความกว้างของแถวทั้งหมด
-function getFirstCardWidthPx(row: HTMLElement): number {
-  const first = row.querySelector<HTMLElement>("button");
-  if (!first) return row.clientWidth;
-  return first.getBoundingClientRect().width;
-}
-
-// Function คำนวณระยะเลื่อนแบบ "เป็นชุด" โดยดูจากความกว้างของการ์ดใบแรกและช่องว่างระหว่างการ์ด เพื่อให้เลื่อนทีละจำนวนการ์ดที่พอดีใน viewport และถ้าเกิดข้อผิดพลาดในการคำนวณให้ fallback เป็นความกว้างของแถวทั้งหมด
-function calcPageDeltaPx(row: HTMLElement): number {
-  const gap = getGapPx(row);
-  const cardW = getFirstCardWidthPx(row);
-  const unit = cardW + gap;
-
-  if (unit <= 0) return row.clientWidth;
-
-  const pageSize = Math.max(1, Math.floor((row.clientWidth + gap) / unit));
-  return pageSize * unit;
-}
-
-// Function animate scrollLeft ของ element ไปยัง target ด้วยระยะเวลา durationMs และใช้ easing แบบ cubic in-out เพื่อให้การเลื่อนดูนุ่มนวลขึ้น และถ้า prefers-reduced-motion เปิดอยู่หรือ duration เป็น 0 จะเลื่อนไปทันทีโดยไม่ใช้ animation
-function animateScrollLeft(
-  el: HTMLElement,
-  target: number,
-  durationMs: number,
-  onDone?: () => void
-) {
-  const prefersReduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
-  if (prefersReduced || durationMs <= 0) {
-    el.scrollLeft = target;
-    onDone?.();
-    return;
-  }
-
-  const start = el.scrollLeft;
-  const diff = target - start;
-  if (Math.abs(diff) < 0.5) {
-    el.scrollLeft = target;
-    onDone?.();
-    return;
-  }
-
-  const t0 = performance.now();
-
-  const tick = (now: number) => {
-    const p = Math.min(1, (now - t0) / durationMs);
-    const eased = easeInOutCubic(p);
-    el.scrollLeft = start + diff * eased;
-
-    if (p < 1) {
-      requestAnimationFrame(tick);
-    } else {
-      el.scrollLeft = target;
-      onDone?.();
-    }
-  };
-
-  requestAnimationFrame(tick);
 }
 
 /* -------------------- component -------------------- */
@@ -282,51 +153,51 @@ function MapPage() {
   const [timeOpen, setTimeOpen] = useState(false);
   const timeWrapRef = useRef<HTMLDivElement | null>(null);
 
-  const [raw, setRaw] = useState<UpperWindResponse | null>(null);
+  const [raw, setRaw] = useState<UpperWindResponse>({
+    success: true,
+    data: {} as UpperWindResponse["data"],
+    message: "",
+  });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // dropdown state
-  const [selectedTypeLabel, setSelectedTypeLabel] = useState<string>("");
+  const [selectedTypeLabel, setSelectedTypeLabel] = useState<string>(Type_Menu[0]);
   const [selectedTimeKey, setSelectedTimeKey] = useState<string>("");
 
   // apply เมื่อกดปุ่ม “แสดงแผนที่”
-  const [applied, setApplied] = useState<{ typeLabel: string; timeKey: string } | null>(null);
+  const [applied, setApplied] = useState<{ typeLabel: string; timeKey: string }>({
+    typeLabel: Type_Menu[0],
+    timeKey: "",
+  });
+
+  // Swiper ref
+  const soundingSwiperRef = useRef<SwiperType | null>(null);
 
   /* -------------------- API fetchers -------------------- */
 
   async function load() {
     setLoading(true);
-    setError(null);
 
-    try {
-      const res = await fetch(MAP_API_ROUTE, { cache: "no-store" });
-      const json = (await res.json()) as UpperWindResponse;
+    const res = await fetch(MAP_API_ROUTE, { cache: "no-store" });
+    const json = (await res.json()) as UpperWindResponse;
 
-      if (!res.ok) throw new Error(`Request failed (${res.status})`);
-      if (!json?.success || !json?.data) throw new Error(json?.message || "Bad response");
+    setRaw(json);
 
-      setRaw(json);
+    const allEntries = normalizeToEntries(json.data);
+    const firstType =
+      Type_Menu.find((label) => allEntries.some((e) => isMatchType(label, e))) ?? Type_Menu[0];
 
-      const allEntries = normalizeToEntries(json.data);
-      const firstType =
-        Type_Menu.find((label) => allEntries.some((e) => isMatchType(label, e))) ?? Type_Menu[0];
+    const firstItems = allEntries.filter((e) => isMatchType(firstType, e)).map((e) => e.item);
+    const firstTimes = getTimeOptions(firstItems);
+    const firstTime = firstTimes[0].key;
 
-      const firstItems = allEntries.filter((e) => isMatchType(firstType, e)).map((e) => e.item);
-      const firstTimes = getTimeOptions(firstItems);
-      const firstTime = firstTimes[0]?.key ?? (firstItems[0]?.contentdate ?? "");
+    setSelectedTypeLabel(firstType);
+    setSelectedTimeKey(firstTime);
+    setApplied({ typeLabel: firstType, timeKey: firstTime });
 
-      setSelectedTypeLabel(firstType);
-      setSelectedTimeKey(firstTime);
-      setApplied({ typeLabel: firstType, timeKey: firstTime });
-
-      setTypeOpen(false);
-      setTimeOpen(false);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to load");
-    } finally {
-      setLoading(false);
-    }
+    setTypeOpen(false);
+    setTimeOpen(false);
+    setLoading(false);
   }
 
   /* -------------------- useEffect -------------------- */
@@ -352,6 +223,7 @@ function MapPage() {
 
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
+
     return () => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
@@ -360,9 +232,8 @@ function MapPage() {
 
   /* -------------------- useMemo -------------------- */
 
-  const entries = useMemo(() => normalizeToEntries(raw?.data), [raw]);
+  const entries = useMemo(() => normalizeToEntries(raw.data), [raw]);
 
-  // map: Type_Menu label -> items ที่ match จาก API
   const itemsByTypeLabel = useMemo(() => {
     const map = new Map<string, UpperWindItem[]>();
 
@@ -370,8 +241,8 @@ function MapPage() {
       const items = entries.filter((e) => isMatchType(label, e)).map((e) => e.item);
 
       const sorted = [...items].sort((a, b) => {
-        const da = parseContentDate(a.contentdate ?? "")?.getTime() ?? 0;
-        const db = parseContentDate(b.contentdate ?? "")?.getTime() ?? 0;
+        const da = parseContentDate(a.contentdate as string).getTime();
+        const db = parseContentDate(b.contentdate as string).getTime();
         return db - da;
       });
 
@@ -393,15 +264,12 @@ function MapPage() {
     if (!selectedTypeLabel) return;
 
     const items = itemsByTypeLabel.get(selectedTypeLabel) ?? [];
-    if (!items.length) {
-      setSelectedTimeKey("");
-      setTimeOpen(false);
-      return;
-    }
+    if (!items.length) return;
 
     const times = getTimeOptions(items);
     const has = times.some((t) => t.key === selectedTimeKey);
-    if (!has) setSelectedTimeKey(times[0]?.key ?? (items[0]?.contentdate ?? ""));
+
+    if (!has) setSelectedTimeKey(times[0].key);
     setTimeOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTypeLabel]);
@@ -409,50 +277,42 @@ function MapPage() {
   const selectedHasData = selectedItems.length > 0;
 
   const selectedTimeLabel =
-    timeOptions.find((t) => t.key === selectedTimeKey)?.label ?? timeOptions[0]?.label ?? "-";
+    timeOptions.find((t) => t.key === selectedTimeKey)?.label ?? timeOptions[0]?.label ?? "";
 
-  // shown: อิงจาก applied (หลังกดปุ่ม)
   const shown = useMemo(() => {
-    const typeLabel = applied?.typeLabel ?? selectedTypeLabel;
-    const timeKey = applied?.timeKey ?? selectedTimeKey;
+    const items = itemsByTypeLabel.get(applied.typeLabel) ?? [];
+    return items.find((it) => it.contentdate === applied.timeKey) ?? items[0];
+  }, [applied, itemsByTypeLabel]);
 
-    const items = itemsByTypeLabel.get(typeLabel) ?? [];
-    if (!items.length) return null;
+  const shownDate = shown ? parseContentDate(shown.contentdate as string) : new Date();
 
-    const exact = items.find((it) => (it.contentdate ?? "") === timeKey);
-    return exact ?? items[0] ?? null;
-  }, [applied, selectedTypeLabel, selectedTimeKey, itemsByTypeLabel]);
-
-  const shownDate = parseContentDate(shown?.contentdate ?? "");
-
-  const appliedTypeLabel = applied?.typeLabel ?? selectedTypeLabel;
-  const appliedTimeKey = applied?.timeKey ?? selectedTimeKey;
+  const appliedTypeLabel = applied.typeLabel;
+  const appliedTimeKey = applied.timeKey;
 
   const appliedItems = itemsByTypeLabel.get(appliedTypeLabel) ?? [];
   const appliedTimeOptions = getTimeOptions(appliedItems);
 
   const appliedTimeLabel =
-    appliedTimeOptions.find((t) => t.key === appliedTimeKey)?.label ??
-    (shownDate ? thaiDateTime(shownDate) : shown?.contentdate ?? "");
+    appliedTimeOptions.find((t) => t.key === appliedTimeKey)?.label ?? thaiDateTime(shownDate);
 
   // ===== Sounding (AirMapWeather) =====
   const isSoundingApplied = appliedTypeLabel === SOUNDING_TYPE_LABEL;
 
   const soundingStations = useMemo(
-    () => (isSoundingApplied ? extractSoundingStations(shown) : []),
+    () => (isSoundingApplied && shown ? extractSoundingStations(shown) : []),
     [isSoundingApplied, shown]
   );
 
   const [activeSoundingId, setActiveSoundingId] = useState<string>("");
 
   useEffect(() => {
-    if (!isSoundingApplied) {
+    if (!isSoundingApplied || !soundingStations.length) {
       setActiveSoundingId("");
       return;
     }
-    const first = soundingStations[0]?.id ?? "";
+
     setActiveSoundingId((prev) =>
-      prev && soundingStations.some((s) => s.id === prev) ? prev : first
+      prev && soundingStations.some((s) => s.id === prev) ? prev : soundingStations[0].id
     );
   }, [isSoundingApplied, soundingStations]);
 
@@ -462,104 +322,42 @@ function MapPage() {
     return idx >= 0 ? idx : 0;
   }, [soundingStations, activeSoundingId]);
 
-  // scroll ให้การ์ด active อยู่ในจอ (ตอน "คลิกการ์ด" เท่านั้น)
-  const soundingRowMobileRef = useRef<HTMLDivElement | null>(null);
-  const soundingRowDesktopRef = useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
     if (!isSoundingApplied) return;
 
-    const rows = [soundingRowMobileRef.current, soundingRowDesktopRef.current].filter(
-      (r): r is HTMLDivElement => Boolean(r)
-    );
+    const swiper = soundingSwiperRef.current;
+    if (!swiper || !soundingStations.length) return;
 
-    for (const row of rows) {
-      const el = row.querySelector<HTMLButtonElement>(
-        `button[data-sounding-index="${activeSoundingIndex}"]`
-      );
-      if (el) el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    const currentIndex = swiper.realIndex ?? swiper.activeIndex ?? 0;
+    if (currentIndex === activeSoundingIndex) return;
+
+    if (swiper.params.loop) {
+      swiper.slideToLoop(activeSoundingIndex, 550);
+    } else {
+      swiper.slideTo(activeSoundingIndex, 550);
     }
-  }, [isSoundingApplied, activeSoundingIndex]);
+  }, [isSoundingApplied, activeSoundingIndex, soundingStations.length]);
 
-  const activeSounding = isSoundingApplied
-    ? soundingStations[activeSoundingIndex] ?? null
-    : null;
+  const activeSounding = isSoundingApplied ? soundingStations[activeSoundingIndex] : undefined;
 
-  const imageSrc = isSoundingApplied ? activeSounding?.imagePath ?? "" : shown?.url ?? "";
-  const descText = isSoundingApplied ? "" : shown?.description ?? "";
+  const imageSrc = isSoundingApplied
+    ? activeSounding?.imagePath ?? ""
+    : ((shown?.url as string) ?? "");
 
-  // ===== ✅ ปุ่มเลื่อน: เลื่อน "เป็นชุด" + animate duration =====
-  const isAnimatingScrollRef = useRef<boolean>(false);
+  const descText = isSoundingApplied ? "" : ((shown?.description as string) ?? "");
 
-  const scrollSoundingCardsByPage = useCallback(
-    (dir: ScrollDir) => {
-      // ปุ่มบนหัวเป็น desktop อยู่แล้ว แต่กันไว้เผื่อเรียกที่อื่น
-      const row =
-        window.matchMedia("(min-width: 640px)").matches
-          ? soundingRowDesktopRef.current
-          : soundingRowMobileRef.current;
+  /* -------------------- UI -------------------- */
 
-      if (!row) return;
-      if (isAnimatingScrollRef.current) return;
-
-      const delta = calcPageDeltaPx(row);
-      const max = Math.max(0, row.scrollWidth - row.clientWidth);
-      const target = Math.min(max, Math.max(0, row.scrollLeft + dir * delta));
-
-      if (Math.abs(target - row.scrollLeft) < 1) return;
-
-      isAnimatingScrollRef.current = true;
-      animateScrollLeft(row, target, SOUNDING_SCROLL_DURATION_MS, () => {
-        isAnimatingScrollRef.current = false;
-      });
-    },
-    []
-  );
-
-  const [canScrollPrevDesktop, setCanScrollPrevDesktop] = useState<boolean>(false);
-  const [canScrollNextDesktop, setCanScrollNextDesktop] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (!isSoundingApplied) {
-      setCanScrollPrevDesktop(false);
-      setCanScrollNextDesktop(false);
-      return;
-    }
-
-    const row = soundingRowDesktopRef.current;
-    if (!row) return;
-
-    const update = () => {
-      const max = Math.max(0, row.scrollWidth - row.clientWidth);
-      setCanScrollPrevDesktop(row.scrollLeft > 2);
-      setCanScrollNextDesktop(row.scrollLeft < max - 2);
-    };
-
-    update();
-
-    const onScroll = () => update();
-    row.addEventListener("scroll", onScroll, { passive: true });
-
-    const ro = new ResizeObserver(() => update());
-    ro.observe(row);
-
-    return () => {
-      row.removeEventListener("scroll", onScroll);
-      ro.disconnect();
-    };
-  }, [isSoundingApplied, soundingStations.length]);
-
-  {/* UI Loading */ }
   if (loading) {
     return (
       <main className="min-h-screen bg-white">
         <section className="relative min-h-60 border-b border-gray-200">
           <div
-            className="hidden sm:block absolute inset-0 bg-no-repeat bg-top-right bg-contain"
+            className="absolute inset-0 hidden bg-contain bg-no-repeat bg-top-right sm:block"
             style={{ backgroundImage: `url(${basePath}/bg_top.png)` }}
           />
-          <div className="mx-auto max-w-7xl px-4 py-6 relative z-10">
-            <div className="animate-pulse space-y-3">
+          <div className="relative z-10 mx-auto max-w-7xl px-4 py-6">
+            <div className="space-y-3 animate-pulse">
               <div className="h-8 w-96 rounded bg-gray-200" />
               <div className="h-5 w-130 rounded bg-gray-200" />
               <div className="mt-4 h-11 w-full max-w-4xl rounded bg-gray-200" />
@@ -575,51 +373,16 @@ function MapPage() {
     );
   }
 
-  {/* UI Error */ }
-  if (error || !raw) {
-    return (
-      <main className="min-h-screen bg-white">
-        <section className="relative min-h-60 border-b border-gray-200">
-          <div
-            className="hidden sm:block absolute inset-0 bg-no-repeat bg-top-right bg-contain"
-            style={{ backgroundImage: `url(${basePath}/bg_top.png)` }}
-          />
-          <div className="mx-auto max-w-7xl px-4 py-6 relative z-10">
-            <div className="flex flex-col gap-1">
-              <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
-                แผนที่อากาศผิวพื้นระดับต่างๆ
-              </h1>
-              <p className="mt-1 text-sm font-medium text-gray-600 sm:text-base">
-                ไม่สามารถโหลดข้อมูลได้ในขณะนี้
-              </p>
-            </div>
-
-            <div className="mt-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
-              <p className="text-sm font-semibold text-red-600">{error || ""}</p>
-              <button
-                type="button"
-                onClick={load}
-                className="mt-4 rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
-              >
-                ลองใหม่
-              </button>
-            </div>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
-  /* -------------------- UI section -------------------- */
   return (
     <main className="min-h-screen bg-white">
       {/* Header */}
       <section className="relative min-h-60 border-b border-gray-200">
         <div
-          className="hidden sm:block absolute inset-0 bg-no-repeat bg-top-right bg-contain"
+          className="absolute inset-0 hidden bg-contain bg-no-repeat bg-top-right sm:block"
           style={{ backgroundImage: `url(${basePath}/bg_top.png)` }}
         />
-        <div className="mx-auto max-w-7xl px-4 py-6 relative z-10">
+
+        <div className="relative z-10 mx-auto max-w-7xl px-4 py-6">
           <div className="flex flex-col gap-1">
             <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
               แผนที่อากาศผิวพื้นระดับต่างๆ
@@ -627,16 +390,14 @@ function MapPage() {
 
             <p className="mt-1 text-sm font-medium text-gray-600 sm:text-base">
               <span className="flex flex-wrap items-baseline gap-x-2">
-                <span className="whitespace-nowrap">{appliedTypeLabel || "แผนที่"}</span>
-                {appliedTimeLabel ? (
-                  <span className="whitespace-nowrap text-gray-600">- {appliedTimeLabel}</span>
-                ) : null}
+                <span className="whitespace-nowrap">{appliedTypeLabel}</span>
+                <span className="whitespace-nowrap text-gray-600">- {appliedTimeLabel}</span>
               </span>
             </p>
           </div>
 
           {/* Controls row */}
-          <div className="flex flex-col gap-2 mt-5 sm:flex-row sm:items-center sm:justify-start sm:mt-10">
+          <div className="mt-5 flex flex-col gap-2 sm:mt-10 sm:flex-row sm:items-center sm:justify-start">
             {/* Type dropdown */}
             <div ref={typeWrapRef} className="relative w-full max-w-sm">
               <button
@@ -646,14 +407,11 @@ function MapPage() {
                   setTimeOpen(false);
                 }}
                 aria-expanded={typeOpen}
-                className="flex py-3 w-full items-center justify-between
-                  cursor-pointer rounded-lg border border-gray-300 bg-white
-                  px-5 text-left text-sm font-medium text-gray-800 outline-none
-                  focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-gray-300 bg-white px-5 py-3 text-left text-sm font-medium text-gray-800 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               >
-                <span className="flex items-center justify-start gap-4 min-w-0">
+                <span className="flex min-w-0 items-center justify-start gap-4">
                   <FiMap className="h-6 w-6 shrink-0 text-gray-800" />
-                  <span className="block truncate">{selectedTypeLabel || "—"}</span>
+                  <span className="block truncate">{selectedTypeLabel}</span>
                 </span>
 
                 <FiChevronDown
@@ -685,9 +443,9 @@ function MapPage() {
                               setTimeOpen(false);
                             }}
                             className={[
-                              "w-full text-left px-5 py-3 text-sm font-medium cursor-pointer",
+                              "w-full cursor-pointer px-5 py-3 text-left text-sm font-medium",
                               active ? "bg-emerald-600 text-white" : "text-gray-700 hover:bg-gray-50",
-                              !has ? "opacity-40 cursor-not-allowed hover:bg-white" : "",
+                              !has ? "cursor-not-allowed opacity-40 hover:bg-white" : "",
                             ].join(" ")}
                           >
                             {label}
@@ -712,13 +470,13 @@ function MapPage() {
                 }}
                 aria-expanded={timeOpen}
                 className={[
-                  "flex py-3 w-full items-center justify-between rounded-lg border bg-white px-5 text-left text-sm font-medium outline-none",
+                  "flex w-full items-center justify-between rounded-lg border bg-white px-5 py-3 text-left text-sm font-medium outline-none",
                   selectedHasData
-                    ? "border-gray-300 text-gray-800 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 cursor-pointer"
-                    : "border-gray-200 text-gray-400 cursor-not-allowed",
+                    ? "cursor-pointer border-gray-300 text-gray-800 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                    : "cursor-not-allowed border-gray-200 text-gray-400",
                 ].join(" ")}
               >
-                <span className="flex items-center justify-start gap-4 min-w-0">
+                <span className="flex min-w-0 items-center justify-start gap-4">
                   <FiCalendar
                     className={[
                       "h-6 w-6 shrink-0",
@@ -746,6 +504,7 @@ function MapPage() {
                     <div className="max-h-105 overflow-auto py-2">
                       {timeOptions.map((t) => {
                         const active = t.key === selectedTimeKey;
+
                         return (
                           <button
                             key={t.key}
@@ -755,7 +514,7 @@ function MapPage() {
                               setTimeOpen(false);
                             }}
                             className={[
-                              "w-full text-left px-5 py-3 text-sm font-medium cursor-pointer",
+                              "w-full cursor-pointer px-5 py-3 text-left text-sm font-medium",
                               active ? "bg-emerald-600 text-white" : "text-gray-700 hover:bg-gray-50",
                             ].join(" ")}
                           >
@@ -779,10 +538,10 @@ function MapPage() {
                 setTimeOpen(false);
               }}
               className={[
-                "h-12 rounded-lg px-6 text-sm font-semibold text-white whitespace-nowrap cursor-pointer",
+                "h-12 cursor-pointer whitespace-nowrap rounded-lg px-6 text-sm font-semibold text-white",
                 selectedHasData && selectedTimeKey
                   ? "bg-emerald-600 hover:bg-emerald-700"
-                  : "bg-gray-300 cursor-not-allowed",
+                  : "cursor-not-allowed bg-gray-300",
               ].join(" ")}
             >
               แสดงแผนที่
@@ -793,39 +552,36 @@ function MapPage() {
 
       {/* Title Map + Desktop arrows */}
       <section className="mx-auto max-w-7xl px-4 py-3 sm:py-6">
-        <div className="flex items-start sm:items-center justify-between gap-3">
+        <div className="flex items-start justify-between gap-3 sm:items-center">
           <div className="text-lg font-semibold text-gray-900 sm:text-2xl">
             <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2">
               <span className="whitespace-nowrap">
-                {isSoundingApplied ? `${appliedTypeLabel || "แผนที่"} -` : appliedTypeLabel || "แผนที่"}
+                {isSoundingApplied ? `${appliedTypeLabel} -` : appliedTypeLabel}
               </span>
 
-              {appliedTimeLabel ? (
-                <span className="text-sm font-medium text-gray-600 whitespace-nowrap">
-                  {isSoundingApplied ? appliedTimeLabel : `- ${appliedTimeLabel}`}
-                </span>
-              ) : null}
+              <span className="whitespace-nowrap text-sm font-medium text-gray-600">
+                {isSoundingApplied ? appliedTimeLabel : `- ${appliedTimeLabel}`}
+              </span>
 
               {isSoundingApplied ? (
-                <span className="text-sm font-medium text-gray-500 whitespace-nowrap">
-                  ( {soundingStations.length} จังหวัด )
+                <span className="whitespace-nowrap text-sm font-medium text-gray-500">
+                  ({soundingStations.length} จังหวัด)
                 </span>
               ) : null}
             </div>
           </div>
 
-          {/* ปุ่มเลื่อนบนหัว (Desktop) */}
           {isSoundingApplied ? (
-            <div className="hidden sm:flex items-center gap-2">
+            <div className="hidden items-center gap-2 sm:flex">
               <button
                 type="button"
-                onClick={() => scrollSoundingCardsByPage(-1)}
-                disabled={soundingStations.length <= 1 || !canScrollPrevDesktop}
+                onClick={() => soundingSwiperRef.current?.slidePrev()}
+                disabled={soundingStations.length <= 1}
                 className={[
-                  "inline-flex items-center justify-center rounded-lg border px-2.5 py-2 text-sm font-semibold cursor-pointer",
-                  soundingStations.length <= 1 || !canScrollPrevDesktop
-                    ? "border-gray-200 text-gray-300 cursor-not-allowed"
-                    : "border-gray-300 text-gray-700 hover:bg-gray-50",
+                  "inline-flex items-center justify-center rounded-lg border px-2.5 py-2 text-sm font-semibold",
+                  soundingStations.length <= 1
+                    ? "cursor-not-allowed border-gray-200 text-gray-300"
+                    : "cursor-pointer border-gray-300 text-gray-700 hover:bg-gray-50",
                 ].join(" ")}
                 aria-label="ก่อนหน้า"
               >
@@ -834,13 +590,13 @@ function MapPage() {
 
               <button
                 type="button"
-                onClick={() => scrollSoundingCardsByPage(1)}
-                disabled={soundingStations.length <= 1 || !canScrollNextDesktop}
+                onClick={() => soundingSwiperRef.current?.slideNext()}
+                disabled={soundingStations.length <= 1}
                 className={[
-                  "inline-flex items-center justify-center rounded-lg border px-2.5 py-2 text-sm font-semibold cursor-pointer",
-                  soundingStations.length <= 1 || !canScrollNextDesktop
-                    ? "border-gray-200 text-gray-300 cursor-not-allowed"
-                    : "border-gray-300 text-gray-700 hover:bg-gray-50",
+                  "inline-flex items-center justify-center rounded-lg border px-2.5 py-2 text-sm font-semibold",
+                  soundingStations.length <= 1
+                    ? "cursor-not-allowed border-gray-200 text-gray-300"
+                    : "cursor-pointer border-gray-300 text-gray-700 hover:bg-gray-50",
                 ].join(" ")}
                 aria-label="ถัดไป"
               >
@@ -853,90 +609,76 @@ function MapPage() {
 
       {/* Sounding Cards */}
       {isSoundingApplied ? (
-        <section className="mx-auto max-w-7xl px-0 sm:px-4 pb-2">
-          {/* Mobile */}
-          <div
-            ref={soundingRowMobileRef}
-            className="sm:hidden flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory
-              [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        <section className="mx-auto max-w-7xl px-0 pb-2 sm:px-4">
+          <Swiper
+            modules={[Autoplay]}
+            onSwiper={(swiper) => {
+              soundingSwiperRef.current = swiper;
+            }}
+            onSlideChange={(swiper) => {
+              const idx = swiper.realIndex ?? 0;
+              const id = soundingStations[idx]?.id ?? "";
+              if (id) setActiveSoundingId(id);
+            }}
+            loop={soundingStations.length > 1}
+            autoplay={
+              soundingStations.length > 1
+                ? {
+                  delay: 10000,
+                  disableOnInteraction: false,
+                  pauseOnMouseEnter: true,
+                }
+                : false
+            }
+            speed={550}
+            spaceBetween={12}
+            slidesPerView="auto"
+            grabCursor
+            breakpoints={{
+              640: {
+                spaceBetween: 16,
+              },
+            }}
+            className="!px-4 sm:!px-0"
           >
             {soundingStations.map((s, idx) => {
               const active = idx === activeSoundingIndex;
 
               return (
-                <button
-                  key={`${s.id}-${idx}`}
-                  type="button"
-                  data-sounding-index={idx}
-                  onClick={() => setActiveSoundingId(s.id)}
-                  className={[
-                    "relative shrink-0 rounded-xl border p-4 text-left shadow-sm transition cursor-pointer",
-                    "w-55",
-                    "h-24 overflow-hidden",
-                    active ? "bg-white border-emerald-200" : "bg-gray-50 border-sky-100",
-                  ].join(" ")}
-                >
-                  <span
+                <SwiperSlide key={`${s.id}-${idx}`} className="!h-auto !w-[220px] sm:!w-72">
+                  <button
+                    type="button"
+                    onClick={() => setActiveSoundingId(s.id)}
                     className={[
-                      "absolute left-0 top-4 bottom-4 w-1 rounded-r",
-                      active ? "bg-emerald-600" : "bg-transparent",
+                      "relative h-24 w-full cursor-pointer overflow-hidden rounded-xl border p-4 text-left shadow-sm transition sm:h-auto",
+                      active
+                        ? "border-emerald-300 bg-white ring-2 ring-emerald-100"
+                        : "border-sky-100 bg-gray-50 hover:bg-gray-100",
                     ].join(" ")}
-                  />
-                  <div className="pl-2 h-full flex flex-col justify-center">
-                    <div className="text-sm font-semibold text-gray-900 leading-tight">
-                      จังหวัด {s.title}
+                  >
+                    <span
+                      className={[
+                        "absolute bottom-4 left-0 top-4 w-1 rounded-r transition",
+                        active ? "bg-emerald-600" : "bg-transparent",
+                      ].join(" ")}
+                    />
+
+                    <div className="flex h-full flex-col justify-center pl-2 sm:block">
+                      <div className="text-sm font-semibold leading-tight text-gray-900">
+                        จังหวัด {s.title}
+                      </div>
+                      <div className="mt-1 text-xs font-medium leading-tight text-gray-500">
+                        แผนที่หยั่งอากาศ
+                      </div>
+                      <div className="mt-1 text-xs font-medium leading-tight text-gray-500">
+                        วันที่ {appliedTimeLabel}
+                      </div>
                     </div>
-                    <div className="mt-1 text-xs font-medium text-gray-500 leading-tight">
-                      แผนที่หยั่งอากาศ
-                    </div>
-                    <div className="mt-1 text-xs font-medium text-gray-500 leading-tight">
-                      วันที่ {appliedTimeLabel || "-"}
-                    </div>
-                  </div>
-                </button>
+                  </button>
+                </SwiperSlide>
               );
             })}
-          </div>
-
-          {/* Desktop */}
-          <div
-            ref={soundingRowDesktopRef}
-            className="hidden sm:flex gap-4 overflow-x-auto pb-2
-            [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          >
-            {soundingStations.map((s, idx) => {
-              const active = idx === activeSoundingIndex;
-
-              return (
-                <button
-                  key={`${s.id}-${idx}`}
-                  type="button"
-                  data-sounding-index={idx}
-                  onClick={() => setActiveSoundingId(s.id)}
-                  className={[
-                    "relative shrink-0 w-72 rounded-xl border p-4 text-left shadow-sm transition cursor-pointer",
-                    active
-                      ? "bg-white border-emerald-200"
-                      : "bg-gray-50 border-sky-100 hover:bg-gray-100",
-                  ].join(" ")}
-                >
-                  <span
-                    className={[
-                      "absolute left-0 top-4 bottom-4 w-1 rounded-r",
-                      active ? "bg-emerald-600" : "bg-transparent",
-                    ].join(" ")}
-                  />
-                  <div className="pl-2">
-                    <div className="text-sm font-semibold text-gray-900">จังหวัด {s.title}</div>
-                    <div className="mt-1 text-xs font-medium text-gray-500">แผนที่หยั่งอากาศ</div>
-                    <div className="mt-1 text-xs font-medium text-gray-500">
-                      วันที่ {appliedTimeLabel || "-"}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          </Swiper>
         </section>
       ) : null}
 
@@ -952,7 +694,7 @@ function MapPage() {
       {/* Description (mobile) */}
       <section className="mx-auto max-w-7xl px-4 py-3 sm:hidden">
         {!isSoundingApplied ? (
-          <p className="mx-auto text-sm leading-relaxed text-gray-700">{descText || "-"}</p>
+          <p className="mx-auto text-sm leading-relaxed text-gray-700">{descText}</p>
         ) : null}
       </section>
 
@@ -967,7 +709,7 @@ function MapPage() {
                   alt={
                     isSoundingApplied
                       ? `แผนที่หยั่งอากาศ - จังหวัด ${activeSounding?.title ?? ""}`
-                      : (shown?.alt ?? shown?.title ?? "Map") || "Map"
+                      : ((shown?.alt as string) || (shown?.title as string) || "Map")
                   }
                   width={1600}
                   height={1000}
@@ -983,8 +725,8 @@ function MapPage() {
 
         {/* Description (desktop) */}
         {!isSoundingApplied ? (
-          <div className="hidden mx-auto mt-6 max-w-5xl border-t border-gray-100 pt-4 sm:block">
-            <p className="text-center text-sm text-gray-700">{descText || ""}</p>
+          <div className="mx-auto mt-6 hidden max-w-5xl border-t border-gray-100 pt-4 sm:block">
+            <p className="text-center text-sm text-gray-700">{descText}</p>
           </div>
         ) : null}
       </section>
