@@ -20,7 +20,7 @@ const PAGE_SIZE = 6;
 
 /* -------------------- Functions -------------------- */
 
-// Function แปลง string เป็น Date โดยพยายามแก้ไขรูปแบบให้เป็น ISO ถ้าเป็นไปได้
+// Function แปลง string(วันที่จาก API) เป็น Date object โดยปรับรูปแบบให้ใกล้เคียง ISO ก่อน parse
 function toDate(raw: string): Date | null {
   if (!raw) return null;
   const isoLike = raw.trim().replace(" ", "T").replace(/\.\d+$/, "");
@@ -75,6 +75,7 @@ function AgroforecastPage() {
 
   /* -------------------- Scroll helpers -------------------- */
 
+  // Function Scroll Top หลังกด Pagination
   function scrollToTop(): void {
     if (pageTopRef.current) {
       pageTopRef.current.scrollIntoView({
@@ -156,7 +157,7 @@ function AgroforecastPage() {
     };
   }, [yearOpen]);
 
-  // เมื่อ page เปลี่ยนจริงและ DOM อัปเดตแล้ว ค่อย scroll
+  // เมื่อ page เปลี่ยนจริงและ DOM Update แล้ว ค่อย scroll
   useEffect(() => {
     if (!shouldScrollAfterPageChangeRef.current) return;
 
@@ -200,9 +201,11 @@ function AgroforecastPage() {
     });
   }, [items, yearFilter]);
 
+  // ใช้หาจำนวนหน้าทั้งหมด
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  // เลขหน้าที่ไม่เกินขอบเขต
   const pageSafe = Math.min(Math.max(1, page), totalPages);
-
+  // ข้อมูลของหน้าปัจจุบันที่ต้องเอาไปแสดง
   const pageItems = useMemo<Agro7DaysItem[]>(() => {
     const start = (pageSafe - 1) * PAGE_SIZE;
     return filtered.slice(start, start + PAGE_SIZE);
@@ -210,6 +213,7 @@ function AgroforecastPage() {
 
   /* -------------------- Handlers -------------------- */
 
+  // รับเลขหน้าจาก paginate แปลงจาก 0-based เป็น 1-based ถ้าไม่ใช่หน้าเดิม ให้เปลี่ยนหน้า และ scroll top หลัง render
   function handlePageChange(selectedItem: { selected: number }): void {
     const nextPage = selectedItem.selected + 1;
 
@@ -218,7 +222,7 @@ function AgroforecastPage() {
     shouldScrollAfterPageChangeRef.current = true;
     setPage(nextPage);
   }
-
+  // ปิด dropdown Reset Filter กลับไปหน้าแรกและ scroll top หลัง render
   function handleYearFilterChange(value: YearFilter): void {
     setYearOpen(false);
 
