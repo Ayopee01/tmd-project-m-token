@@ -309,9 +309,10 @@ function AgroforecastPage() {
 
   return (
     <main className="min-h-screen bg-white">
-      <div ref={pageTopRef}
+      <div
+        ref={pageTopRef}
         aria-hidden="true"
-        className="h-0 overflow-hidden scroll-mt-0"
+        className="h-0 overflow-hidden scroll-mt-18 md:scroll-mt-22"
       />
 
       {/* Header */}
