@@ -18,6 +18,13 @@ const AGRO_API_ROUTE = `${basePath}/api/agroforecast`;
 // กำหนดจำนวน Card ใน Page
 const PAGE_SIZE = 6;
 
+// Format วันที่แบบไทย (พ.ศ.)
+const TH_DATE = new Intl.DateTimeFormat("th-TH-u-ca-buddhist", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
 /* -------------------- Functions -------------------- */
 
 // Function แปลง string เป็น Date โดยพยายามแก้ไขรูปแบบให้เป็น ISO ถ้าเป็นไปได้
@@ -32,13 +39,6 @@ function toDate(raw: string): Date | null {
 function thaiDate(d: Date): string {
   return TH_DATE.format(d);
 }
-
-// Format วันที่แบบไทย (พ.ศ.)
-const TH_DATE = new Intl.DateTimeFormat("th-TH-u-ca-buddhist", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
 
 // Function แปลงปี ค.ศ. เป็น พ.ศ.
 function beYear(d: Date): number {
@@ -66,6 +66,10 @@ function AgroforecastPage() {
 
   // Pagination
   const [page, setPage] = useState<number>(1);
+
+  // Scroll target / skip first render
+  const pageTopRef = useRef<HTMLDivElement | null>(null);
+  const didPageChangeRef = useRef<boolean>(false);
 
   /* -------------------- API fetchers -------------------- */
 
@@ -109,6 +113,27 @@ function AgroforecastPage() {
   useEffect(() => {
     setPage(1);
   }, [yearFilter]);
+
+  // เมื่อเปลี่ยนหน้าแล้ว ค่อย scroll กลับขึ้นด้านบนหลัง render เสร็จ
+  useEffect(() => {
+    if (!didPageChangeRef.current) {
+      didPageChangeRef.current = true;
+      return;
+    }
+
+    const raf = window.requestAnimationFrame(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+
+      pageTopRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(raf);
+  }, [page]);
 
   // Close dropdown เมื่อ click outside / ESC
   useEffect(() => {
@@ -156,6 +181,7 @@ function AgroforecastPage() {
   const filtered = useMemo<Agro7DaysItem[]>(() => {
     if (yearFilter === "all") return items;
     const y = Number(yearFilter);
+
     return items.filter((it) => {
       const d = toDate(it.contentdate);
       return d ? beYear(d) === y : false;
@@ -172,15 +198,10 @@ function AgroforecastPage() {
 
   /* -------------------- Handlers -------------------- */
 
-  // Function เปลี่ยนหน้า และเลื่อนกลับไปบนสุดทุกครั้ง
+  // Function เปลี่ยนหน้าอย่างเดียว แล้วค่อยให้ useEffect เป็นคน scroll หลัง render เสร็จ
   function handlePageChange(selectedItem: { selected: number }): void {
     const nextPage = selectedItem.selected + 1;
     setPage(nextPage);
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
   }
 
   /* -------------------- UI Loading -------------------- */
@@ -253,6 +274,9 @@ function AgroforecastPage() {
 
   return (
     <main className="min-h-screen bg-white">
+      {/* จุดอ้างอิงสำหรับ scroll กลับขึ้นด้านบน */}
+      <div ref={pageTopRef} />
+
       {/* Header */}
       <section className="relative min-h-60 border-b border-gray-200">
         <div
