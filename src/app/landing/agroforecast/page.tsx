@@ -68,26 +68,38 @@ function AgroforecastPage() {
   const [page, setPage] = useState<number>(1);
 
   // จุดอ้างอิงสำหรับ scroll กลับขึ้นด้านบน
-  const pageTopRef = useRef<HTMLDivElement | null>(null);
+  // const pageTopRef = useRef<HTMLDivElement | null>(null);
 
   // ใช้ flag กันไม่ให้ scroll ตอน render ครั้งแรก
   const shouldScrollAfterPageChangeRef = useRef<boolean>(false);
 
   /* -------------------- Scroll helpers -------------------- */
 
-  function scrollToTop(): void {
-    if (pageTopRef.current) {
-      pageTopRef.current.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-      return;
-    }
+  // function scrollToTop(): void {
+  //   if (pageTopRef.current) {
+  //     pageTopRef.current.scrollIntoView({
+  //       behavior: "smooth",
+  //       block: "start",
+  //     });
+  //     return;
+  //   }
 
+  //   window.scrollTo({
+  //     top: 0,
+  //     behavior: "smooth",
+  //   });
+  // }
+
+  function scrollToTop(): void {
     window.scrollTo({
       top: 0,
+      left: 0,
       behavior: "smooth",
     });
+
+    // fallback เผื่อบาง mobile browser / webview
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
   }
 
   /* -------------------- API fetchers -------------------- */
@@ -309,7 +321,7 @@ function AgroforecastPage() {
 
   return (
     <main className="min-h-screen bg-white">
-      <div ref={pageTopRef} />
+      {/* <div ref={pageTopRef} /> */}
 
       {/* Header */}
       <section className="relative min-h-60 border-b border-gray-200">
