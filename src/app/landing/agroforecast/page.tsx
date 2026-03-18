@@ -18,13 +18,6 @@ const AGRO_API_ROUTE = `${basePath}/api/agroforecast`;
 // กำหนดจำนวน Card ใน Page
 const PAGE_SIZE = 6;
 
-// Format วันที่แบบไทย (พ.ศ.)
-const TH_DATE = new Intl.DateTimeFormat("th-TH-u-ca-buddhist", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
-
 /* -------------------- Functions -------------------- */
 
 // Function แปลง string เป็น Date โดยพยายามแก้ไขรูปแบบให้เป็น ISO ถ้าเป็นไปได้
@@ -39,6 +32,13 @@ function toDate(raw: string): Date | null {
 function thaiDate(d: Date): string {
   return TH_DATE.format(d);
 }
+
+// Format วันที่แบบไทย (พ.ศ.)
+const TH_DATE = new Intl.DateTimeFormat("th-TH-u-ca-buddhist", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
 
 // Function แปลงปี ค.ศ. เป็น พ.ศ.
 function beYear(d: Date): number {
@@ -67,9 +67,28 @@ function AgroforecastPage() {
   // Pagination
   const [page, setPage] = useState<number>(1);
 
-  // Scroll target / skip first render
+  // จุดอ้างอิงสำหรับ scroll กลับขึ้นด้านบน
   const pageTopRef = useRef<HTMLDivElement | null>(null);
-  const didPageChangeRef = useRef<boolean>(false);
+
+  // ใช้ flag กันไม่ให้ scroll ตอน render ครั้งแรก
+  const shouldScrollAfterPageChangeRef = useRef<boolean>(false);
+
+  /* -------------------- Scroll helpers -------------------- */
+
+  function scrollToTop(): void {
+    if (pageTopRef.current) {
+      pageTopRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      return;
+    }
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
 
   /* -------------------- API fetchers -------------------- */
 
@@ -109,32 +128,6 @@ function AgroforecastPage() {
     load();
   }, []);
 
-  // เมื่อเปลี่ยน filter ให้กลับไปหน้าแรกเสมอ
-  useEffect(() => {
-    setPage(1);
-  }, [yearFilter]);
-
-  // เมื่อเปลี่ยนหน้าแล้ว ค่อย scroll กลับขึ้นด้านบนหลัง render เสร็จ
-  useEffect(() => {
-    if (!didPageChangeRef.current) {
-      didPageChangeRef.current = true;
-      return;
-    }
-
-    const raf = window.requestAnimationFrame(() => {
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
-
-      pageTopRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
-
-    return () => window.cancelAnimationFrame(raf);
-  }, [page]);
-
   // Close dropdown เมื่อ click outside / ESC
   useEffect(() => {
     if (!yearOpen) return;
@@ -163,6 +156,26 @@ function AgroforecastPage() {
     };
   }, [yearOpen]);
 
+  // เมื่อ page เปลี่ยนจริงและ DOM อัปเดตแล้ว ค่อย scroll
+  useEffect(() => {
+    if (!shouldScrollAfterPageChangeRef.current) return;
+
+    let raf1 = 0;
+    let raf2 = 0;
+
+    raf1 = window.requestAnimationFrame(() => {
+      raf2 = window.requestAnimationFrame(() => {
+        scrollToTop();
+        shouldScrollAfterPageChangeRef.current = false;
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
+    };
+  }, [page]);
+
   const yearLabel = yearFilter === "all" ? "เอกสารทั้งหมด" : `ปี ${yearFilter}`;
 
   /* -------------------- useMemo -------------------- */
@@ -181,7 +194,6 @@ function AgroforecastPage() {
   const filtered = useMemo<Agro7DaysItem[]>(() => {
     if (yearFilter === "all") return items;
     const y = Number(yearFilter);
-
     return items.filter((it) => {
       const d = toDate(it.contentdate);
       return d ? beYear(d) === y : false;
@@ -198,10 +210,30 @@ function AgroforecastPage() {
 
   /* -------------------- Handlers -------------------- */
 
-  // Function เปลี่ยนหน้าอย่างเดียว แล้วค่อยให้ useEffect เป็นคน scroll หลัง render เสร็จ
   function handlePageChange(selectedItem: { selected: number }): void {
     const nextPage = selectedItem.selected + 1;
+
+    if (nextPage === pageSafe) return;
+
+    shouldScrollAfterPageChangeRef.current = true;
     setPage(nextPage);
+  }
+
+  function handleYearFilterChange(value: YearFilter): void {
+    setYearOpen(false);
+
+    // ถ้าเลือก filter แล้วกลับไปหน้า 1
+    if (page !== 1) {
+      shouldScrollAfterPageChangeRef.current = true;
+    } else {
+      // ถึงแม้อยู่หน้า 1 อยู่แล้ว ก็ยังอยากเลื่อนขึ้นบนสุด
+      window.requestAnimationFrame(() => {
+        scrollToTop();
+      });
+    }
+
+    setYearFilter(value);
+    setPage(1);
   }
 
   /* -------------------- UI Loading -------------------- */
@@ -226,7 +258,10 @@ function AgroforecastPage() {
         <section className="mx-auto max-w-7xl px-4 py-8">
           <div className="grid gap-6 md:grid-cols-2">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-32 rounded-2xl bg-gray-100 ring-1 ring-black/5" />
+              <div
+                key={i}
+                className="h-32 rounded-2xl bg-gray-100 ring-1 ring-black/5"
+              />
             ))}
           </div>
         </section>
@@ -274,7 +309,6 @@ function AgroforecastPage() {
 
   return (
     <main className="min-h-screen bg-white">
-      {/* จุดอ้างอิงสำหรับ scroll กลับขึ้นด้านบน */}
       <div ref={pageTopRef} />
 
       {/* Header */}
@@ -304,7 +338,10 @@ function AgroforecastPage() {
                 className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-gray-300 bg-white px-5 py-3 text-left text-sm font-medium text-gray-800 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               >
                 <span className="flex min-w-0 items-center justify-start gap-4">
-                  <FiCalendar className="h-6 w-6 shrink-0 text-gray-800" aria-hidden="true" />
+                  <FiCalendar
+                    className="h-6 w-6 shrink-0 text-gray-800"
+                    aria-hidden="true"
+                  />
                   <span className="block truncate">{yearLabel || "—"}</span>
                 </span>
 
@@ -323,10 +360,7 @@ function AgroforecastPage() {
                     <div className="max-h-105 overflow-auto py-2" role="listbox">
                       <button
                         type="button"
-                        onClick={() => {
-                          setYearFilter("all");
-                          setYearOpen(false);
-                        }}
+                        onClick={() => handleYearFilterChange("all")}
                         className={[
                           "w-full cursor-pointer px-5 py-3 text-left text-sm font-medium",
                           yearFilter === "all"
@@ -347,10 +381,7 @@ function AgroforecastPage() {
                           <button
                             key={y}
                             type="button"
-                            onClick={() => {
-                              setYearFilter(value);
-                              setYearOpen(false);
-                            }}
+                            onClick={() => handleYearFilterChange(value)}
                             className={[
                               "w-full cursor-pointer px-5 py-3 text-left text-sm font-medium",
                               active
@@ -423,7 +454,9 @@ function AgroforecastPage() {
                       <div className="flex flex-col gap-1 text-xs text-gray-500 sm:flex-row sm:items-center sm:justify-between lg:text-sm">
                         <div>
                           อัปเดต:{" "}
-                          <span className="font-medium text-gray-700">{updated}</span>
+                          <span className="font-medium text-gray-700">
+                            {updated}
+                          </span>
                         </div>
                         <div>
                           หมวดหมู่:{" "}
