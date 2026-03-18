@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+// icons
 import { FiCalendar, FiChevronDown, FiDownload } from "react-icons/fi";
+// types
 import type { ClimateMonthlyResponse, Norm } from "@/app/types/monthly";
 
 /* -------------------- Config API routes -------------------- */

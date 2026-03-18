@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+// icons
 import { FiArrowDown, FiArrowUp, FiCalendar, FiChevronDown, FiCloudRain, FiDownload } from "react-icons/fi";
+// types
 import type { ClimateWeeklyItem, ClimateWeeklyResponse, WeekRegionKey } from "@/app/types/week";
 
 /* -------------------- Config API routes -------------------- */
