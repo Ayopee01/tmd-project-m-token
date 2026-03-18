@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useAuth } from '@/app/hooks/auth-hook';
-import { FaUserCircle } from 'react-icons/fa';
+// import { useAuth } from '@/app/hooks/auth-hook';
+// import { FaUserCircle } from 'react-icons/fa';
 import { FiMenu } from 'react-icons/fi';
 import Logo from "public/logo.png"
 
@@ -19,9 +19,9 @@ function isActivePath(pathname: string, href: string) {
 
 function Navbar({ onOpenMenu }: Props) {
   const pathname = usePathname();
-  const { user, loading } = useAuth();
+  // const { user, loading } = useAuth();
 
-  const fullName = [user?.firstName].filter(Boolean).join(' ').trim();
+  // const fullName = [user?.firstName].filter(Boolean).join(' ').trim();
   // , user?.lastName
 
   const navStyle = "group relative h-full flex items-center px-1 font-normal text-base leading-6 tracking-normal text-gray-900";
@@ -116,7 +116,7 @@ function Navbar({ onOpenMenu }: Props) {
         {/* Right: User + Mobile hamburger */}
         <div className="flex items-center gap-3">
           {/* User (ขวาสุด) */}
-          <div className="hidden min-[1440px]:flex items-center gap-2 rounded-lg  bg-gray-200 px-6 py-3 text-sm text-gray-800 shadow-sm dark:border-gray-700">
+          {/* <div className="hidden min-[1440px]:flex items-center gap-2 rounded-lg  bg-gray-200 px-6 py-3 text-sm text-gray-800 shadow-sm dark:border-gray-700">
             {loading ? (
               <span className="max-w-55 truncate font-medium">...</span>
             ) : user ? (
@@ -129,7 +129,7 @@ function Navbar({ onOpenMenu }: Props) {
                 <span className="max-w-55 truncate font-medium">ผู้ใช้งาน</span>
               </>
             )}
-          </div>
+          </div> */}
 
           <button
             className="cursor-pointer inline-flex h-11 w-11 items-center justify-center rounded-full min-[1440px]:hidden"

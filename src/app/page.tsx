@@ -55,9 +55,9 @@ function pickWeatherIconPath(desc?: string, isNight = false): string | null {
   return null;
 }
 
-// Function ตั้งค่า icon เข็มทิศ -45°
+// Function ตั้งค่า icon เข็มทิศ +135°
 function getWindRotateDeg(deg?: number | string | null) {
-  return Number(deg ?? 0) - 45;
+  return Number(deg ?? 0) + 135;
 }
 
 // Function เช็กว่าเป็นช่วงกลางคืนหรือไม่

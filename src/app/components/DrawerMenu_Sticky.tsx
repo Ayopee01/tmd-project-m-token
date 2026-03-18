@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/app/hooks/auth-hook";
+// import { useAuth } from "@/app/hooks/auth-hook";
 
 type Props = { open: boolean; onClose: () => void };
 
@@ -28,13 +28,13 @@ const TOP_OFFSET = "top-18 md:top-22";
 
 function DrawerMenu({ open, onClose }: Props) {
     const pathname = usePathname();
-    const { user, loading } = useAuth();
+    // const { user, loading } = useAuth();
 
-    const fullName = useMemo(
-        () => [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim(),
-        [user?.firstName, user?.lastName]
-        // , user?.lastName
-    );
+    // const fullName = useMemo(
+    //     () => [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim(),
+    //     [user?.firstName, user?.lastName]
+    //     // , user?.lastName
+    // );
 
     useEffect(() => {
         if (!open) return;
@@ -77,9 +77,9 @@ function DrawerMenu({ open, onClose }: Props) {
                     }`}
             >
                 {/* User */}
-                <div className="h-16 flex items-center justify-center text-sm font-medium text-emerald-600">
+                {/* <div className="h-16 flex items-center justify-center text-sm font-medium text-emerald-600">
                     {loading ? "..." : fullName ? `คุณ ${fullName}` : "ไม่พบข้อมูลผู้ใช้"}
-                </div>
+                </div> */}
 
                 <div className="h-2 w-full bg-linear-to-b from-gray-200 to-gray-100"></div>
 
