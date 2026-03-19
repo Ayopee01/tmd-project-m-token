@@ -8,34 +8,41 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "3005:3005" # Host Port : Container Port
-    environment:
-      # ตั้งค่า Port ภายใน Container
-      - PORT=3005
-      - HOSTNAME=0.0.0.0
-      # DGA Config (.env)
-      - DGA_API_URL: ${DGA_API_URL}
-      - DGA_AUTH_URL: ${DGA_AUTH_URL}
-      - NOTIFICATION_API_URL: ${NOTIFICATION_API_URL}
-      # DGA Key (.env)
-      - DGA_CONSUMER_KEY: ${DGA_CONSUMER_KEY}
-      - DGA_CONSUMER_SECRET: ${DGA_CONSUMER_SECRET}
-      - DGA_AGENT_ID: ${DGA_AGENT_ID}
-      # API TMD Dashboard
-      - AWS_BY_PROVINCE_URL: ${AWS_BY_PROVINCE_URL}
-      - TMD_DASHBOARD_URL: ${TMD_DASHBOARD}
-      # API TMD e-Service
-      - TMD_DAILY_URL: ${TMD_DAILY_URL}
-      - TMD_UPPER_WIND_URL: ${TMD_UPPER_WIND_URL}
-      - TMD_WEEKLY_URL: ${TMD_WEEKLY_URL}
-      - TMD_MONTHLY_URL: ${TMD_MONTHLY_URL}
-      - TMD_AGROMET_URL: ${TMD_AGROMET_URL}
-      # เรียกใช้ไฟล์ .env เพื่อดึง Key ลับ
+      - "3005:3005"
     env_file:
       - .env
+    environment:
+      PORT: 3005
+      HOSTNAME: 0.0.0.0
+
+      # DGA Config (.env)
+      GDX_AUTH_URL: ${GDX_AUTH_URL}
+      DEPROC_API_URL: ${DEPROC_API_URL}
+      NOTIFICATION_API_URL: ${NOTIFICATION_API_URL}
+
+      # DGA Keys (.env)
+      DGA_CONSUMER_KEY: ${DGA_CONSUMER_KEY}
+      DGA_CONSUMER_SECRET: ${DGA_CONSUMER_SECRET}
+
+      # API TMD Dashboard (.env)
+      AWS_BY_PROVINCE_URL: ${AWS_BY_PROVINCE_URL}
+      TMD_DASHBOARD_URL: ${TMD_DASHBOARD_URL}
+
+      # API TMD e-Service (.env)
+      TMD_DAILY_URL: ${TMD_DAILY_URL}
+      TMD_UPPER_WIND_URL: ${TMD_UPPER_WIND_URL}
+      TMD_WEEKLY_URL: ${TMD_WEEKLY_URL}
+      TMD_MONTHLY_URL: ${TMD_MONTHLY_URL}
+      TMD_AGROMET_URL: ${TMD_AGROMET_URL}
+
+      # Next.js
+      NEXT_PUBLIC_API_ROUTE: ${NEXT_PUBLIC_API_ROUTE}
+      NODE_ENV: ${NODE_ENV}
+
     logging:
       driver: "json-file"
       # กำหนดให้ Log ไม่เกิน 50MB และ ไม่เกิน 3 File
       options:
         max-size: "50m"
         max-file: "3"
+      
