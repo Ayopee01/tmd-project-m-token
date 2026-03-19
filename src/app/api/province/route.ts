@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { NominatimResponse, ProvinceFail, ProvinceResponse } from "@/app/types/dashboard";
+// lib
 import { buildNominatimUrl, normalizeProvinceThai, pickProvinceThai } from "src/app/lib/province";
+// types
+import type { NominatimResponse, ProvinceFail, ProvinceResponse } from "@/app/types/dashboard";
 
 // Route นี้จะทำหน้าที่รับ lat/lng จาก query, ไปเรียก Nominatim API เพื่อ reverse geocode, แล้วดึงชื่อจังหวัดไทยออกมาให้
-export const dynamic = "force-dynamic"; 
+export const dynamic = "force-dynamic";
 
 // Function GET จะถูกเรียกเมื่อมี request เข้ามาที่ /api/province?lat=...&lng=...
 export async function GET(req: NextRequest) {

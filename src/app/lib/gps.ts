@@ -1,9 +1,5 @@
-import type {
-  DashboardOK,
-  DashboardResponse,
-  DailyForecast,
-  ProvinceResponse,
-} from "@/app/types/dashboard";
+// types
+import type { DashboardOK, DashboardResponse, DailyForecast, ProvinceResponse } from "@/app/types/dashboard";
 
 const base = process.env.NEXT_PUBLIC_API_ROUTE ?? "";
 

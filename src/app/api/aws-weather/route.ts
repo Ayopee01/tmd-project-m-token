@@ -4,8 +4,11 @@ import type { AwsApiResponse, AwsErrorResponse } from "@/app/types/aws-weather";
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
-const AWS_BY_PROVINCE_URL =
-  "https://tmd.go.th/api/weather/get-aws-weather-by-province";
+const AWS_BY_PROVINCE_URL = process.env.AWS_BY_PROVINCE_URL;
+
+if (!AWS_BY_PROVINCE_URL) {
+  throw new Error("Missing AWS_BY_PROVINCE_URL in environment variables");
+}
 
 const NO_STORE_HEADERS = {
   "Cache-Control": "no-store, no-cache, max-age=0, must-revalidate",

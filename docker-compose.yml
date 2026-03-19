@@ -13,13 +13,29 @@ services:
       # ตั้งค่า Port ภายใน Container
       - PORT=3005
       - HOSTNAME=0.0.0.0
-      # DGA Config (ใส่ค่าจริงตรงนี้ หรือจะให้ดึงจากไฟล์ .env ก็ได้)
-      - DGA_API_URL=https://api.egov.go.th/ws/dga/czp/uat/v1/core/shield/data/deproc
-      - DGA_AUTH_URL=https://api.egov.go.th/ws/auth/validate
-      # แนะนำให้อ่านค่าจากไฟล์ .env เพื่อความปลอดภัย
-      - DGA_CONSUMER_KEY=${DGA_CONSUMER_KEY}
-      - DGA_CONSUMER_SECRET=${DGA_CONSUMER_SECRET}
-      - DGA_AGENT_ID=${DGA_AGENT_ID}
-    # เรียกใช้ไฟล์ .env.local เพื่อดึง Key ลับ
+      # DGA Config (.env)
+      - DGA_API_URL: ${DGA_API_URL}
+      - DGA_AUTH_URL: ${DGA_AUTH_URL}
+      - NOTIFICATION_API_URL: ${NOTIFICATION_API_URL}
+      # DGA Key (.env)
+      - DGA_CONSUMER_KEY: ${DGA_CONSUMER_KEY}
+      - DGA_CONSUMER_SECRET: ${DGA_CONSUMER_SECRET}
+      - DGA_AGENT_ID: ${DGA_AGENT_ID}
+      # API TMD Dashboard
+      - AWS_BY_PROVINCE_URL: ${AWS_BY_PROVINCE_URL}
+      - TMD_DASHBOARD_URL: ${TMD_DASHBOARD}
+      # API TMD e-Service
+      - TMD_DAILY_URL: ${TMD_DAILY_URL}
+      - TMD_UPPER_WIND_URL: ${TMD_UPPER_WIND_URL}
+      - TMD_WEEKLY_URL: ${TMD_WEEKLY_URL}
+      - TMD_MONTHLY_URL: ${TMD_MONTHLY_URL}
+      - TMD_AGROMET_URL: ${TMD_AGROMET_URL}
+      # เรียกใช้ไฟล์ .env เพื่อดึง Key ลับ
     env_file:
       - .env
+    logging:
+      driver: "json-file"
+      # กำหนดให้ Log ไม่เกิน 50MB และ ไม่เกิน 3 File
+      options:
+        max-size: "50m"
+        max-file: "3"

@@ -1,7 +1,8 @@
 "use client";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-// Swiper
+// library
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
 import "swiper/css/pagination";

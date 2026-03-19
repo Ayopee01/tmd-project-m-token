@@ -1,11 +1,5 @@
-import type {
-  DailyForecast,
-  ProvinceForecast,
-  DashboardOK,
-  JsonRecord,
-  NormalizeProvinceOptions,
-  NominatimResponse,
-} from "@/app/types/dashboard";
+// types
+import type { DailyForecast, ProvinceForecast, DashboardOK, JsonRecord, NormalizeProvinceOptions, NominatimResponse } from "@/app/types/dashboard";
 
 // เลือกชื่อจังหวัดจากผลลัพธ์ Nominatim
 export const pickProvinceThai = (data: NominatimResponse): string => {

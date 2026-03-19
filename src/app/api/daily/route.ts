@@ -2,14 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const revalidate = 300;
 
-// URL API พยากรณ์อากาศรายวัน
-const TMD_URL = "https://data.tmd.go.th/api/TMDForecastDaily/v1/";
-
 export async function GET(req: NextRequest) {
   try {
+    const TMD_DAILY_URL = process.env.TMD_DAILY_URL;
+
+    if (!TMD_DAILY_URL) {
+      return NextResponse.json(
+        { success: false, message: "Missing TMD_DAILY_URL in environment variables" },
+        { status: 500 }
+      );
+    }
+
     const mode = req.nextUrl.searchParams.get("mode");
 
-    const res = await fetch(TMD_URL, {
+    const res = await fetch(TMD_DAILY_URL, {
       headers: { Accept: "application/json" },
       next: { revalidate },
     });
@@ -35,10 +41,16 @@ export async function GET(req: NextRequest) {
       data: mode === "initial" ? data.slice(0, 1) : data,
       message: json?.message ?? "Successfully , Data found",
     });
-  } catch {
+  } catch (err: unknown) {
     return NextResponse.json(
-      { success: false, message: "Failed to fetch Daily API" },
+      {
+        success: false,
+        message: "Failed to fetch Daily API",
+        snippet: err instanceof Error ? err.message : String(err),
+      },
       { status: 500 }
     );
   }
 }
+
+

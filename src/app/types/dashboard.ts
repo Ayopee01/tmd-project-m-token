@@ -61,3 +61,5 @@ export type NormalizeProvinceOptions = {
 export type WeatherDay = ProvinceForecast["sevenDays"][number];
 
 export type JsonRecord = Record<string, unknown>;
+// กำหนดภาคให้แต่ละจังหวัด
+export type RegionKey = "north" | "northeast" | "central" | "south";
