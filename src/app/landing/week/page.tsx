@@ -11,12 +11,6 @@ import type { ClimateWeeklyItem, ClimateWeeklyResponse, WeekRegionKey } from "@/
 const basePath = process.env.NEXT_PUBLIC_API_ROUTE ?? "";
 const WEEK_API_ROUTE = `${basePath}/api/week`;
 
-/* -------------------- Functions -------------------- */
-
-function cleanText(v: unknown): string {
-  return String(v ?? "").trim().replace(/\s+/g, " ");
-}
-
 /* -------------------- Config pure helpers -------------------- */
 
 const REGION_LIST: Array<{ key: WeekRegionKey; label: string }> = [
@@ -28,6 +22,12 @@ const REGION_LIST: Array<{ key: WeekRegionKey; label: string }> = [
   { key: "south_west_coast", label: "ภาคใต้ฝั่งตะวันตก" },
   { key: "bangkok_vicinity", label: "กรุงเทพมหานครและปริมณฑล" },
 ];
+
+/* -------------------- Functions -------------------- */
+
+function cleanText(v: unknown): string {
+  return String(v ?? "").trim().replace(/\s+/g, " ");
+}
 
 /* -------------------- component -------------------- */
 
@@ -100,6 +100,8 @@ function WeekPage() {
       document.removeEventListener("keydown", onKey);
     };
   }, []);
+
+  /* -------------------- useMemo -------------------- */
 
   const selected = useMemo(() => {
     return items.find((x) => x.contentdate === selectedKey) ?? items[0] ?? null;
