@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+// hooks
 import { useAuth } from "@/app/hooks/auth-hook";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_API_ROUTE ?? "";

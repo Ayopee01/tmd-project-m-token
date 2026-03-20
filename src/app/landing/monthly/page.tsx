@@ -30,10 +30,12 @@ const THAI_MONTHS = [
 
 /* -------------------- Functions -------------------- */
 
+// Function แปลง null หรือ unknown เป็น string ตัดช่องว่างออก
 function txt(v: unknown) {
   return String(v ?? "").trim().replace(/\s+/g, " ");
 }
 
+// Function แปลงวันที่จาก API ให้เป็น Date
 function parseApiDate(raw: string): Date | null {
   const s = txt(raw);
   if (!s) return null;
@@ -44,10 +46,12 @@ function parseApiDate(raw: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+// Function แปลงปี ค.ศ. เป็น พ.ศ.
 function beYear(d: Date) {
   return d.getFullYear() + 543;
 }
 
+// Function แปลง Date เป็นข้อความวันที่ภาษาไทย
 function thaiDate(d: Date) {
   const day = d.getDate();
   const month = THAI_MONTHS[d.getMonth()] ?? "";
@@ -58,21 +62,21 @@ function thaiDate(d: Date) {
 /* -------------------- component -------------------- */
 
 function MonthlyPage() {
-  const [rows, setRows] = useState<Norm[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [rows, setRows] = useState<Norm[]>([]); // rows เก็บข้อมูลที่ normalize แล้วจาก API
+  const [loading, setLoading] = useState(true); // loading ใช้บอกว่ากำลังโหลดข้อมูลอยู่
+  const [error, setError] = useState<string | null>(null); // error เก็บข้อความ error
 
   // month dropdown (mobile)
-  const [monthOpen, setMonthOpen] = useState(false);
-  const monthWrapRef = useRef<HTMLDivElement | null>(null);
+  const [monthOpen, setMonthOpen] = useState(false); // monthOpen เปิด/ปิด dropdown เดือน
+  const monthWrapRef = useRef<HTMLDivElement | null>(null); // monthWrapRef ใช้เช็กว่าคลิกนอก dropdown หรือไม่
 
   // selections
-  const [yearBE, setYearBE] = useState<number>(0);
-  const [selectedKey, setSelectedKey] = useState<string>(""); // ใช้ contentdate เป็น key
+  const [yearBE, setYearBE] = useState<number>(0); // yearBE คือปีที่กำลังเลือก
+  const [selectedKey, setSelectedKey] = useState<string>(""); // item ที่เลือกอยู่ ใช้ contentdate เป็น key
 
   // header year dropdown
-  const [yearOpen, setYearOpen] = useState(false);
-  const yearWrapRef = useRef<HTMLDivElement | null>(null);
+  const [yearOpen, setYearOpen] = useState(false); // yearOpen เปิด/ปิด dropdown ปี
+  const yearWrapRef = useRef<HTMLDivElement | null>(null); // yearWrapRef ใช้ตรวจว่าคลิกนอก dropdown ปีหรือไม่
 
   /* -------------------- API fetchers -------------------- */
 
@@ -144,26 +148,31 @@ function MonthlyPage() {
 
   /* -------------------- useMemo -------------------- */
 
+  // ดึงรายการปีทั้งหมดจาก rows แบบไม่ซ้ำ และเรียงจากมากไปน้อย
   const years = useMemo(() => {
     const set = new Set<number>();
     for (const r of rows) set.add(r.yearBE);
     return Array.from(set).sort((a, b) => b - a);
   }, [rows]);
 
+  // หา item ปัจจุบันที่ผู้ใช้เลือกอยู่
   const selected = useMemo(() => {
     return rows.find((r) => r.item.contentdate === selectedKey) ?? null;
   }, [rows, selectedKey]);
 
   // เดือนที่มีจริงในปีที่เลือก (เอา 1 รายการต่อเดือน)
   const monthsInYear = useMemo(() => {
+    // กรองเฉพาะปีที่เลือก เรียงใหม่สุด → เก่าสุด
     const inYear = rows.filter((r) => r.yearBE === yearBE).sort((a, b) => b.date.getTime() - a.date.getTime());
-    const byMonth = new Map<number, Norm>(); // monthIndex -> latest item
+    // เก็บแค่ 1 รายการต่อ 1 เดือน
+    const byMonth = new Map<number, Norm>();
     for (const r of inYear) if (!byMonth.has(r.monthIndex)) byMonth.set(r.monthIndex, r);
 
     // เรียง ธ.ค. -> ม.ค.
     return Array.from(byMonth.entries())
       .sort((a, b) => b[0] - a[0])
       .map(([monthIndex, r]) => ({
+        // แปลงเป็น object สำหรับใช้แสดงผล
         monthIndex,
         label: THAI_MONTHS[monthIndex] ?? "-",
         key: r.item.contentdate,
@@ -181,7 +190,9 @@ function MonthlyPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [yearBE]);
 
+  // ชื่อเดือนของ item ที่เลือก
   const monthLabel = selected ? THAI_MONTHS[selected.monthIndex] ?? "-" : "-";
+  // subtitle ใต้หัวข้อหน้า
   const pageSubTitle = yearBE ? `ข้อมูลของปี ${yearBE}` : "—";
 
   {/* UI Loading */ }

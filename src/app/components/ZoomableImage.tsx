@@ -2,17 +2,10 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { FiMaximize2, FiX } from "react-icons/fi";
-
-type Props = {
-  src: string;
-  alt: string;
-  width?: number;
-  height?: number;
-  className?: string;
-  /** ถ้า true: จอใหญ่ก็คลิกที่รูปเพื่อซูมได้ (default: false) */
-  clickAnywhereOnDesktop?: boolean;
-};
+// icons
+import { FiLoader, FiMaximize2, FiX } from "react-icons/fi";
+// types
+import type { Props } from "@/app/types/ZoomableImage"
 
 function ZoomableImage({
   src,
@@ -24,11 +17,15 @@ function ZoomableImage({
 }: Props) {
   const [open, setOpen] = useState(false);
 
-  // หน้าจอขนาด lg=1024px ลงไป ให้คลิกที่รูปเพื่อซูมได้เลย (ไม่ต้องกดไอคอน)
+  // หน้าจอขนาด 1024px ลงไป ให้คลิกที่รูปเพื่อซูมได้เลย (ไม่ต้องกดไอคอน)
   const [isLgDown, setIsLgDown] = useState(false);
 
+  // state สำหรับ loading รูปตอนขยาย
+  const [isZoomLoading, setIsZoomLoading] = useState(false);
+  const [isZoomImageReady, setIsZoomImageReady] = useState(false);
+
   useEffect(() => {
-    const mql = window.matchMedia("(max-width: 1024px)"); // lg=1024px ลงไป
+    const mql = window.matchMedia("(max-width: 1024px)");
     const apply = () => setIsLgDown(mql.matches);
 
     apply();
@@ -58,6 +55,18 @@ function ZoomableImage({
     };
   }, [open]);
 
+  const openZoom = () => {
+    setIsZoomLoading(true);
+    setIsZoomImageReady(false);
+    setOpen(true);
+  };
+
+  const closeZoom = () => {
+    setOpen(false);
+    setIsZoomLoading(false);
+    setIsZoomImageReady(false);
+  };
+
   if (!src) return null;
 
   return (
@@ -68,17 +77,17 @@ function ZoomableImage({
           "group relative shadow-xl",
           canClickAnywhere ? "cursor-zoom-in" : "",
         ].join(" ")}
-        onClick={canClickAnywhere ? () => setOpen(true) : undefined}
+        onClick={canClickAnywhere ? openZoom : undefined}
         role={canClickAnywhere ? "button" : undefined}
         tabIndex={canClickAnywhere ? 0 : -1}
         onKeyDown={
           canClickAnywhere
             ? (e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                setOpen(true);
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  openZoom();
+                }
               }
-            }
             : undefined
         }
       >
@@ -96,7 +105,7 @@ function ZoomableImage({
           aria-label="Icon Zoom"
           onClick={(e) => {
             e.stopPropagation();
-            setOpen(true);
+            openZoom();
           }}
           className="cursor-pointer absolute right-3 top-3
           hidden lg:inline-flex h-10 w-10 items-center justify-center
@@ -114,7 +123,7 @@ function ZoomableImage({
       {open && (
         <div
           className="fixed inset-0 z-50 bg-black/70 p-4 backdrop-blur-[2px]"
-          onClick={() => setOpen(false)}
+          onClick={closeZoom}
           role="dialog"
           aria-modal="true"
         >
@@ -123,19 +132,43 @@ function ZoomableImage({
               className="relative inline-block max-h-[90vh] max-w-[95vw]"
               onClick={(e) => e.stopPropagation()}
             >
+              {/* Loading UI */}
+              {isZoomLoading && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center">
+                  <div className="flex min-w-[180px] flex-col items-center gap-3 rounded-2xl bg-black/55 px-5 py-4 text-white shadow-2xl">
+                    <FiLoader className="h-6 w-6 animate-spin" />
+                    <span className="text-sm font-medium">
+                      กำลังโหลดรูปภาพ...
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Skeleton BG Loading UI */}
+              {!isZoomImageReady && (
+                <div className="h-[70vh] w-[80vw] max-w-[1200px] animate-pulse rounded-2xl bg-white/10" />
+              )}
+
               <Image
                 src={src}
                 alt={alt}
                 width={1600}
                 height={2000}
-                className="mx-auto max-h-[90vh] w-auto max-w-[95vw] object-contain shadow-2xl"
                 priority
+                onLoad={() => {
+                  setIsZoomLoading(false);
+                  setIsZoomImageReady(true);
+                }}
+                className={[
+                  "mx-auto max-h-[90vh] w-auto max-w-[95vw] object-contain shadow-2xl transition-opacity duration-300",
+                  isZoomImageReady ? "opacity-100" : "opacity-0",
+                ].join(" ")}
               />
 
               <button
                 type="button"
                 aria-label="Close Button"
-                onClick={() => setOpen(false)}
+                onClick={closeZoom}
                 className="cursor-pointer absolute right-3 top-3
                 inline-flex h-10 w-10 items-center justify-center
                 rounded-lg bg-black/50 text-white

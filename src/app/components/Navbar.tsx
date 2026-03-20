@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 // import { useAuth } from '@/app/hooks/auth-hook';
 // import { FaUserCircle } from 'react-icons/fa';
+// icons
 import { FiMenu } from 'react-icons/fi';
 import Logo from "public/logo.png"
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+// icons
 import { FiChevronUp } from "react-icons/fi";
 
 function ScrollTopButton() {
