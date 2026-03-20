@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 // icons
 import { FiLoader, FiMaximize2, FiX } from "react-icons/fi";
 // types
-import type { Props } from "@/app/types/ZoomableImage"
+import type { Props } from "@/app/types/zoom"
 
 function ZoomableImage({
   src,
