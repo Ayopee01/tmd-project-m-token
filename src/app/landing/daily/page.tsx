@@ -24,13 +24,14 @@ function parseContentDate(raw: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-// Function แปลง Date เป็นข้อความวันที่ภาษาไทย
-function thaiDate(d: Date): string {
-  return d.toLocaleDateString("th-TH", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+// Function นำ title (ตัดคำว่า "ประจำวันที่" และเวลาท้ายออก) เพื่อใช้แสดงในหัวข้อ
+function extractThaiDateFromTitle(title: string): string {
+  if (!title) return "";
+
+  return title
+    .replace(/^ประจำวันที่\s*/u, "")     // ตัดคำว่า "ประจำวันที่" ด้านหน้า
+    .replace(/\s+\d{1,2}\.\d{2}\s*น\.?\s*$/u, "") // ตัดเวลา เช่น "11.00 น."
+    .trim();
 }
 
 // Function ตัดข้อความให้สั้นลงเพื่อใช้เป็น preview บน card
@@ -185,7 +186,7 @@ function DailyPage() {
   }, [items, selectedKey]);
 
   const selectedLabel = selected?.title ?? ""; // ใช้ title ของรายการที่เลือกเอาไปแสดงบนปุ่ม dropdown
-  const issueDate = selected ? parseContentDate(selected.contentdate) : null; // แปลง contentdate ของตัวที่เลือกเป็น Date ใช้แสดงวันที่ในหัวข้อ infographic
+  const issueDateText = selected ? extractThaiDateFromTitle(selected.title ?? "") : ""; // ถ้า selected ยังไม่มีค่า ให้ใช้ string ว่างแทน
   const hasGeneral = Boolean((selected?.general_climate ?? "").trim()); // เช็กว่ามีข้อความ general climate หรือไม่ เช็กว่ามีข้อความ general climate หรือไม่
 
   const renderCard = (section: { key: keyof DailyForecastItem; label: string }) => {
@@ -476,9 +477,9 @@ function DailyPage() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="flex flex-wrap items-baseline gap-2 text-xl font-medium text-gray-900 sm:text-2xl">
             <span>พยากรณ์อากาศประจำวันแบบอินโฟกราฟิก</span>
-            {issueDate ? (
+            {issueDateText ? (
               <span className="whitespace-nowrap text-sm font-medium text-gray-600 sm:text-base">
-                - {thaiDate(issueDate)}
+                - {issueDateText}
               </span>
             ) : null}
           </h2>

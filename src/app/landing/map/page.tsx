@@ -41,6 +41,23 @@ const Type_Menu = [
 const SOUNDING_TYPE_LABEL = "แผนที่หยั่งอากาศ" as const;
 const SOUNDING_API_KEY = "AirMapWeather" as const;
 
+const TYPE_TO_API_KEY: Record<(typeof Type_Menu)[number], string> = {
+  "แผนที่อากาศผิวพื้น": "AirmapSurface",
+  "แผนที่ลมชั้นบนระดับ 925 hPa": "UpperWind925hPa",
+  "แผนที่ลมชั้นบนระดับ 850 hPa": "UpperWind850hPa",
+  "แผนที่ลมชั้นบนระดับ 700 hPa": "UpperWind700hPa",
+  "แผนที่ลมชั้นบนระดับ 500 hPa": "UpperWind500hPa",
+  "แผนที่ลมชั้นบนระดับ 300 hPa": "UpperWind300hPa",
+  "แผนที่ลมชั้นบนระดับ 200 hPa": "UpperWind200hPa",
+  "แผนที่ลมชั้นบนระดับ 600 m": "UpperWind600m",
+  "แผนที่ลมชั้นบนรวม 4 ระดับ": "AirMap4Levels",
+  "แผนที่รายละเอียดประเทศไทยและใกล้เคียง": "AirMapThai",
+  "แผนที่ค่าเปลี่ยนแปลงความกดอากาศ": "AirMapAtmos",
+  "แผนที่ค่าเปลี่ยนแปลงอุณหภูมิ": "AirMapTemp",
+  "แผนที่ค่าเปลี่ยนแปลงอุณหภูมิจุดน้ำค้าง": "AirMapDew",
+  "แผนที่หยั่งอากาศ": SOUNDING_API_KEY,
+};
+
 // ชื่อเดือนภาษาไทย
 const THAI_MONTHS = [
   "มกราคม",
@@ -57,8 +74,9 @@ const THAI_MONTHS = [
   "ธันวาคม",
 ] as const;
 
-/* -------------------- Helpers -------------------- */
+/* -------------------- Function -------------------- */
 
+// ใช้กับ AirMapWeather เท่านั้น: ดึงจังหวัดจากคู่ฟิลด์ xxxTitle / xxxImagePath โดยข้ามรายการที่ชื่อซ้ำหรือข้อมูลไม่ครบ
 function extractSoundingStations(item: UpperWindItem): SoundingStation[] {
   const seenTitle = new Set<string>();
   const out: SoundingStation[] = [];
@@ -67,8 +85,8 @@ function extractSoundingStations(item: UpperWindItem): SoundingStation[] {
     if (!key.endsWith("Title")) continue;
 
     const base = key.replace(/Title$/, "");
-    const title = item[key as keyof UpperWindItem] as string;
-    const imagePath = item[`${base}ImagePath` as keyof UpperWindItem] as string;
+    const title = item[key as keyof UpperWindItem] as string | null;
+    const imagePath = item[`${base}ImagePath` as keyof UpperWindItem] as string | null;
 
     if (!title || !imagePath || seenTitle.has(title)) continue;
 
@@ -79,10 +97,13 @@ function extractSoundingStations(item: UpperWindItem): SoundingStation[] {
   return out;
 }
 
-function toDate(value: string) {
+// Function แปลง string วันเวลาจาก API เป็น Date
+function toDate(value?: string | null) {
+  if (!value) return new Date(0);
   return new Date(value.replace(" ", "T").replace(/\.\d+$/, ""));
 }
 
+// Function แปลง Date เป็นรูปแบบวันเวลาไทย (พ.ศ.)
 function thaiDateTime(date: Date) {
   const day = date.getDate();
   const month = THAI_MONTHS[date.getMonth()];
@@ -96,6 +117,7 @@ function thaiDateTime(date: Date) {
   return `${day} ${month} ${yearBE} ${time} น.`;
 }
 
+// Function แปลงข้อมูล data จาก API ให้เป็น array ของ { apiKey, item }
 function normalizeToEntries(data: UpperWindResponse["data"]) {
   return Object.entries(data).flatMap(([apiKey, value]) =>
     (Array.isArray(value) ? value : value ? [value] : []).map((item) => ({
@@ -105,33 +127,20 @@ function normalizeToEntries(data: UpperWindResponse["data"]) {
   );
 }
 
+// Function เทียบ apiKey กับ mapping ของ Menu
 function isMatchType(
-  menuLabel: string,
+  menuLabel: (typeof Type_Menu)[number],
   entry: { apiKey: string; item: UpperWindItem }
 ) {
-  const text = `${entry.item.title ?? ""} ${entry.item.alt ?? ""}`;
-
-  if (menuLabel === SOUNDING_TYPE_LABEL) {
-    return entry.apiKey === SOUNDING_API_KEY;
-  }
-
-  const hpa = menuLabel.match(/(\d{3,4})\s*hPa/u)?.[1];
-  if (hpa) {
-    return entry.apiKey.includes(hpa) || text.includes(menuLabel);
-  }
-
-  if (menuLabel.includes("600 m")) {
-    return entry.apiKey.includes("600") || text.includes(menuLabel);
-  }
-
-  return text.includes(menuLabel);
+  return entry.apiKey === TYPE_TO_API_KEY[menuLabel];
 }
 
+// Function สร้างรายการตัวเลือกวันเวลา โดยดึงจาก contentdate, ตัดค่าซ้ำ, เรียงจากใหม่ไปเก่า และแปลงเป็นข้อความภาษาไทย
 function getTimeOptions(items: UpperWindItem[]) {
   const times = new Map<string, Date>();
 
   for (const item of items) {
-    const key = item.contentdate as string;
+    const key = item.contentdate as string | undefined;
     if (key) times.set(key, toDate(key));
   }
 
@@ -140,6 +149,7 @@ function getTimeOptions(items: UpperWindItem[]) {
     .map(([key, date]) => ({ key, label: thaiDateTime(date) }));
 }
 
+// Function หา type และ time เริ่มต้นของหน้า โดยเลือกประเภทแรกที่มีข้อมูลและใช้เวลาล่าสุดเป็นค่าเริ่มต้น
 function getDefaultSelection(data: UpperWindResponse["data"]) {
   const entries = normalizeToEntries(data);
 
@@ -189,22 +199,23 @@ function MapPage() {
   // Swiper ref
   const soundingSwiperRef = useRef<SwiperType | null>(null);
 
-  /* -------------------- Data loading -------------------- */
+  /* -------------------- useEffect -------------------- */
 
+  // โหลดข้อมูลแผนที่ครั้งแรก โดยเริ่มจาก mode=initial เพื่อให้หน้าแสดงผลเร็วขึ้น
   useEffect(() => {
     let ignore = false;
 
     async function fetchMap(mode?: "initial") {
       const url = mode ? `${MAP_API_ROUTE}?mode=${mode}` : MAP_API_ROUTE;
       const res = await fetch(url, { cache: "no-store" });
-
+      // ถ้า initial โหลดไม่สำเร็จจะ fallback ไปโหลดข้อมูลเต็มแทน
       if (!res.ok) {
         throw new Error(`Map API error: ${res.status}`);
       }
 
       return (await res.json()) as UpperWindResponse;
     }
-
+    // หลังจาก initial สำเร็จ จะค่อยโหลดข้อมูลเต็มเพิ่มเติมเบื้องหลัง
     async function load() {
       try {
         const initialJson = await fetchMap("initial");
@@ -257,8 +268,7 @@ function MapPage() {
     };
   }, []);
 
-  /* -------------------- Close dropdown on outside click -------------------- */
-
+  // ปิด dropdown เมื่อคลิกนอกกรอบ + Esc
   useEffect(() => {
     function onDown(e: MouseEvent) {
       const target = e.target as Node;
@@ -288,10 +298,12 @@ function MapPage() {
     };
   }, []);
 
-  /* -------------------- Derived data -------------------- */
+  /* -------------------- useMemo -------------------- */
 
+  // แปลง raw.data จาก API ให้เป็นรายการ entry แบบ { apiKey, item } สำหรับนำไปจัดกลุ่มตามประเภท
   const entries = useMemo(() => normalizeToEntries(raw.data), [raw.data]);
 
+  // จัดกลุ่มข้อมูลตามเมนูแต่ละประเภท พร้อมเรียงข้อมูลในแต่ละประเภทจากวันเวลาล่าสุดไปเก่าสุด
   const itemsByTypeLabel = useMemo(() => {
     const map = new Map<string, UpperWindItem[]>();
 
@@ -311,13 +323,16 @@ function MapPage() {
     return map;
   }, [entries]);
 
+  // ข้อมูลของประเภทที่ผู้ใช้กำลังเลือกอยู่ใน dropdown
   const selectedItems = useMemo(
     () => itemsByTypeLabel.get(selectedTypeLabel) ?? [],
     [itemsByTypeLabel, selectedTypeLabel]
   );
 
+  // สร้างรายการตัวเลือกวันเวลา จากข้อมูลของประเภทที่กำลังเลือก
   const timeOptions = useMemo(() => getTimeOptions(selectedItems), [selectedItems]);
 
+  // เมื่อประเภทหรือรายการเวลาเปลี่ยน ให้ปรับ selectedTimeKey ให้สอดคล้องกับข้อมูลล่าสุด
   useEffect(() => {
     const nextTimeKey = timeOptions[0]?.key ?? "";
 
@@ -334,37 +349,47 @@ function MapPage() {
     setTimeOpen(false);
   }, [timeOptions, selectedTimeKey]);
 
+  // ใช้ตรวจว่าประเภทที่เลือกอยู่มีข้อมูลหรือไม่
   const selectedHasData = selectedItems.length > 0;
 
+  // label วันเวลาที่ใช้แสดงใน dropdown ของค่าที่กำลังเลือก
   const selectedTimeLabel =
     timeOptions.find((time) => time.key === selectedTimeKey)?.label ?? "";
 
+  // ข้อมูลของประเภทที่กดปุ่มแสดงแผนที่แล้ว
   const appliedItems = useMemo(
     () => itemsByTypeLabel.get(applied.typeLabel) ?? [],
     [itemsByTypeLabel, applied.typeLabel]
   );
 
+  // รายการวันเวลาของประเภทที่ถูกนำมาแสดงจริง
   const appliedTimeOptions = useMemo(() => getTimeOptions(appliedItems), [appliedItems]);
 
+  // ข้อมูล item ที่ตรงกับ time ที่ถูก apply อยู่ ถ้าไม่พบให้ fallback เป็นรายการแรก
   const shown = useMemo(
     () => appliedItems.find((item) => item.contentdate === applied.timeKey) ?? appliedItems[0],
     [appliedItems, applied.timeKey]
   );
 
+  // เก็บชื่อประเภทและข้อความวันเวลาที่ใช้แสดงผลบนหน้า
   const appliedTypeLabel = applied.typeLabel;
   const appliedTimeLabel =
     appliedTimeOptions.find((time) => time.key === applied.timeKey)?.label ?? "";
 
   // ===== Sounding (AirMapWeather) =====
+  // ตรวจว่าข้อมูลที่แสดงอยู่เป็นแผนที่หยั่งอากาศหรือไม่ (AirMapWeather)
   const isSoundingApplied = appliedTypeLabel === SOUNDING_TYPE_LABEL;
 
+  // ใช้กับ AirMapWeather เท่านั้น: ดึงจังหวัดจากคู่ฟิลด์ xxxTitle / xxxImagePath
   const soundingStations = useMemo(
     () => (isSoundingApplied && shown ? extractSoundingStations(shown) : []),
     [isSoundingApplied, shown]
   );
 
+  // เก็บจังหวัดที่กำลัง active อยู่ในแผนที่หยั่งอากาศ
   const [activeSoundingId, setActiveSoundingId] = useState("");
 
+  // เมื่อข้อมูล sounding เปลี่ยน ให้ตั้งจังหวัด active เริ่มต้น หรือคงค่าเดิมถ้ายังมีอยู่ในรายการ
   useEffect(() => {
     if (!isSoundingApplied || !soundingStations.length) {
       setActiveSoundingId("");
@@ -378,6 +403,7 @@ function MapPage() {
     );
   }, [isSoundingApplied, soundingStations]);
 
+  // หา index ของจังหวัดที่ active เพื่อใช้ sync กับ swiper และแสดงรูปที่ตรงกัน
   const activeSoundingIndex = useMemo(() => {
     if (!soundingStations.length) return 0;
 
@@ -385,6 +411,7 @@ function MapPage() {
     return idx >= 0 ? idx : 0;
   }, [soundingStations, activeSoundingId]);
 
+  // sync ตำแหน่ง swiper ให้ตรงกับจังหวัดที่ active อยู่
   useEffect(() => {
     if (!isSoundingApplied) return;
 
@@ -401,12 +428,15 @@ function MapPage() {
     }
   }, [isSoundingApplied, activeSoundingIndex, soundingStations.length]);
 
+  // จังหวัดที่ active จริงในขณะนี้
   const activeSounding = isSoundingApplied ? soundingStations[activeSoundingIndex] : undefined;
 
+  // เลือก src ของรูปที่จะแสดง โดยถ้าเป็น sounding จะใช้รูปของจังหวัดที่ active
   const imageSrc = isSoundingApplied
     ? activeSounding?.imagePath ?? ""
     : ((shown?.url as string) ?? "");
 
+  // ข้อความ description จะแสดงเฉพาะแผนที่ทั่วไป ไม่ใช้กับ sounding
   const descText = isSoundingApplied ? "" : ((shown?.description as string) ?? "");
 
   /* -------------------- UI -------------------- */
@@ -697,10 +727,10 @@ function MapPage() {
             autoplay={
               soundingStations.length > 1
                 ? {
-                    delay: 10000,
-                    disableOnInteraction: false,
-                    pauseOnMouseEnter: true,
-                  }
+                  delay: 10000,
+                  disableOnInteraction: false,
+                  pauseOnMouseEnter: true,
+                }
                 : false
             }
             speed={550}
