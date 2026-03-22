@@ -3,6 +3,8 @@ export type DgaUser = {
   citizenId?: string;
   firstName?: string;
   lastName?: string;
+  //
+  appId?: string;
 
   // เผื่อมี field อื่น ๆ จาก API
   [key: string]: unknown;

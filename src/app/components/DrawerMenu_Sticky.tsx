@@ -30,11 +30,18 @@ function DrawerMenu({ open, onClose }: Props) {
     const pathname = usePathname();
     const { user, loading } = useAuth();
 
-    const fullName = useMemo(
-        () => [user?.firstName, user?.lastName, user?.userId].filter(Boolean).join(" ").trim(),
-        [user?.firstName, user?.lastName, user?.userId]
-        // , user?.lastName   user?.userId
-    );
+    // const fullName = useMemo(
+    //     () => [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim(),
+    //     [user?.firstName, user?.lastName]
+    //     // , user?.lastName   user?.userId
+    // );
+
+    const fullName = useMemo(() => {
+        const name = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
+        const userId = user?.userId ? ` | userId: ${user.userId}` : "";
+        const appId = user?.appId ? ` | appId: ${user.appId}` : "";
+        return `${name}${userId}${appId}`.trim();
+    }, [user?.firstName, user?.lastName, user?.userId, user?.appId]);
 
     useEffect(() => {
         if (!open) return;

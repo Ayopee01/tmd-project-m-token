@@ -64,7 +64,15 @@ function QueryString() {
         }
 
         // Login สำเร็จ -> เก็บ user ไว้ global
-        setUser(data.user ?? null);
+        // setUser(data.user ?? null);
+        setUser(
+          data.user
+            ? {
+              ...data.user,
+              appId,
+            }
+            : null
+        );
 
         // หา userId จาก data.user ใช้ในการ notification
         const userId = data.user?.userId;
