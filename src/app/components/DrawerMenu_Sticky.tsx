@@ -24,7 +24,7 @@ const MENUS: MenuItem[] = [
 ];
 
 // ตำแหน่งของ Topbar
-const TOP_OFFSET = "top-18 md:top-22";
+const TOP_OFFSET = "top-28 md:top-32";
 
 function DrawerMenu({ open, onClose }: Props) {
     const pathname = usePathname();

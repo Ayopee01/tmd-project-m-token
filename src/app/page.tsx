@@ -429,7 +429,7 @@ function DashboardPage() {
             </button>
 
             {provinceOpen && (
-              <div className="absolute left-0 top-full z-50 mt-2 w-full">
+              <div className="absolute left-0 top-full z-10 mt-2 w-full">
                 <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
                   <div className="border-b border-gray-200 p-3">
                     <div className="relative">

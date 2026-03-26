@@ -115,29 +115,36 @@ function WeekPage() {
     load();
   }, []);
 
-  // ปิด dropdown เมื่อคลิกนอกกรอบ + Esc
+  // Close dropdown เมื่อ click outside / ESC
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (!dateWrapRef.current) return;
-      if (!dateWrapRef.current.contains(e.target as Node)) {
+    if (!dateOpen) return;
+
+    const onDown = (e: MouseEvent | TouchEvent): void => {
+      const el = dateWrapRef.current;
+      if (!el) return;
+
+      const target = e.target;
+      if (target instanceof Node && !el.contains(target)) {
         setDateOpen(false);
       }
-    }
+    };
 
-    function handleEscapeKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setDateOpen(false);
-      }
-    }
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") setDateOpen(false);
+    };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscapeKey);
+    const touchOpts: AddEventListenerOptions = { passive: true };
+
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown, touchOpts);
+    document.addEventListener("keydown", onKey);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscapeKey);
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown, touchOpts);
+      document.removeEventListener("keydown", onKey);
     };
-  }, []);
+  }, [dateOpen]);
 
   /* -------------------- useMemo -------------------- */
 

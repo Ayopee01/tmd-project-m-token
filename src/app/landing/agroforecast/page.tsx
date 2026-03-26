@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 // library
 import ReactPaginate from "react-paginate";
 // icons
-import { FiCalendar, FiChevronDown, FiChevronLeft, FiChevronRight, FiDownload } from "react-icons/fi";
+import { FiCalendar, FiChevronDown, FiChevronLeft, FiChevronRight, FiDownload, FiTag } from "react-icons/fi";
 // types
 import type { Agro7DaysItem, Agro7DaysResponse, YearFilter } from "@/app/types/agroforecast";
 
@@ -60,9 +60,15 @@ function AgroforecastPage() {
   // Dropdown filter
   const [yearFilter, setYearFilter] = useState<YearFilter>("all");
 
-  // Custom dropdown state
+  // Custom dropdown state Year
   const [yearOpen, setYearOpen] = useState<boolean>(false);
   const yearDropRef = useRef<HTMLDivElement | null>(null);
+
+  // Custom dropdown state Type
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+
+  const [typeOpen, setTypeOpen] = useState<boolean>(false);
+  const typeDropRef = useRef<HTMLDivElement | null>(null);
 
   // Pagination
   const [page, setPage] = useState<number>(1);
@@ -116,6 +122,8 @@ function AgroforecastPage() {
       setYearFilter("all");
       setYearOpen(false);
       setPage(1);
+      setTypeFilter("all");
+      setTypeOpen(false);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -131,17 +139,26 @@ function AgroforecastPage() {
 
   // Close dropdown เมื่อ click outside / ESC
   useEffect(() => {
-    if (!yearOpen) return;
+    if (!yearOpen && !typeOpen) return;
 
     const onDown = (e: MouseEvent | TouchEvent): void => {
-      const el = yearDropRef.current;
-      if (!el) return;
       const target = e.target;
-      if (target instanceof Node && !el.contains(target)) setYearOpen(false);
+      if (!(target instanceof Node)) return;
+
+      if (yearDropRef.current && !yearDropRef.current.contains(target)) {
+        setYearOpen(false);
+      }
+
+      if (typeDropRef.current && !typeDropRef.current.contains(target)) {
+        setTypeOpen(false);
+      }
     };
 
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") setYearOpen(false);
+      if (e.key === "Escape") {
+        setYearOpen(false);
+        setTypeOpen(false);
+      }
     };
 
     const touchOpts: AddEventListenerOptions = { passive: true };
@@ -155,7 +172,7 @@ function AgroforecastPage() {
       document.removeEventListener("touchstart", onDown, touchOpts);
       document.removeEventListener("keydown", onKey);
     };
-  }, [yearOpen]);
+  }, [yearOpen, typeOpen]);
 
   // เมื่อ page เปลี่ยนจริงและ DOM Update แล้ว ค่อย scroll
   useEffect(() => {
@@ -179,6 +196,8 @@ function AgroforecastPage() {
 
   const yearLabel = yearFilter === "all" ? "เอกสารทั้งหมด" : `ปี ${yearFilter}`;
 
+  const typeLabel = typeFilter === "all" ? "ประเภททั้งหมด" : typeFilter;
+
   /* -------------------- useMemo -------------------- */
 
   // หา list ปีทั้งหมดจาก items เพื่อใช้ใน dropdown filter
@@ -191,15 +210,36 @@ function AgroforecastPage() {
     return Array.from(set).sort((a, b) => b - a);
   }, [items]);
 
+  // หา list ประเภททั้งหมดจาก items เพื่อใช้ใน dropdown filter
+  const typeOptions = useMemo<string[]>(() => {
+    const set = new Set<string>();
+
+    for (const it of items) {
+      const value = it.type?.trim();
+      if (value) set.add(value);
+    }
+
+    return Array.from(set);
+  }, [items]);
+
   // กรอง items ตามปีที่เลือกใน filter
   const filtered = useMemo<Agro7DaysItem[]>(() => {
-    if (yearFilter === "all") return items;
-    const y = Number(yearFilter);
     return items.filter((it) => {
       const d = toDate(it.contentdate);
-      return d ? beYear(d) === y : false;
+
+      const passYear =
+        yearFilter === "all"
+          ? true
+          : d
+            ? beYear(d) === Number(yearFilter)
+            : false;
+
+      const passType =
+        typeFilter === "all" ? true : it.type === typeFilter;
+
+      return passYear && passType;
     });
-  }, [items, yearFilter]);
+  }, [items, yearFilter, typeFilter]);
 
   // ใช้หาจำนวนหน้าทั้งหมด
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -222,15 +262,14 @@ function AgroforecastPage() {
     shouldScrollAfterPageChangeRef.current = true;
     setPage(nextPage);
   }
+
   // ปิด dropdown Reset Filter กลับไปหน้าแรกและ scroll top หลัง render
   function handleYearFilterChange(value: YearFilter): void {
     setYearOpen(false);
 
-    // ถ้าเลือก filter แล้วกลับไปหน้า 1
     if (page !== 1) {
       shouldScrollAfterPageChangeRef.current = true;
     } else {
-      // ถึงแม้อยู่หน้า 1 อยู่แล้ว ก็ยังอยากเลื่อนขึ้นบนสุด
       window.requestAnimationFrame(() => {
         scrollToTop();
       });
@@ -240,6 +279,20 @@ function AgroforecastPage() {
     setPage(1);
   }
 
+  function handleTypeFilterChange(value: string): void {
+    setTypeOpen(false);
+
+    if (page !== 1) {
+      shouldScrollAfterPageChangeRef.current = true;
+    } else {
+      window.requestAnimationFrame(() => {
+        scrollToTop();
+      });
+    }
+
+    setTypeFilter(value);
+    setPage(1);
+  }
   /* -------------------- UI Loading -------------------- */
 
   if (loading) {
@@ -316,7 +369,7 @@ function AgroforecastPage() {
       <div
         ref={pageTopRef}
         aria-hidden="true"
-        className="h-0 overflow-hidden scroll-mt-18 md:scroll-mt-22"
+        className="h-0 overflow-hidden scroll-mt-28 md:scroll-mt-32"
       />
 
       {/* Header */}
@@ -336,7 +389,8 @@ function AgroforecastPage() {
           </div>
 
           {/* Filter */}
-          <div className="mt-12 flex flex-col gap-2 sm:mt-10 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-12 flex flex-col gap-2 sm:mt-10 sm:flex-row sm:items-center">
+            {/* Year */}
             <div ref={yearDropRef} className="relative w-full max-w-sm">
               <button
                 type="button"
@@ -361,7 +415,7 @@ function AgroforecastPage() {
                   aria-hidden="true"
                 />
               </button>
-
+              {/* Dropdown Year */}
               {yearOpen && (
                 <div className="absolute left-0 top-full z-50 mt-2 w-full">
                   <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg">
@@ -408,6 +462,79 @@ function AgroforecastPage() {
                 </div>
               )}
             </div>
+
+            {/* Type */}
+            <div ref={typeDropRef} className="relative w-full max-w-sm">
+              <button
+                type="button"
+                onClick={() => setTypeOpen((v) => !v)}
+                aria-expanded={typeOpen}
+                aria-haspopup="listbox"
+                className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-gray-300 bg-white px-5 py-3 text-left text-sm font-medium text-gray-800 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              >
+                <span className="flex min-w-0 items-center justify-start gap-4">
+                  <FiTag
+                    className="h-6 w-6 shrink-0 text-gray-800"
+                    aria-hidden="true"
+                  />
+                  <span className="block truncate">{typeLabel}</span>
+                </span>
+
+                <FiChevronDown
+                  className={[
+                    "h-6 w-6 shrink-0 text-gray-500 transition-transform duration-300 ease-in-out",
+                    typeOpen ? "rotate-180" : "",
+                  ].join(" ")}
+                  aria-hidden="true"
+                />
+              </button>
+              {/* Dropdown Type */}
+              {typeOpen && (
+                <div className="absolute left-0 top-full z-50 mt-2 w-full">
+                  <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg">
+                    <div className="max-h-105 overflow-auto py-2" role="listbox">
+                      <button
+                        type="button"
+                        onClick={() => handleTypeFilterChange("all")}
+                        className={[
+                          "w-full cursor-pointer px-5 py-3 text-left text-sm font-medium",
+                          typeFilter === "all"
+                            ? "bg-emerald-600 text-white"
+                            : "text-gray-700 hover:bg-gray-50",
+                        ].join(" ")}
+                        role="option"
+                        aria-selected={typeFilter === "all"}
+                      >
+                        ประเภททั้งหมด
+                      </button>
+
+                      {typeOptions.map((type) => {
+                        const active = typeFilter === type;
+
+                        return (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => handleTypeFilterChange(type)}
+                            className={[
+                              "w-full cursor-pointer px-5 py-3 text-left text-sm font-medium",
+                              active
+                                ? "bg-emerald-600 text-white"
+                                : "text-gray-700 hover:bg-gray-50",
+                            ].join(" ")}
+                            role="option"
+                            aria-selected={active}
+                          >
+                            {type}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
       </section>

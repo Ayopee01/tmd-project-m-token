@@ -1,10 +1,11 @@
 // Type ข้อมูลจาก API
 export type Agro7DaysItem = {
   title: string;
+  type: string;
   description: string | null;
   alt: string;
   url: string;
-  contentdate: string; 
+  contentdate: string;
 };
 
 // Type response ที่ได้จาก API

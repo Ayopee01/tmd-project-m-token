@@ -2,12 +2,14 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
-// import { useAuth } from '@/app/hooks/auth-hook';
-// import { FaUserCircle } from 'react-icons/fa';
-// icons
-import { FiMenu } from 'react-icons/fi';
 import Logo from "public/logo.png"
+import { usePathname } from 'next/navigation';
+// icons
+import { FiMenu } from "react-icons/fi";
+// import { FaUserCircle } from 'react-icons/fa';
+// components
+import FontSizeControls from "./FontSizeControls";
+// import { useAuth } from '@/app/hooks/auth-hook';
 
 type Props = {
   onOpenMenu: () => void;
@@ -30,6 +32,12 @@ function Navbar({ onOpenMenu }: Props) {
 
   return (
     <nav className="top-0 z-30 border-b border-gray-100 bg-white backdrop-blur shadow-lg sticky">
+      <div>
+        {/* Font size controls */}
+        <div className="flex items-center justify-center bg-gray-800">
+          < FontSizeControls />
+        </div>
+      </div>
       <div className="flex h-18 w-full items-center justify-between px-4 md:h-22">
         {/* Left: Brand/Logo */}
         <Link href="/" className="flex items-center gap-3 h-full">
@@ -116,6 +124,7 @@ function Navbar({ onOpenMenu }: Props) {
 
         {/* Right: User + Mobile hamburger */}
         <div className="flex items-center gap-3">
+
           {/* User (ขวาสุด) */}
           {/* <div className="hidden min-[1440px]:flex items-center gap-2 rounded-lg  bg-gray-200 px-6 py-3 text-sm text-gray-800 shadow-sm dark:border-gray-700">
             {loading ? (
@@ -142,7 +151,7 @@ function Navbar({ onOpenMenu }: Props) {
           </button>
         </div>
       </div>
-    </nav>
+    </nav >
   );
 }
 

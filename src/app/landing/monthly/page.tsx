@@ -122,29 +122,40 @@ function MonthlyPage() {
     load();
   }, []);
 
-  // ปิด dropdown เมื่อคลิกนอกกรอบ + Esc
+  // Close dropdown เมื่อ click outside / ESC
   useEffect(() => {
-    function onDown(e: MouseEvent) {
-      const t = e.target as Node;
+    if (!yearOpen && !monthOpen) return;
 
-      if (yearWrapRef.current && !yearWrapRef.current.contains(t)) setYearOpen(false);
-      if (monthWrapRef.current && !monthWrapRef.current.contains(t)) setMonthOpen(false);
-    }
+    const onDown = (e: MouseEvent | TouchEvent): void => {
+      const target = e.target;
+      if (!(target instanceof Node)) return;
 
-    function onKey(e: KeyboardEvent) {
+      const yearEl = yearWrapRef.current;
+      const monthEl = monthWrapRef.current;
+
+      if (yearEl && !yearEl.contains(target)) setYearOpen(false);
+      if (monthEl && !monthEl.contains(target)) setMonthOpen(false);
+    };
+
+    const onKey = (e: KeyboardEvent): void => {
       if (e.key === "Escape") {
         setYearOpen(false);
         setMonthOpen(false);
       }
-    }
+    };
+
+    const touchOpts: AddEventListenerOptions = { passive: true };
 
     document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown, touchOpts);
     document.addEventListener("keydown", onKey);
+
     return () => {
       document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown, touchOpts);
       document.removeEventListener("keydown", onKey);
     };
-  }, []);
+  }, [yearOpen, monthOpen]);
 
   /* -------------------- useMemo -------------------- */
 
@@ -296,7 +307,7 @@ function MonthlyPage() {
               </button>
 
               {yearOpen && (
-                <div className="absolute left-0 top-full z-50 mt-2 w-full">
+                <div className="absolute left-0 top-full z-10 mt-2 w-full">
                   <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg">
                     <div className="max-h-105 overflow-auto py-2">
                       {years.map((y) => {
@@ -378,7 +389,7 @@ function MonthlyPage() {
             </button>
 
             {monthOpen && (
-              <div className="absolute left-0 top-full z-50 mt-2 w-full">
+              <div className="absolute left-0 top-full z-10 mt-2 w-full">
                 <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg">
                   <div className="max-h-105 overflow-auto py-2">
                     {monthsInYear.map((m) => {

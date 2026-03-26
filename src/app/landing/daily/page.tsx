@@ -150,27 +150,36 @@ function DailyPage() {
     load();
   }, [load]);
 
-  // ปิด dropdown เมื่อคลิกนอกกรอบ / กด Escape
+  // Close dropdown เมื่อ click outside / ESC
   useEffect(() => {
-    const onMouseDown = (e: MouseEvent) => {
-      if (!dateWrapRef.current) return;
-      if (!dateWrapRef.current.contains(e.target as Node)) {
+    if (!dateOpen) return;
+
+    const onDown = (e: MouseEvent | TouchEvent): void => {
+      const el = dateWrapRef.current;
+      if (!el) return;
+
+      const target = e.target;
+      if (target instanceof Node && !el.contains(target)) {
         setDateOpen(false);
       }
     };
 
-    const onKeyDown = (e: KeyboardEvent) => {
+    const onKey = (e: KeyboardEvent): void => {
       if (e.key === "Escape") setDateOpen(false);
     };
 
-    document.addEventListener("mousedown", onMouseDown);
-    document.addEventListener("keydown", onKeyDown);
+    const touchOpts: AddEventListenerOptions = { passive: true };
+
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown, touchOpts);
+    document.addEventListener("keydown", onKey);
 
     return () => {
-      document.removeEventListener("mousedown", onMouseDown);
-      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown, touchOpts);
+      document.removeEventListener("keydown", onKey);
     };
-  }, []);
+  }, [dateOpen]);
 
   // รีเซ็ต UI เมื่อเปลี่ยนรายการที่เลือก
   useEffect(() => {

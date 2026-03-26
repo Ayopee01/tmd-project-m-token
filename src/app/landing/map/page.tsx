@@ -268,35 +268,45 @@ function MapPage() {
     };
   }, []);
 
-  // ปิด dropdown เมื่อคลิกนอกกรอบ + Esc
+  // Close dropdown เมื่อ click outside / ESC
   useEffect(() => {
-    function onDown(e: MouseEvent) {
-      const target = e.target as Node;
+    if (!typeOpen && !timeOpen) return;
 
-      if (typeWrapRef.current && !typeWrapRef.current.contains(target)) {
+    const onDown = (e: MouseEvent | TouchEvent): void => {
+      const target = e.target;
+      if (!(target instanceof Node)) return;
+
+      const typeEl = typeWrapRef.current;
+      const timeEl = timeWrapRef.current;
+
+      if (typeEl && !typeEl.contains(target)) {
         setTypeOpen(false);
       }
 
-      if (timeWrapRef.current && !timeWrapRef.current.contains(target)) {
+      if (timeEl && !timeEl.contains(target)) {
         setTimeOpen(false);
       }
-    }
+    };
 
-    function onKey(e: KeyboardEvent) {
+    const onKey = (e: KeyboardEvent): void => {
       if (e.key === "Escape") {
         setTypeOpen(false);
         setTimeOpen(false);
       }
-    }
+    };
+
+    const touchOpts: AddEventListenerOptions = { passive: true };
 
     document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown, touchOpts);
     document.addEventListener("keydown", onKey);
 
     return () => {
       document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown, touchOpts);
       document.removeEventListener("keydown", onKey);
     };
-  }, []);
+  }, [typeOpen, timeOpen]);
 
   /* -------------------- useMemo -------------------- */
 
