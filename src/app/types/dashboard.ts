@@ -1,5 +1,3 @@
-import type { IconType } from "react-icons";
-
 // พยากรณ์อากาศจากกรมอุตุนิยมวิทยา (TMD)
 export type DailyForecast = {
   forecastDate: string;

@@ -596,7 +596,7 @@ function AgroforecastPage() {
                         <div>
                           หมวดหมู่:{" "}
                           <span className="font-medium text-gray-700">
-                            จุดพยากรณ์อากาศเกษตร
+                            {it.type?.trim() || "ไม่ระบุหมวดหมู่"}
                           </span>
                         </div>
                       </div>
