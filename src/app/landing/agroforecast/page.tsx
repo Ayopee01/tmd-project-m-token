@@ -196,7 +196,7 @@ function AgroforecastPage() {
 
   const yearLabel = yearFilter === "all" ? "เอกสารทั้งหมด" : `ปี ${yearFilter}`;
 
-  const typeLabel = typeFilter === "all" ? "ประเภททั้งหมด" : typeFilter;
+  const typeLabel = typeFilter === "all" ? "หมวดหมู่ทั้งหมด" : typeFilter;
 
   /* -------------------- useMemo -------------------- */
 

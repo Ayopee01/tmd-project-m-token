@@ -278,27 +278,37 @@ function DashboardPage() {
 
   /* -------------------- useEffect -------------------- */
 
-  // ปิด dropdown เมื่อคลิกนอก/กด ESC
+  // Close dropdown เมื่อ click outside / ESC
   useEffect(() => {
-    const onMouseDown = (e: MouseEvent) => {
-      if (!provinceWrapRef.current?.contains(e.target as Node)) {
+    if (!provinceOpen) return;
+
+    const onDown = (e: MouseEvent | TouchEvent): void => {
+      const target = e.target;
+      if (!(target instanceof Node)) return;
+
+      if (provinceWrapRef.current && !provinceWrapRef.current.contains(target)) {
         setProvinceOpen(false);
       }
     };
 
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setProvinceOpen(false);
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") {
+        setProvinceOpen(false);
+      }
     };
 
-    document.addEventListener("mousedown", onMouseDown);
+    const touchOpts: AddEventListenerOptions = { passive: true };
+
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown, touchOpts);
     document.addEventListener("keydown", onKeyDown);
 
     return () => {
-      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown, touchOpts);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, []);
-
+  }, [provinceOpen]);
   // เปิด dropdown แล้ว focus input ก่อน
   useEffect(() => {
     if (!provinceOpen) return;
