@@ -488,7 +488,7 @@ function MapPage() {
         <div className="relative z-10 mx-auto max-w-7xl px-4 py-6">
           <div className="flex flex-col gap-1">
             <h1 className="text-2xl font-medium text-gray-900 sm:text-3xl">
-              แผนที่อากาศผิวพื้นระดับต่างๆ
+              แผนที่อากาศ
             </h1>
 
             <p className="mt-1 text-sm font-medium text-gray-600 sm:text-base">

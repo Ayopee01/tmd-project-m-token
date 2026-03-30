@@ -24,7 +24,7 @@ function Footer() {
         {/* Menu */}
         <div className='flex flex-col flex-wrap gap-4 justify-center items-center text-gray-700 text-xs font-medium sm:flex-row '>
           <Link href="/landing/daily">พยากรณ์อากาศประจำวัน</Link>
-          <Link href="/landing/map">แผนที่อากาศพื้นผิว</Link>
+          <Link href="/landing/map">แผนที่อากาศ</Link>
           <Link href="/landing/week">สรุปลักษณะอากาศรายสัปดาห์</Link>
           <Link href="/landing/monthly">สรุปลักษณะอากาศรายเดือน</Link>
           <Link href="/landing/agroforecast">พยากรณ์อากาศเพื่อการเกษตรราย 7 วัน</Link>

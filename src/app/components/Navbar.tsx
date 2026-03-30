@@ -73,7 +73,7 @@ function Navbar({ onOpenMenu }: Props) {
             href="/landing/map"
             className={navStyle}
           >
-            แผนที่อากาศพื้นผิว
+            แผนที่อากาศ
             <span
               className={`${navUnderline} ${isActivePath(pathname, "/landing/map")
                 ? "scale-x-100"
