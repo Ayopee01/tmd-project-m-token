@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 // lib
-import { buildNominatimUrl, normalizeProvinceThai, pickProvinceThai } from "src/app/lib/province";
+import { buildNominatimUrl, normalizeProvinceThai, pickProvinceThai } from "@/app/lib/province";
 // types
 import type { NominatimResponse, ProvinceFail, ProvinceResponse } from "@/app/types/dashboard";
 

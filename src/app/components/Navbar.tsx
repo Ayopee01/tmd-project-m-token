@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import Logo from "public/logo.png"
 import { usePathname } from 'next/navigation';
 // icons
 import { FiMenu } from "react-icons/fi";
@@ -43,7 +42,7 @@ function Navbar({ onOpenMenu }: Props) {
         <Link href="/" className="flex items-center gap-3 h-full">
           <div className="relative h-full w-36 sm:w-40 md:w-42">
             <Image
-              src={Logo}
+              src="/logo.png"
               alt="Logo"
               fill
               priority
