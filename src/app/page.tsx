@@ -702,7 +702,7 @@ function DashboardPage() {
                         key={`${provinceData?.provinceNameThai}-${d.forecastDate}-${idx}`}
                         className="!w-full"
                       >
-                        <div className="w-full rounded-3xl border border-gray-200 bg-blue-300/65 p-4 shadow-sm">
+                        <div className="flex flex-col items-center justify-center w-full rounded-3xl border border-gray-200 bg-blue-300/65 p-4 shadow-sm">
                           <div className="flex items-center justify-center gap-2">
                             {isToday ? (
                               <>
@@ -772,39 +772,41 @@ function DashboardPage() {
                             </div>
                           </div>
 
-                          <div className="mt-4 flex flex-col gap-3 ml-10">
-                            <div className="flex items-center text-center gap-2">
-                              <FiDroplet className="text-3xl text-slate-80" />
-                              <div className="flex gap-3">
-                                <div className="text-xs text-white">พื้นที่ฝนตก</div>
-                                <div className="text-xs text-white">
-                                  {d.percentRainCover ?? "-"} %
+                          <div className="w-60 flex justify-center">
+                            <div className="mt-4 flex flex-col gap-3 items-start">
+                              <div className="flex items-center text-center gap-2">
+                                <FiDroplet className="text-3xl text-slate-80" />
+                                <div className="flex gap-3">
+                                  <div className="text-xs text-white">พื้นที่ฝนตก</div>
+                                  <div className="text-xs text-white">
+                                    {d.percentRainCover ?? "-"} %
+                                  </div>
                                 </div>
                               </div>
-                            </div>
 
-                            <div className="flex items-center text-center gap-2">
-                              <FiWind className="text-3xl text-slate-800" />
-                              <div className="flex gap-3">
-                                <div className="text-xs text-white">ความเร็วลม</div>
-                                <div className="text-xs text-white">
-                                  {windToKmh(d.windSpeedKmh) ?? "-"} กม./ชม.
+                              <div className="flex items-center text-center gap-2">
+                                <FiWind className="text-3xl text-slate-800" />
+                                <div className="flex gap-3">
+                                  <div className="text-xs text-white">ความเร็วลม</div>
+                                  <div className="text-xs text-white">
+                                    {windToKmh(d.windSpeedKmh) ?? "-"} กม./ชม.
+                                  </div>
                                 </div>
                               </div>
-                            </div>
 
-                            <div className="flex items-center text-center gap-2">
-                              <IoNavigateCircleOutline className="text-3xl text-slate-80"
-                                style={{ transform: `rotate(${getWindRotateDeg(d.windDirectionDeg)}deg)` }}
-                              />
-                              <div className="flex gap-3">
-                                <div className="text-xs text-white">ทิศทางลม</div>
-                                <div className="text-xs text-white">
-                                  {(d.windDirectionDeg ?? "-") + "°"}
+                              <div className="flex items-center text-center gap-2">
+                                <IoNavigateCircleOutline className="text-3xl text-slate-80"
+                                  style={{ transform: `rotate(${getWindRotateDeg(d.windDirectionDeg)}deg)` }}
+                                />
+                                <div className="flex gap-3">
+                                  <div className="text-xs text-white">ทิศทางลม</div>
+                                  <div className="text-xs text-white">
+                                    {(d.windDirectionDeg ?? "-") + "°"}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
 
+                            </div>
                           </div>
                         </div>
                       </SwiperSlide>
