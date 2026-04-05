@@ -560,7 +560,7 @@ function DashboardPage() {
             <>
 
               {/* Card AWS Weather */}
-              <section className="flex flex-col gap-4 w-full max-w-xs mx-auto sm:max-w-sm">
+              <section className="flex flex-col gap-4 w-full max-w-xs mx-auto sm:max-w-sm md:max-w-2xl lg:max-w-2xl">
                 <div className="flex flex-col gap-2 items-center w-full max-w-xl mx-auto">
 
                   {awsItem?.stationNameTh ? (
@@ -597,7 +597,7 @@ function DashboardPage() {
                   </div>
                 ) : (
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                     <div className="flex flex-col rounded-2xl border border-gray-200 bg-blue-300/65 px-2 py-6 text-center text-sm leading-tight text-slate-700 sm:px-5">
                       <p className="flex items-center text-white text-base mb-3">ความชื้นสัมพัทธ์</p>
                       <div className="flex items-center justify-between">
@@ -674,7 +674,10 @@ function DashboardPage() {
               </section>
 
               {/* Weather 7 day Card */}
-              <section className="mt-4 w-full max-w-xs mx-auto sm:max-w-sm">
+              <h1 className="text-lg font-bold text-gray-600 mt-4">
+                : อากาศรายพยากรณ์ 7 วันข้างหน้า
+              </h1>
+              <section className="mt-4 w-full max-w-xs mx-auto sm:max-w-sm md:max-w-2xl lg:max-w-6xl">
                 <Swiper
                   key={`${provinceData?.provinceNameThai}-${sevenDaysForShow.length}`}
                   modules={[Pagination]}
@@ -683,6 +686,20 @@ function DashboardPage() {
                   onSlideChange={handleWeatherSlideChange}
                   slidesPerView={1}
                   spaceBetween={12}
+                  breakpoints={{
+                    360: {
+                      slidesPerView: 1.4,
+                    },
+                    768: {
+                      slidesPerView: 3,
+                    },
+                    1024: {
+                      slidesPerView: 4,
+                    },
+                    1100: {
+                      slidesPerView: 5,
+                    },
+                  }}
                   className="weather-swiper w-full"
                 >
                   {sevenDaysForShow.slice(0, 7).map((d, idx) => {
@@ -700,7 +717,6 @@ function DashboardPage() {
                     return (
                       <SwiperSlide
                         key={`${provinceData?.provinceNameThai}-${d.forecastDate}-${idx}`}
-                        className="!w-full"
                       >
                         <div className="flex flex-col items-center justify-center w-full rounded-3xl border border-gray-200 bg-blue-300/65 p-4 shadow-sm">
                           <div className="flex items-center justify-center gap-2">
