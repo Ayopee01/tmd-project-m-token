@@ -537,7 +537,7 @@ function DashboardPage() {
         </header>
 
         {/* UI Loading */}
-        <section className="mt-4 flex flex-col">
+        <section className="mt-4 flex flex-col items-center">
           {loading ? (
             <div className="w-full max-w-xl rounded-3xl border border-gray-200 bg-white p-6 text-slate-800 shadow-sm">
               <div className="animate-pulse space-y-4">
