@@ -11,6 +11,7 @@ import "swiper/css";
 import { STORAGE_KEY, fetchGPSProvince, rotateToToday, toDDMMYYYY } from "@/app/lib/gps";
 // icons
 import { FiChevronDown, FiDroplet, FiWind, FiSearch, FiX } from "react-icons/fi";
+import { SlLocationPin } from "react-icons/sl";
 import { IoNavigateCircleOutline } from "react-icons/io5";
 // types
 import type { DashboardOK, ProvinceForecast, WeatherDay } from "@/app/types/dashboard";
@@ -59,6 +60,27 @@ function pickWeatherIconPath(desc?: string, isNight = false): string | null {
 // Function ตั้งค่า icon เข็มทิศ +135°
 function getWindRotateDeg(deg?: number | string | null) {
   return Number(deg ?? 0) + 135;
+}
+
+// Function แปลงค่า windDirection (องศาลม) เป็น ทิศ (Text ภาษาไทย)
+function formatWindDirectionThai(deg?: number | null) {
+  if (typeof deg !== "number" || Number.isNaN(deg)) return "-";
+
+  const directions = [
+    "เหนือ",
+    "ตะวันออกเฉียงเหนือ",
+    "ตะวันออก",
+    "ตะวันออกเฉียงใต้",
+    "ใต้",
+    "ตะวันตกเฉียงใต้",
+    "ตะวันตก",
+    "ตะวันตกเฉียงเหนือ",
+  ];
+
+  const normalized = ((deg % 360) + 360) % 360;
+  const index = Math.round(normalized / 45) % 8;
+
+  return directions[index];
 }
 
 // Function เช็กว่าเป็นช่วงกลางคืนหรือไม่
@@ -405,13 +427,16 @@ function DashboardPage() {
     return `${formatThaiShortDate2DigitYear(dt)} เวลา ${formatTime24(dt)} น.`;
   }, [awsItem?.dateTimeUtc7]);
 
+  const selectedDay = getSelectedWeatherDay(sevenDaysForShow, selectedIdx);
+  const awsIconSrc = pickWeatherIconPath(selectedDay?.descriptionThai, isNightNow);
+
   /* -------------------- UI section -------------------- */
 
   return (
     <main className="flex justify-center px-5 py-10 text-slate-900 bg-gradient-to-br from-sky-200 via-white to-fuchsia-200">
       <section className="w-full relative">
         {/* Province select */}
-        <header className="w-full max-w-sm mx-auto">
+        <header className="w-full max-w-xs mx-auto sm:max-w-2xl">
           <label className="sr-only">เลือกจังหวัด</label>
           <div ref={provinceWrapRef} className="relative">
             <button
@@ -512,7 +537,7 @@ function DashboardPage() {
         </header>
 
         {/* UI Loading */}
-        <section className="mt-4 flex flex-1 flex-col items-center justify-start text-center">
+        <section className="mt-4 flex flex-col">
           {loading ? (
             <div className="w-full max-w-xl rounded-3xl border border-gray-200 bg-white p-6 text-slate-800 shadow-sm">
               <div className="animate-pulse space-y-4">
@@ -533,69 +558,123 @@ function DashboardPage() {
             </div>
           ) : (
             <>
-              {/* Section Card */}
-              <section className="mt-6 gap-4 w-full max-w-xs mx-auto">
-                {/* AWS Card */}
-                <div className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm backdrop-blur">
-                  {/* Header */}
-                  <div className="flex flex-col">
-                    <div className="text-left">
-                      <div className="text-sm font-semibold text-slate-800">
-                        สภาพอากาศปัจจุบัน
+
+              {/* Card AWS Weather */}
+              <section className="flex flex-col gap-4 w-full max-w-xs mx-auto sm:max-w-sm">
+                <div className="flex flex-col gap-2 items-center w-full max-w-xl mx-auto">
+
+                  {awsItem?.stationNameTh ? (
+                    <div className="text-xs text-slate-500 flex gap-2">
+                      <SlLocationPin />
+                      {awsItem.stationNameTh}
+                    </div>
+                  ) : null}
+
+                  <div className="text-xs text-slate-500">
+                    {awsLoading ? "กำลังโหลด..." : awsUpdatedText || "-"}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center gap-4">
+                  <span className="text-5xl text-slate-500">
+                    {awsItem?.temperature != null ? `${awsItem.temperature} °` : "-"}
+                  </span>
+
+                  {awsIconSrc ? (
+                    <Image
+                      src={awsIconSrc}
+                      alt={shortCondition(selectedDay?.descriptionThai)}
+                      width={28}
+                      height={28}
+                      className="h-20 w-20 shrink-0"
+                    />
+                  ) : null}
+                </div>
+
+                {awsError ? (
+                  <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                    โหลด AWS ไม่สำเร็จ: {awsError}
+                  </div>
+                ) : (
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col rounded-2xl border border-gray-200 bg-blue-300/65 px-2 py-6 text-center text-sm leading-tight text-slate-700 sm:px-5">
+                      <p className="flex items-center text-white text-base mb-3">ความชื้นสัมพัทธ์</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-white">
+                          :
+                        </span>
+                        <span className="text-sm text-white">
+                          {awsItem?.humidity != null ? `${awsItem.humidity} %` : "-"}
+                        </span>
                       </div>
+                    </div>
 
-                      {awsItem?.stationNameTh ? (
-                        <div className="mt-1 truncate text-xs text-slate-500">
-                          {awsItem.stationNameTh}
+                    <div className="flex flex-col rounded-2xl border border-gray-200 bg-blue-300/65 px-2 py-6 text-center text-sm leading-tight text-slate-700 sm:px-5">
+                      <p className="flex items-center text-white text-base mb-3">ความกดอากาศ</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-white">
+                          :
+                        </span>
+                        <span className="text-sm text-white">
+                          {awsItem?.pressure != null ? `${awsItem.pressure} hPa` : "-"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col rounded-2xl border border-gray-200 bg-blue-300/65 px-2 py-6 text-center text-sm leading-tight text-slate-700 sm:px-5">
+                      <p className="flex items-center text-white text-base mb-3">ฝนสะสม</p>
+                      <div className="flex flex-col">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-white">
+                            15 นาที :
+                          </span>
+                          <span className="text-sm text-white">
+                            {awsItem?.precip15Mins != null ? `${awsItem.precip15Mins} มม.` : "-"}
+                          </span>
                         </div>
-                      ) : null}
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-white">
+                            วันนี้ :
+                          </span>
+                          <span className="text-sm text-white">
+                            {awsItem?.precipToday != null ? `${awsItem.precipToday} มม.` : "-"}
+                          </span>
+                        </div>
+                        {/* <p className="flex text-sm text-slate-500">(ตั้งแต่ 08:00 น.)</p> */}
+                      </div>
+                    </div>
 
-                      <div className="text-xs text-slate-600 mt-1.5">
-                        {awsLoading ? "กำลังโหลด..." : awsUpdatedText || "-"}
+                    <div className="flex flex-col rounded-2xl border border-gray-200 bg-blue-300/65 px-2 py-6 text-center text-sm leading-tight text-slate-700 sm:px-5">
+                      <p className="flex items-center text-white text-base mb-3">ลม</p>
+                      <div className="flex flex-col">
+                        <div className="flex items-start justify-between">
+                          <span className="text-sm text-white whitespace-nowrap">
+                            ทิศ :
+                          </span>
+                          <span className="text-sm text-white text-right">
+                            {formatWindDirectionThai(awsItem?.windDirection)}
+                          </span>
+                          {/* <span className="text-sm text-white">
+                              {awsItem?.windDirection != null ? `${awsItem.windDirection} °` : "-"}
+                            </span> */}
+                        </div>
+                        <div className="flex items-start justify-between">
+                          <span className="text-sm text-white whitespace-nowrap">
+                            ความเร็ว :
+                          </span>
+                          <span className="text-sm text-white">
+                            {awsItem?.windSpeed != null ? `${awsItem.windSpeed} m/s` : "-"}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-
-                  {/* Content */}
-                  {awsError ? (
-                    <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                      โหลด AWS ไม่สำเร็จ: {awsError}
-                    </div>
-                  ) : (
-                    <div className="mt-4 grid grid-cols-2 gap-3">
-                      <div className="flex items-center justify-center rounded-2xl border border-gray-200 bg-white/80 px-3 py-2 text-center text-sm leading-tight text-slate-700">
-                        <span className="flex items-center text-sm text-slate-700 h-8">
-                          {awsItem?.temperature != null ? `${awsItem.temperature} °C` : "-"}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-center rounded-2xl border border-gray-200 bg-white/80 px-3 py-2 text-center text-sm leading-tight text-slate-700">
-                        <span className="flex items-center text-sm text-slate-700 h-8">
-                          {awsItem?.windSpeed != null ? `${awsItem.windSpeed} m/s` : "-"}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-center rounded-2xl border border-gray-200 bg-white/80 px-3 py-2 text-center text-sm leading-tight text-slate-700">
-                        <span className="flex items-center text-sm text-slate-700 h-8">
-                          {awsItem?.precip15Mins != null ? `${awsItem.precip15Mins} มม.` : "-"}
-                        </span>
-                      </div>
-
-                      <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-200 bg-white/80 px-3 py-2 text-center leading-tight">
-                        <span className="text-sm text-slate-700">
-                          {awsItem?.precipToday != null ? `${awsItem.precipToday} มม.` : "-"}
-                        </span>
-                        <span className="text-xs text-slate-500">
-                          (ตั้งแต่ 07:00 น.)
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                )}
               </section>
 
               {/* Weather 7 day Card */}
-              <section className="mt-4 w-full max-w-xs mx-auto">
+              <section className="mt-4 w-full max-w-xs mx-auto sm:max-w-sm">
                 <Swiper
                   key={`${provinceData?.provinceNameThai}-${sevenDaysForShow.length}`}
                   modules={[Pagination]}
@@ -623,24 +702,44 @@ function DashboardPage() {
                         key={`${provinceData?.provinceNameThai}-${d.forecastDate}-${idx}`}
                         className="!w-full"
                       >
-                        <div className="w-full rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <div className="w-full rounded-3xl border border-gray-200 bg-blue-300/65 p-4 shadow-sm">
                           <div className="flex items-center justify-center gap-2">
-                            <span className="min-w-0 flex-1 truncate text-center text-xs text-slate-700">
-                              {shortCondition(d.descriptionThai)}
-                            </span>
+                            {isToday ? (
+                              <>
+                                <div className="rounded-3xl border border-sky-100 bg-sky-100 px-5">
+                                  <span className="shrink-0 text-xs font-medium text-slate-600">
+                                    วันนี้
+                                  </span>
+                                </div>
 
+                                <div className="rounded-3xl border border-sky-100 bg-sky-100 px-5">
+                                  <span className="shrink-0 text-xs font-medium text-slate-600">
+                                    {slideDateShortBE || d.forecastDate || "-"}
+                                  </span>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="rounded-3xl border border-sky-100 bg-sky-100 px-5">
+                                <span className="shrink-0 text-xs font-medium text-slate-600">
+                                  {slideDateShortBE || d.forecastDate || "-"}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex flex-col items-center justify-center">
                             {slideIconSrc && (
                               <Image
                                 src={slideIconSrc}
                                 alt={shortCondition(d.descriptionThai)}
-                                width={28}
-                                height={28}
-                                className="h-7 w-7 shrink-0"
+                                width={110}
+                                height={110}
+                                className="shrink-0"
                               />
                             )}
 
-                            <span className="shrink-0 rounded-xl bg-gray-200 px-2 text-xs text-slate-600">
-                              {isToday ? "วันนี้" : slideDateShortBE || d.forecastDate || "-"}
+                            <span className="truncate text-center text-xs text-white">
+                              {shortCondition(d.descriptionThai)}
                             </span>
                           </div>
 
@@ -654,7 +753,7 @@ function DashboardPage() {
                                   width={20}
                                   height={20}
                                 />
-                                <div className="text-2xl font-light tracking-tight text-gray-700">
+                                <div className="text-2xl font-light tracking-tight text-white">
                                   {d.maxTempC ?? "-"}°
                                 </div>
                               </div>
@@ -666,39 +765,46 @@ function DashboardPage() {
                                   width={20}
                                   height={20}
                                 />
-                                <div className="text-2xl font-light tracking-tight text-gray-600">
+                                <div className="text-2xl font-light tracking-tight text-white">
                                   {d.minTempC ?? "-"}°
                                 </div>
                               </div>
                             </div>
                           </div>
 
-                          <div className="mt-4 grid grid-cols-3 gap-3">
-                            <div className="min-w-0 flex flex-col items-center text-center">
-                              <IoNavigateCircleOutline className="h-8 w-8 text-slate-800"
+                          <div className="mt-4 flex flex-col gap-3 ml-10">
+                            <div className="flex items-center text-center gap-2">
+                              <FiDroplet className="text-3xl text-slate-80" />
+                              <div className="flex gap-3">
+                                <div className="text-xs text-white">พื้นที่ฝนตก</div>
+                                <div className="text-xs text-white">
+                                  {d.percentRainCover ?? "-"} %
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center text-center gap-2">
+                              <FiWind className="text-3xl text-slate-800" />
+                              <div className="flex gap-3">
+                                <div className="text-xs text-white">ความเร็วลม</div>
+                                <div className="text-xs text-white">
+                                  {windToKmh(d.windSpeedKmh) ?? "-"} กม./ชม.
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center text-center gap-2">
+                              <IoNavigateCircleOutline className="text-3xl text-slate-80"
                                 style={{ transform: `rotate(${getWindRotateDeg(d.windDirectionDeg)}deg)` }}
                               />
-                              <div className="mt-2 text-[11px] text-slate-600">ทิศทางลม</div>
-                              <div className="mt-1 text-xs font-medium text-slate-900">
-                                {(d.windDirectionDeg ?? "-") + "°"}
+                              <div className="flex gap-3">
+                                <div className="text-xs text-white">ทิศทางลม</div>
+                                <div className="text-xs text-white">
+                                  {(d.windDirectionDeg ?? "-") + "°"}
+                                </div>
                               </div>
                             </div>
 
-                            <div className="min-w-0 flex flex-col items-center text-center">
-                              <FiWind className="h-8 w-8 text-slate-800" />
-                              <div className="mt-2 text-[11px] text-slate-600">ความเร็วลม</div>
-                              <div className="mt-1 text-xs font-medium text-slate-900">
-                                {windToKmh(d.windSpeedKmh) ?? "-"} กม./ชม.
-                              </div>
-                            </div>
-
-                            <div className="min-w-0 flex flex-col items-center text-center">
-                              <FiDroplet className="h-8 w-8 text-slate-800" />
-                              <div className="mt-2 text-[11px] text-slate-600">พื้นที่ฝนตก</div>
-                              <div className="mt-1 text-xs font-medium text-slate-900">
-                                {d.percentRainCover ?? "-"} %
-                              </div>
-                            </div>
                           </div>
                         </div>
                       </SwiperSlide>
