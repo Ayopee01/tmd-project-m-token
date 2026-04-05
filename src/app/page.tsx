@@ -4,13 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 // library
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Pagination } from "swiper/modules";
+import { Pagination, Autoplay } from "swiper/modules";
 import "swiper/css/pagination";
 import "swiper/css";
 // lib
 import { STORAGE_KEY, fetchGPSProvince, rotateToToday, toDDMMYYYY } from "@/app/lib/gps";
 // icons
-import { FiChevronDown, FiDroplet, FiWind, FiSearch, FiX } from "react-icons/fi";
+import { FiChevronDown, FiDroplet, FiWind, FiSearch, FiX, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { SlLocationPin } from "react-icons/sl";
 import { IoNavigateCircleOutline } from "react-icons/io5";
 // types
@@ -674,18 +674,44 @@ function DashboardPage() {
               </section>
 
               {/* Weather 7 day Card */}
-              <h1 className="text-lg font-bold text-gray-600 mt-4">
-                : อากาศรายพยากรณ์ 7 วันข้างหน้า
-              </h1>
               <section className="mt-4 w-full max-w-xs mx-auto sm:max-w-sm md:max-w-2xl lg:max-w-6xl">
+                <h1 className="text-lg font-bold text-gray-600 mt-4 mb-3 text-center">
+                  : อากาศรายพยากรณ์ 7 วันข้างหน้า
+                </h1>
+                {/* ปุ่มแสดงเฉพาะ md ขึ้นไป */}
+                <div className="mb-3 hidden md:flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => weatherSwiperRef.current?.slidePrev()}
+                    className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm hover:bg-slate-50 cursor-pointer"
+                  >
+                    <FiChevronLeft className="h-4 w-4" />
+                    ย้อนกลับ
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => weatherSwiperRef.current?.slideNext()}
+                    className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm hover:bg-slate-50 cursor-pointer"
+                  >
+                    ถัดไป
+                    <FiChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
                 <Swiper
                   key={`${provinceData?.provinceNameThai}-${sevenDaysForShow.length}`}
-                  modules={[Pagination]}
+                  modules={[Pagination, Autoplay]}
                   pagination={{ clickable: true }}
                   onSwiper={handleWeatherSwiper}
                   onSlideChange={handleWeatherSlideChange}
                   slidesPerView={1}
                   spaceBetween={12}
+                  loop={true}
+                  autoplay={{
+                    delay: 10000,
+                    disableOnInteraction: false,
+                    pauseOnMouseEnter: true,
+                  }}
                   breakpoints={{
                     360: {
                       slidesPerView: 1.4,
