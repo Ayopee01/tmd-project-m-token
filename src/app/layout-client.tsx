@@ -8,6 +8,7 @@ import Footer from "./components/Footer";
 import QueryString from "@/app/components/QueryString";
 import { AuthProvider } from "@/app/hooks/auth-hook";
 import ScrollTopButton from "@/app/components/ScrollTop";
+import WarningNews from "@/app/components/Warning_News";
 
 function RootLayoutClient({
   children,
@@ -26,6 +27,7 @@ function RootLayoutClient({
 
       <Suspense fallback={null}>
         <QueryString />
+        <WarningNews />
       </Suspense>
 
       <Navbar onOpenMenu={() => setOpen((i) => !i)} />

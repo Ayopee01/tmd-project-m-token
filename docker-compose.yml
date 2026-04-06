@@ -27,6 +27,7 @@ services:
       # API TMD Dashboard (.env)
       AWS_BY_PROVINCE_URL: ${AWS_BY_PROVINCE_URL}
       TMD_DASHBOARD_URL: ${TMD_DASHBOARD_URL}
+      TMD_WARNING_NEWS_URL: ${TMD_WARNING_NEWS_URL}
 
       # API TMD e-Service (.env)
       TMD_DAILY_URL: ${TMD_DAILY_URL}
