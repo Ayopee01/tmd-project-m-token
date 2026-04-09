@@ -675,11 +675,11 @@ function DashboardPage() {
 
               {/* Weather 7 day Card */}
               <section className="mt-4 w-full max-w-xs mx-auto sm:max-w-sm md:max-w-2xl lg:max-w-6xl">
-                <h1 className="text-lg font-bold text-gray-600 mt-4 mb-3 text-center">
+                <h1 className="text-lg font-bold text-gray-600 mt-4 mb-3 text-left">
                   : อากาศรายพยากรณ์ 7 วันข้างหน้า
                 </h1>
                 {/* ปุ่มแสดงเฉพาะ md ขึ้นไป */}
-                <div className="mb-3 hidden md:flex items-center justify-end gap-2">
+                {/* <div className="mb-3 hidden md:flex items-center justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => weatherSwiperRef.current?.slidePrev()}
@@ -697,7 +697,7 @@ function DashboardPage() {
                     ถัดไป
                     <FiChevronRight className="h-4 w-4" />
                   </button>
-                </div>
+                </div> */}
                 <Swiper
                   key={`${provinceData?.provinceNameThai}-${sevenDaysForShow.length}`}
                   modules={[Pagination, Autoplay]}
@@ -715,6 +715,7 @@ function DashboardPage() {
                   breakpoints={{
                     360: {
                       slidesPerView: 1.4,
+                      centeredSlides: true,
                     },
                     768: {
                       slidesPerView: 3,
@@ -790,10 +791,11 @@ function DashboardPage() {
                             <div className="flex items-center gap-4 leading-none">
                               <div className="flex items-center gap-1">
                                 <Image
-                                  src="/icon_temp/1.tmax.svg"
+                                  // src="/icon_temp/1.tmax.svg"
+                                  src="/icon_temperature/1.normal.svg"
                                   alt="Max temperature"
-                                  width={20}
-                                  height={20}
+                                  width={30}
+                                  height={30}
                                 />
                                 <div className="text-2xl font-light tracking-tight text-white">
                                   {d.maxTempC ?? "-"}°
@@ -802,10 +804,11 @@ function DashboardPage() {
 
                               <div className="flex items-center gap-1">
                                 <Image
-                                  src="/icon_temp/2.tmin.svg"
+                                  // src="/icon_temp/2.tmin.svg"
+                                  src="/icon_temperature/2.cool.svg"
                                   alt="Min temperature"
-                                  width={20}
-                                  height={20}
+                                  width={30}
+                                  height={30}
                                 />
                                 <div className="text-2xl font-light tracking-tight text-white">
                                   {d.minTempC ?? "-"}°
