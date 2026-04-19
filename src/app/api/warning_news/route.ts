@@ -8,52 +8,25 @@ function txt(value: unknown): string {
 }
 
 function normalizeWarning(raw: TmdWarningApiResponse | null): NormalizedWarning {
-  if (!raw || raw.success === false || !raw.data) {
+  if (!raw || raw.success === false || !raw.data?.length) {
     return null;
   }
 
-  const source = Array.isArray(raw.data) ? raw.data[0] : raw.data;
+  const item = raw.data[0] as WarningSource;
 
-  if (!source || typeof source !== "object") {
-    return null;
-  }
-
-  const item = source as WarningSource;
-
-  const title =
-    txt(item.title) ||
-    txt(item.TitleThai) ||
-    txt(item.headline) ||
-    txt(item.subject) ||
-    "ประกาศ";
-
-  const description =
-    txt(item.description) ||
-    txt(item.DescriptionThai) ||
-    txt(item.detail) ||
-    txt(item.message) ||
-    "";
-
-  const publishedAt =
-    txt(item.publishedAt) ||
-    txt(item.publishDate) ||
-    txt(item.announceDate) ||
-    txt(item.AnnounceDateTime) ||
-    txt(item.date) ||
-    null;
-
-  const key = String(
-    item.id ??
-      item.IssueNo ??
-      publishedAt ??
-      title
-  );
+  const title = txt(item.title) || "ประกาศ";
+  const description = txt(item.description);
+  const contentdate = txt(item.contentdate) || null;
+  const url = txt(item.url) || null;
+  const alt = txt(item.alt) || null;
 
   return {
-    key,
+    key: contentdate || title,
     title,
     description,
-    publishedAt,
+    contentdate,
+    url,
+    alt,
     raw: item,
   };
 }
@@ -80,7 +53,9 @@ export async function GET() {
       cache: "no-store",
     });
 
-    const raw = (await res.json().catch(() => null)) as TmdWarningApiResponse | null;
+    const raw =
+      (await res.json().catch(() => null)) as TmdWarningApiResponse | null;
+
     const warning = normalizeWarning(raw);
 
     return NextResponse.json({

@@ -1,33 +1,37 @@
-export type WarningSource = Record<string, unknown> & {
-  id?: string | number;
-  IssueNo?: string | number;
+export type WarningSource = {
   title?: string;
-  TitleThai?: string;
-  headline?: string;
-  subject?: string;
   description?: string;
-  DescriptionThai?: string;
-  detail?: string;
-  message?: string;
-  publishedAt?: string;
-  publishDate?: string;
-  announceDate?: string;
-  AnnounceDateTime?: string;
-  date?: string;
+  url?: string;
+  alt?: string;
+  contentdate?: string;
 };
 
-export type TmdWarningApiResponse = {
-  success?: boolean;
-  data?: WarningSource | WarningSource[] | null;
-  message?: string;
-};
+export type NormalizedWarning =
+  | {
+    key: string;
+    title: string;
+    description: string;
+    contentdate: string | null;
+    url: string | null;
+    alt: string | null;
+    raw: WarningSource;
+  }
+  | null;
 
-export type WarningPopupItem = {
+export type TmdWarningApiResponse =
+  | {
+    success: boolean;
+    data?: WarningSource[] | null;
+    message?: string;
+  }
+  | null;
+
+export type WarningData = {
   key: string;
   title: string;
   description: string;
-  publishedAt: string | null;
-  raw: WarningSource;
-};
-
-export type NormalizedWarning = WarningPopupItem | null;
+  contentdate: string | null;
+  url: string | null;
+  alt: string | null;
+  raw: unknown;
+} | null;

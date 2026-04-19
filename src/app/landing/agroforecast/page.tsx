@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 // library
 import ReactPaginate from "react-paginate";
 // icons
@@ -569,7 +570,7 @@ function AgroforecastPage() {
                         {titleOf(it)}
                       </h3>
 
-                      <a
+                      <Link
                         href={it.url}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -582,7 +583,7 @@ function AgroforecastPage() {
                         <span className="text-xs font-semibold leading-none text-emerald-600 transition-colors group-hover:text-gray-100 group-active:text-gray-100 lg:text-sm">
                           ดาวน์โหลดเอกสาร
                         </span>
-                      </a>
+                      </Link>
                     </div>
 
                     <div className="mt-4 border-t border-gray-100 pt-3">
