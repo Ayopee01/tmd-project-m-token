@@ -126,10 +126,12 @@ function WarningNewsPopup() {
         {/* Button Download & Datetime */}
         <div className="mt-6 flex items-center justify-between gap-4">
           {warning.url ? (
-            <Link
-              href={warning.url}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() => {
+                if (!warning.url) return;
+                window.open(warning.url, "_blank", "noopener,noreferrer");
+              }}
               className="group inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-emerald-600 bg-white px-4 py-3 transition duration-150 hover:bg-emerald-700 active:bg-emerald-800"
             >
               <FiDownload
@@ -139,7 +141,7 @@ function WarningNewsPopup() {
               <span className="text-sm leading-none font-semibold text-emerald-600 transition-colors group-hover:text-gray-100 group-active:text-gray-100">
                 อ่านเพิ่มเติม
               </span>
-            </Link>
+            </button>
           ) : (
             <div />
           )}

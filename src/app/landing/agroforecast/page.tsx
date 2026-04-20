@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 // library
 import ReactPaginate from "react-paginate";
 // icons
@@ -569,21 +568,21 @@ function AgroforecastPage() {
                       >
                         {titleOf(it)}
                       </h3>
-
-                      <Link
-                        href={it.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-600 bg-white px-3 py-2 transition duration-150 hover:bg-emerald-700 active:bg-emerald-800 lg:px-3 lg:py-3"
-                      >
-                        <FiDownload
-                          className="h-5 w-5 text-emerald-600 transition-colors group-hover:text-gray-100 group-active:text-gray-100 lg:h-6 lg:w-6"
-                          aria-hidden="true"
-                        />
-                        <span className="text-xs font-semibold leading-none text-emerald-600 transition-colors group-hover:text-gray-100 group-active:text-gray-100 lg:text-sm">
-                          ดาวน์โหลดเอกสาร
-                        </span>
-                      </Link>
+                      {it.url ? (
+                        <button
+                          type="button"
+                          onClick={() => window.open(it.url, "_blank", "noopener,noreferrer")}
+                          className="cursor-pointer group inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-600 bg-white px-3 py-2 transition duration-150 hover:bg-emerald-700 active:bg-emerald-800 lg:px-3 lg:py-3"
+                        >
+                          <FiDownload
+                            className="h-5 w-5 text-emerald-600 transition-colors group-hover:text-gray-100 group-active:text-gray-100 lg:h-6 lg:w-6"
+                            aria-hidden="true"
+                          />
+                          <span className="text-xs font-semibold leading-none text-emerald-600 transition-colors group-hover:text-gray-100 group-active:text-gray-100 lg:text-sm">
+                            ดาวน์โหลดเอกสาร
+                          </span>
+                        </button>
+                      ) : null}
                     </div>
 
                     <div className="mt-4 border-t border-gray-100 pt-3">

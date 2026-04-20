@@ -179,12 +179,6 @@ function WeekPage() {
     setDateOpen(false);
   }
 
-  // Function เปิดลิงก์ดาวน์โหลดเอกสาร
-  function handleDownload() {
-    if (!selected?.url) return;
-    window.open(selected.url, "_blank", "noopener,noreferrer");
-  }
-
   {/* UI Loading */ }
   if (loading) {
     return (
@@ -335,7 +329,7 @@ function WeekPage() {
               {selected.url ? (
                 <button
                   type="button"
-                  onClick={handleDownload}
+                  onClick={() => window.open(selected.url, "_blank", "noopener,noreferrer")}
                   className="group flex cursor-pointer items-center gap-2 rounded-lg border border-emerald-600 bg-white px-3 py-3 transition duration-150 hover:bg-emerald-700 active:bg-emerald-800"
                 >
                   <FiDownload
