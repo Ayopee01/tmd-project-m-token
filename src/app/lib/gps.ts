@@ -47,7 +47,7 @@ export async function fetchDashboard(province?: string): Promise<DashboardOK> {
 
 // ดึงจังหวัดจาก GPS
 export async function fetchGPSProvince(setNote: (s: string) => void): Promise<string> {
-  // ตรวจสอบว่าเบราว์เซอร์รองรับ Geolocation หรือไม่
+  // ตรวจสอบว่า Browser รองรับ Geolocation หรือไม่
   if (!navigator.geolocation) {
     setNote("อุปกรณ์ไม่รองรับการระบุตำแหน่ง (GPS)");
     return "";

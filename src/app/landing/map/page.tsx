@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-// Components
-import ZoomableImage from "@/app/components/ZoomableImage";
 // library
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
@@ -10,6 +8,8 @@ import type { Swiper as SwiperType } from "swiper";
 import "swiper/css";
 // icons
 import { FiCalendar, FiChevronDown, FiChevronLeft, FiChevronRight, FiMap } from "react-icons/fi";
+// Components
+import ZoomableImage from "@/app/components/ZoomableImage";
 // types
 import type { UpperWindItem, UpperWindResponse, SoundingStation } from "@/app/types/map";
 

@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-// Components
-import ZoomableImage from "@/app/components/ZoomableImage";
 // icons
 import { FiDownload, FiPlus, FiCalendar, FiChevronDown } from "react-icons/fi";
+// Components
+import ZoomableImage from "@/app/components/ZoomableImage";
 // types
 import type { DailyForecastItem, DailyForecastResponse } from "@/app/types/daily";
 import { DAILY_SECTIONS } from "@/app/types/daily";

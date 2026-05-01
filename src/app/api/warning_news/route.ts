@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import type { NormalizedWarning, TmdWarningApiResponse, WarningSource } from "@/app/types/warning";
+// Types
+import type { TmdWarningApiResponse, WarningItem, WarningSource } from "@/app/types/warning";
 
 export const dynamic = "force-dynamic";
 
@@ -7,28 +8,34 @@ function txt(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function normalizeWarning(raw: TmdWarningApiResponse | null): NormalizedWarning {
-  if (!raw || raw.success === false || !raw.data?.length) {
-    return null;
+function normalizeWarnings(raw: TmdWarningApiResponse | null): WarningItem[] {
+  if (!raw || raw.success === false || !Array.isArray(raw.data)) {
+    return [];
   }
 
-  const item = raw.data[0] as WarningSource;
+  return raw.data
+    .map((item: WarningSource, index): WarningItem | null => {
+      const title = txt(item.title) || "ประกาศ";
+      const description = txt(item.description);
+      const contentdate = txt(item.contentdate) || null;
+      const url = txt(item.url) || null;
+      const alt = txt(item.alt) || null;
 
-  const title = txt(item.title) || "ประกาศ";
-  const description = txt(item.description);
-  const contentdate = txt(item.contentdate) || null;
-  const url = txt(item.url) || null;
-  const alt = txt(item.alt) || null;
+      if (!title && !description && !url) {
+        return null;
+      }
 
-  return {
-    key: contentdate || title,
-    title,
-    description,
-    contentdate,
-    url,
-    alt,
-    raw: item,
-  };
+      return {
+        key: `${contentdate || title}-${index}`,
+        title,
+        description,
+        contentdate,
+        url,
+        alt,
+        raw: item,
+      };
+    })
+    .filter((item): item is WarningItem => Boolean(item));
 }
 
 export async function GET() {
@@ -40,6 +47,7 @@ export async function GET() {
         {
           success: false,
           message: "Missing TMD_WARNING_NEWS_URL in environment variables",
+          warnings: [],
         },
         { status: 500 }
       );
@@ -56,15 +64,19 @@ export async function GET() {
     const raw =
       (await res.json().catch(() => null)) as TmdWarningApiResponse | null;
 
-    const warning = normalizeWarning(raw);
+    const warnings = normalizeWarnings(raw);
 
     return NextResponse.json({
       success: true,
-      warning,
+      warnings,
+
+      // เผื่อ component เก่ายังเรียก json.warning อยู่
+      warning: warnings[0] ?? null,
     });
   } catch {
     return NextResponse.json({
       success: true,
+      warnings: [],
       warning: null,
     });
   }
