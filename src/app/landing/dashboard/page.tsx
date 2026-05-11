@@ -481,9 +481,9 @@ function DashboardPage() {
                             disabled={loading || provinceOptions.length === 0}
                             aria-expanded={provinceOpen}
                             className="flex items-center w-full h-11 px-4 text-sm
-              bg-white rounded-full border border-gray-200 shadow-sm text-slate-800
-              focus:ring-2 focus:ring-emerald-600 outline-none cursor-pointer
-              disabled:cursor-not-allowed disabled:opacity-60"
+                            bg-white rounded-full border border-gray-200 shadow-sm text-slate-800
+                            focus:ring-2 focus:ring-emerald-600 outline-none cursor-pointer
+                            disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             <span className="min-w-0 flex-1 truncate pr-3 text-center">
                                 {selectedProvinceLabel}
@@ -597,13 +597,13 @@ function DashboardPage() {
                                 <div className="flex flex-col gap-2 items-center w-full max-w-xl mx-auto">
 
                                     {awsItem?.stationNameTh ? (
-                                        <div className="text-xs text-slate-500 flex gap-2">
+                                        <div className="text-xs text-slate-600 font-semibold flex gap-2">
                                             <SlLocationPin />
                                             {awsItem.stationNameTh}
                                         </div>
                                     ) : null}
 
-                                    <div className="text-xs text-slate-500">
+                                    <div className="text-xs text-slate-600 font-semibold">
                                         {awsLoading ? "กำลังโหลด..." : awsUpdatedText || "-"}
                                     </div>
                                 </div>
@@ -631,46 +631,46 @@ function DashboardPage() {
                                 ) : (
 
                                     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                                        <div className="flex flex-col rounded-2xl border border-gray-200 bg-blue-300/65 px-2 py-6 text-center text-sm leading-tight text-slate-700 sm:px-5">
-                                            <p className="flex items-center text-white text-base mb-3">ความชื้นสัมพัทธ์</p>
+                                        <div className="flex flex-col rounded-2xl border border-gray-300 bg-white/20 px-2 py-6 text-center text-sm leading-tight text-slate-700 sm:px-5">
+                                            <p className="flex items-center text-slate-700 font-bold text-base mb-3">ความชื้นสัมพัทธ์</p>
                                             <div className="flex items-center justify-between">
-                                                <span className="text-sm text-white">
+                                                <span className="text-sm text-slate-500">
                                                     :
                                                 </span>
-                                                <span className="text-sm text-white">
+                                                <span className="text-sm text-slate-500">
                                                     {awsItem?.humidity != null ? `${awsItem.humidity} %` : "-"}
                                                 </span>
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-col rounded-2xl border border-gray-200 bg-blue-300/65 px-2 py-6 text-center text-sm leading-tight text-slate-700 sm:px-5">
-                                            <p className="flex items-center text-white text-base mb-3">ความกดอากาศ</p>
+                                        <div className="flex flex-col rounded-2xl border border-gray-300 bg-white/20 px-2 py-6 text-center text-sm leading-tight text-slate-700 sm:px-5">
+                                            <p className="flex items-center text-slate-700 font-bold text-base mb-3">ความกดอากาศ</p>
                                             <div className="flex items-center justify-between">
-                                                <span className="text-sm text-white">
+                                                <span className="text-sm text-slate-500">
                                                     :
                                                 </span>
-                                                <span className="text-sm text-white">
+                                                <span className="text-sm text-slate-500">
                                                     {awsItem?.pressure != null ? `${awsItem.pressure} hPa` : "-"}
                                                 </span>
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-col rounded-2xl border border-gray-200 bg-blue-300/65 px-2 py-6 text-center text-sm leading-tight text-slate-700 sm:px-5">
-                                            <p className="flex items-center text-white text-base mb-3">ฝนสะสม</p>
+                                        <div className="flex flex-col rounded-2xl border border-gray-300 bg-white/20 px-2 py-6 text-center text-sm leading-tight text-slate-700 sm:px-5">
+                                            <p className="flex items-center text-slate-700 font-bold text-base mb-3">ฝนสะสม</p>
                                             <div className="flex flex-col">
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-sm text-white">
+                                                    <span className="text-sm text-slate-500">
                                                         15 นาที :
                                                     </span>
-                                                    <span className="text-sm text-white">
+                                                    <span className="text-sm text-slate-500">
                                                         {awsItem?.precip15Mins != null ? `${awsItem.precip15Mins} มม.` : "-"}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-sm text-white">
+                                                    <span className="text-sm text-slate-500">
                                                         วันนี้ :
                                                     </span>
-                                                    <span className="text-sm text-white">
+                                                    <span className="text-sm text-slate-500">
                                                         {awsItem?.precipToday != null ? `${awsItem.precipToday} มม.` : "-"}
                                                     </span>
                                                 </div>
@@ -678,25 +678,25 @@ function DashboardPage() {
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-col rounded-2xl border border-gray-200 bg-blue-300/65 px-2 py-6 text-center text-sm leading-tight text-slate-700 sm:px-5">
-                                            <p className="flex items-center text-white text-base mb-3">ลม</p>
+                                        <div className="flex flex-col rounded-2xl border border-gray-300 bg-white/20 px-2 py-6 text-center text-sm leading-tight text-slate-700 sm:px-5">
+                                            <p className="flex items-center text-slate-700 font-bold text-base mb-3">ลม</p>
                                             <div className="flex flex-col">
                                                 <div className="flex items-start justify-between">
-                                                    <span className="text-sm text-white whitespace-nowrap">
+                                                    <span className="text-sm text-slate-500 whitespace-nowrap">
                                                         ทิศ :
                                                     </span>
-                                                    <span className="text-sm text-white text-right">
+                                                    <span className="text-sm text-slate-500 text-right">
                                                         {formatWindDirectionThai(awsItem?.windDirection)}
                                                     </span>
                                                     {/* <span className="text-sm text-white">
-                              {awsItem?.windDirection != null ? `${awsItem.windDirection} °` : "-"}
-                            </span> */}
+                                                        {awsItem?.windDirection != null ? `${awsItem.windDirection} °` : "-"}
+                                                    </span> */}
                                                 </div>
                                                 <div className="flex items-start justify-between">
-                                                    <span className="text-sm text-white whitespace-nowrap">
+                                                    <span className="text-sm text-slate-500 whitespace-nowrap">
                                                         ความเร็ว :
                                                     </span>
-                                                    <span className="text-sm text-white">
+                                                    <span className="text-sm text-slate-500">
                                                         {awsItem?.windSpeed != null ? `${awsItem.windSpeed} m/s` : "-"}
                                                     </span>
                                                 </div>
@@ -713,24 +713,24 @@ function DashboardPage() {
                                 </h1>
                                 {/* ปุ่มแสดงเฉพาะ md ขึ้นไป */}
                                 {/* <div className="mb-3 hidden md:flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => weatherSwiperRef.current?.slidePrev()}
-                    className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm hover:bg-slate-50 cursor-pointer"
-                  >
-                    <FiChevronLeft className="h-4 w-4" />
-                    ย้อนกลับ
-                  </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => weatherSwiperRef.current?.slidePrev()}
+                                        className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm hover:bg-slate-50 cursor-pointer"
+                                    >
+                                        <FiChevronLeft className="h-4 w-4" />
+                                        ย้อนกลับ
+                                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => weatherSwiperRef.current?.slideNext()}
-                    className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm hover:bg-slate-50 cursor-pointer"
-                  >
-                    ถัดไป
-                    <FiChevronRight className="h-4 w-4" />
-                  </button>
-                </div> */}
+                                    <button
+                                        type="button"
+                                        onClick={() => weatherSwiperRef.current?.slideNext()}
+                                        className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm hover:bg-slate-50 cursor-pointer"
+                                    >
+                                        ถัดไป
+                                        <FiChevronRight className="h-4 w-4" />
+                                    </button>
+                                </div> */}
                                 <Swiper
                                     key={`${provinceData?.provinceNameThai}-${sevenDaysForShow.length}`}
                                     modules={[Pagination, Autoplay]}
@@ -778,7 +778,7 @@ function DashboardPage() {
                                             <SwiperSlide
                                                 key={`${provinceData?.provinceNameThai}-${d.forecastDate}-${idx}`}
                                             >
-                                                <div className="flex flex-col items-center justify-center w-full rounded-3xl border border-gray-200 bg-blue-300/65 p-4 shadow-sm">
+                                                <div className="flex flex-col items-center justify-center w-full rounded-3xl border border-gray-300 bg-white/20 p-4 shadow-sm">
                                                     <div className="flex items-center justify-center gap-2">
                                                         {isToday ? (
                                                             <>
@@ -814,7 +814,7 @@ function DashboardPage() {
                                                             />
                                                         )}
 
-                                                        <span className="truncate text-center text-xs text-white">
+                                                        <span className="truncate text-center text-xs text-slate-700 font-bold">
                                                             {shortCondition(d.descriptionThai)}
                                                         </span>
                                                     </div>
@@ -830,7 +830,7 @@ function DashboardPage() {
                                                                     width={30}
                                                                     height={30}
                                                                 />
-                                                                <div className="text-2xl font-light tracking-tight text-white">
+                                                                <div className="text-2xl font-light tracking-tight text-slate-500">
                                                                     {d.maxTempC ?? "-"}°
                                                                 </div>
                                                             </div>
@@ -843,7 +843,7 @@ function DashboardPage() {
                                                                     width={30}
                                                                     height={30}
                                                                 />
-                                                                <div className="text-2xl font-light tracking-tight text-white">
+                                                                <div className="text-2xl font-light tracking-tight text-slate-500">
                                                                     {d.minTempC ?? "-"}°
                                                                 </div>
                                                             </div>
@@ -853,32 +853,32 @@ function DashboardPage() {
                                                     <div className="w-60 flex justify-center">
                                                         <div className="mt-4 flex flex-col gap-3 items-start">
                                                             <div className="flex items-center text-center gap-2">
-                                                                <FiDroplet className="text-3xl text-slate-80" />
+                                                                <FiDroplet className="text-3xl text-slate-700" />
                                                                 <div className="flex gap-3">
-                                                                    <div className="text-xs text-white">พื้นที่ฝนตก</div>
-                                                                    <div className="text-xs text-white">
+                                                                    <div className="text-xs text-slate-700 font-bold">พื้นที่ฝนตก</div>
+                                                                    <div className="text-xs text-slate-500">
                                                                         {d.percentRainCover ?? "-"} %
                                                                     </div>
                                                                 </div>
                                                             </div>
 
                                                             <div className="flex items-center text-center gap-2">
-                                                                <FiWind className="text-3xl text-slate-800" />
+                                                                <FiWind className="text-3xl text-slate-700" />
                                                                 <div className="flex gap-3">
-                                                                    <div className="text-xs text-white">ความเร็วลม</div>
-                                                                    <div className="text-xs text-white">
+                                                                    <div className="text-xs text-slate-700 font-bold">ความเร็วลม</div>
+                                                                    <div className="text-xs text-slate-500">
                                                                         {windToKmh(d.windSpeedKmh) ?? "-"} กม./ชม.
                                                                     </div>
                                                                 </div>
                                                             </div>
 
                                                             <div className="flex items-center text-center gap-2">
-                                                                <IoNavigateCircleOutline className="text-3xl text-slate-80"
+                                                                <IoNavigateCircleOutline className="text-3xl text-slate-700"
                                                                     style={{ transform: `rotate(${getWindRotateDeg(d.windDirectionDeg)}deg)` }}
                                                                 />
                                                                 <div className="flex gap-3">
-                                                                    <div className="text-xs text-white">ทิศทางลม</div>
-                                                                    <div className="text-xs text-white">
+                                                                    <div className="text-xs text-slate-700 font-bold">ทิศทางลม</div>
+                                                                    <div className="text-xs text-slate-500">
                                                                         {(d.windDirectionDeg ?? "-") + "°"}
                                                                     </div>
                                                                 </div>
