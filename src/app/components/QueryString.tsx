@@ -13,9 +13,11 @@ function QueryString() {
   // เก็บสถานะการทำงาน โดยใช้ useRef ไม่ทำให้ re-render หากทำเสร็จแล้วจะตั้งเป็น false
   const inFlightRef = useRef(false);
 
-  // เปิดปุ่ม Back “True”
   useEffect(() => {
+    // เปิดใช้งานปุ่ม Back Button
     window.czpSdk?.setBackButtonVisible?.(true);
+    // เปิดใช้งานปุ่ม capture screen
+    window.czpSdk?.setCaptureButtonVisible?.(true);
   }, []);
 
   // รับค่า appId, mToken จาก URL Params (Query String)
