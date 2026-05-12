@@ -16,6 +16,8 @@ function QueryString() {
   useEffect(() => {
     // เปิดใช้งานปุ่ม Back Button
     window.czpSdk?.setBackButtonVisible?.(true);
+    // เปิดใช้งานปุ่ม capture screen
+    window.czpSdk?.setCaptureButtonVisible?.(true);
   }, []);
 
   // รับค่า appId, mToken จาก URL Params (Query String)

@@ -20,8 +20,6 @@ import type { DashboardOK, ProvinceForecast, WeatherDay } from "@/app/types/dash
 import type { AwsWeatherItem, AwsApiResponse } from "@/app/types/aws-weather";
 import type { Swiper as SwiperType } from "swiper";
 
-import CaptureButtonToggle from "@/app/components/CaptureButtonToggle";
-
 /* -------------------- Config API routes -------------------- */
 
 const DASHBOARD_ROUTE = "/api/dashboard";
@@ -468,7 +466,6 @@ function DashboardPage() {
         <main className="flex justify-center px-5 py-10 text-slate-900 bg-gradient-to-br from-sky-200 via-white to-fuchsia-200">
             <section className="w-full relative">
                 <header className="flex items-center justify-end px-6 py-4">
-                    <CaptureButtonToggle />
                     <WarningNewsBell />
                 </header>
                 {/* Province select */}
