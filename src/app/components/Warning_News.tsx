@@ -85,13 +85,13 @@ function WarningNewsPopup({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-4 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-4 backdrop-blur-xs max-[430px]:px-[12px] max-[430px]:py-[16px]"
       onClick={handleClosePopup}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="relative w-full max-w-sm rounded-xl bg-white px-4 py-5 shadow-2xl xl:max-w-md xl:px-6 xl:py-7"
+        className="relative w-full max-w-sm rounded-xl bg-white px-4 py-5 shadow-2xl max-[430px]:max-w-[320px] max-[430px]:min-h-[520px] max-[430px]:px-[18px] max-[430px]:py-[32px] xl:max-w-sm xl:px-5 xl:py-7"
         onClick={(event) => event.stopPropagation()}
       >
         {/* Button Close */}
@@ -99,14 +99,14 @@ function WarningNewsPopup({
           type="button"
           onClick={handleClosePopup}
           className={[
-            "absolute right-4 top-4 z-10 text-red-500 transition-all duration-300 hover:text-red-600 xl:right-5 xl:top-5",
+            "absolute right-4 top-4 z-10 text-red-500 transition-all duration-300 hover:text-red-600 max-[430px]:right-[14px] max-[430px]:top-[14px] xl:right-5 xl:top-5",
             isSliding
               ? "pointer-events-none scale-90 opacity-0"
               : "pointer-events-auto scale-100 opacity-100",
           ].join(" ")}
           aria-label="ปิดประกาศ"
         >
-          <FiXCircle className="h-6 w-6 cursor-pointer xl:h-7 xl:w-7" />
+          <FiXCircle className="h-6 w-6 cursor-pointer max-[430px]:h-[26px] max-[430px]:w-[26px] xl:h-7 xl:w-7" />
         </button>
 
         <Swiper
@@ -152,19 +152,19 @@ function WarningNewsPopup({
               <SwiperSlide key={warning.key}>
                 <article>
                   {/* Title */}
-                  <h2 className="pr-10 text-lg leading-6 font-bold text-gray-900 sm:text-xl sm:leading-7 xl:text-2xl xl:leading-8">
+                  <h2 className="pr-10 text-lg leading-6 font-bold text-gray-900 max-[430px]:pr-[34px] max-[430px]:text-[20px] max-[430px]:leading-[28px] sm:text-xl sm:leading-7 xl:text-2xl xl:leading-8">
                     {warning.title}
                   </h2>
 
-                  <div className="mt-3 h-px w-full bg-gray-400" />
+                  <div className="mt-3 h-px w-full bg-gray-400 max-[430px]:mt-[16px]" />
 
                   {/* Description */}
-                  <div className="mt-2 whitespace-pre-line text-xs leading-5 text-gray-700 sm:mt-3 sm:text-sm sm:leading-6 xl:mt-4 xl:text-base xl:leading-7">
+                  <div className="mt-3 whitespace-pre-line text-sm leading-6 text-gray-700 max-[430px]:mt-[14px] max-[430px]:text-[13px] max-[430px]:leading-[24px] xl:mt-4 xl:text-base xl:leading-7">
                     {warning.description || "มีประกาศล่าสุดจากระบบ"}
                   </div>
 
                   {/* Button Download & Datetime */}
-                  <div className="mt-4 flex items-center justify-between gap-3 xl:mt-5 xl:gap-4">
+                  <div className="mt-4 flex items-center justify-between gap-3 max-[430px]:mt-[30px] xl:mt-5 xl:gap-4">
                     {warning.url ? (
                       <button
                         type="button"
@@ -177,13 +177,13 @@ function WarningNewsPopup({
                             "noopener,noreferrer"
                           );
                         }}
-                        className="group inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-600 bg-white px-3 py-2 transition duration-150 hover:bg-emerald-700 active:bg-emerald-800 xl:gap-2 xl:px-4 xl:py-3"
+                        className="group inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-600 bg-white px-3 py-2 transition duration-150 hover:bg-emerald-700 active:bg-emerald-800 max-[430px]:px-[14px] max-[430px]:py-[10px] xl:gap-2 xl:px-4 xl:py-3"
                       >
                         <FiDownload
-                          className="h-4 w-4 text-emerald-600 transition-colors group-hover:text-gray-100 group-active:text-gray-100 xl:h-5 xl:w-5"
+                          className="h-4 w-4 text-emerald-600 transition-colors group-hover:text-gray-100 group-active:text-gray-100 max-[430px]:h-[18px] max-[430px]:w-[18px] xl:h-5 xl:w-5"
                           aria-hidden="true"
                         />
-                        <span className="text-xs leading-none font-semibold text-emerald-600 transition-colors group-hover:text-gray-100 group-active:text-gray-100 xl:text-sm">
+                        <span className="text-xs leading-none font-semibold text-emerald-600 transition-colors group-hover:text-gray-100 group-active:text-gray-100 max-[430px]:text-[13px] xl:text-sm">
                           อ่านเพิ่มเติม
                         </span>
                       </button>
@@ -192,7 +192,7 @@ function WarningNewsPopup({
                     )}
 
                     {displayDate ? (
-                      <p className="text-right text-xs font-medium text-gray-500 xl:text-sm">
+                      <p className="text-right text-xs font-medium text-gray-500 max-[430px]:text-[13px] xl:text-sm">
                         {displayDate}
                       </p>
                     ) : null}
@@ -206,7 +206,7 @@ function WarningNewsPopup({
         {/* Dot Indicator */}
         {warnings.length > 1 ? (
           <div
-            className="mt-4 flex items-center justify-center gap-2 xl:mt-5"
+            className="mt-4 flex items-center justify-center gap-2 max-[430px]:mt-[34px] xl:mt-5"
             aria-label="ตัวบอกตำแหน่งประกาศ"
           >
             {warnings.map((warning, index) => {
@@ -221,10 +221,10 @@ function WarningNewsPopup({
                     swiper?.slideToLoop(index);
                   }}
                   className={[
-                    "h-2 cursor-pointer rounded-full transition-all duration-200 xl:h-2.5",
+                    "h-2 cursor-pointer rounded-full transition-all duration-200 max-[430px]:h-[9px] xl:h-2.5",
                     active
-                      ? "w-6 bg-gray-500 xl:w-7"
-                      : "w-2 bg-gray-300 hover:bg-gray-400 xl:w-2.5",
+                      ? "w-6 bg-gray-500 max-[430px]:w-[30px] xl:w-7"
+                      : "w-2 bg-gray-300 hover:bg-gray-400 max-[430px]:w-[9px] xl:w-2.5",
                   ].join(" ")}
                   aria-label={`ไปยังประกาศที่ ${index + 1}`}
                   aria-current={active ? "true" : "false"}
