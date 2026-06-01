@@ -59,25 +59,30 @@ function WarningNewsPopup({
 }: WarningNewsPopupProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [swiper, setSwiper] = useState<SwiperType | null>(null);
-  const [isSliding, setIsSliding] = useState(false);
+
+  const hasMultipleWarnings = warnings.length > 1;
 
   useEffect(() => {
     if (!open || !swiper) return;
 
     setActiveIndex(0);
-    setIsSliding(false);
 
     const frame = requestAnimationFrame(() => {
-      swiper.slideToLoop(0, 0);
+      swiper.update();
+
+      if (hasMultipleWarnings) {
+        swiper.slideToLoop(0, 0);
+      } else {
+        swiper.slideTo(0, 0);
+      }
     });
 
     return () => {
       cancelAnimationFrame(frame);
     };
-  }, [open, swiper]);
+  }, [open, swiper, hasMultipleWarnings]);
 
   function handleClosePopup() {
-    setIsSliding(false);
     onClose();
   }
 
@@ -98,50 +103,35 @@ function WarningNewsPopup({
         <button
           type="button"
           onClick={handleClosePopup}
-          className={[
-            "absolute right-4 top-4 z-10 text-red-500 transition-all duration-300 hover:text-red-600 max-[440px]:right-[14px] max-[440px]:top-[14px] xl:right-5 xl:top-5",
-            isSliding
-              ? "pointer-events-none scale-90 opacity-0"
-              : "pointer-events-auto scale-100 opacity-100",
-          ].join(" ")}
+          onPointerDown={(event) => event.stopPropagation()}
+          className="absolute right-4 top-4 z-20 text-red-500 transition-all duration-300 hover:text-red-600 max-[440px]:right-[14px] max-[440px]:top-[14px] xl:right-5 xl:top-5"
           aria-label="ปิดประกาศ"
         >
           <FiXCircle className="h-6 w-6 cursor-pointer max-[440px]:h-[26px] max-[440px]:w-[26px] xl:h-7 xl:w-7" />
         </button>
 
         <Swiper
+          key={hasMultipleWarnings ? "multiple-warning" : "single-warning"}
           modules={[Autoplay]}
           slidesPerView={1}
           spaceBetween={24}
-          loop={warnings.length > 1}
+          loop={hasMultipleWarnings}
           speed={650}
+          allowTouchMove={hasMultipleWarnings}
+          simulateTouch={hasMultipleWarnings}
+          watchOverflow={true}
           autoplay={
-            warnings.length > 1
+            hasMultipleWarnings
               ? {
-                delay: 10000,
-                disableOnInteraction: false,
-                pauseOnMouseEnter: true,
-              }
+                  delay: 10000,
+                  disableOnInteraction: false,
+                  pauseOnMouseEnter: true,
+                }
               : false
           }
           onSwiper={(swiperInstance) => setSwiper(swiperInstance)}
           onSlideChange={(swiperInstance) => {
             setActiveIndex(swiperInstance.realIndex);
-          }}
-          onSliderFirstMove={() => {
-            setIsSliding(true);
-          }}
-          onTransitionStart={() => {
-            setIsSliding(true);
-          }}
-          onSlideChangeTransitionStart={() => {
-            setIsSliding(true);
-          }}
-          onTransitionEnd={() => {
-            setIsSliding(false);
-          }}
-          onSlideChangeTransitionEnd={() => {
-            setIsSliding(false);
           }}
           className="w-full"
         >
@@ -149,8 +139,8 @@ function WarningNewsPopup({
             const displayDate = formatThaiDate(warning.contentdate);
 
             return (
-              <SwiperSlide key={warning.key}>
-                <article>
+              <SwiperSlide key={warning.key} className="!h-auto">
+                <article className="flex min-h-[390px] flex-col max-[440px]:min-h-[430px] xl:min-h-[410px]">
                   {/* Title */}
                   <h2 className="pr-10 text-lg leading-6 font-bold text-gray-900 max-[440px]:pr-[34px] max-[440px]:text-[20px] max-[440px]:leading-[28px] sm:text-xl sm:leading-7 xl:text-2xl xl:leading-8">
                     {warning.title}
@@ -159,12 +149,12 @@ function WarningNewsPopup({
                   <div className="mt-3 h-px w-full bg-gray-400 max-[440px]:mt-[16px]" />
 
                   {/* Description */}
-                  <div className="mt-3 whitespace-pre-line text-sm leading-6 text-gray-700 max-[440px]:mt-[14px] max-[440px]:text-[13px] max-[440px]:leading-[24px] xl:mt-4 xl:text-base xl:leading-7">
+                  <div className="mt-3 whitespace-pre-line break-words text-sm leading-6 text-gray-700 max-[440px]:mt-[14px] max-[440px]:text-[13px] max-[440px]:leading-[24px] xl:mt-4 xl:text-base xl:leading-7">
                     {warning.description || "มีประกาศล่าสุดจากระบบ"}
                   </div>
 
                   {/* Button Download & Datetime */}
-                  <div className="mt-4 flex items-center justify-between gap-3 max-[440px]:mt-[30px] xl:mt-5 xl:gap-4">
+                  <div className="mt-auto flex items-end justify-between gap-3 pt-4 max-[440px]:pt-[30px] xl:gap-4 xl:pt-5">
                     {warning.url ? (
                       <button
                         type="button"
@@ -188,11 +178,11 @@ function WarningNewsPopup({
                         </span>
                       </button>
                     ) : (
-                      <div />
+                      <div className="shrink-0" />
                     )}
 
                     {displayDate ? (
-                      <p className="text-right text-xs font-medium text-gray-500 max-[440px]:text-[13px] xl:text-sm">
+                      <p className="min-w-0 text-right text-xs font-medium text-gray-500 max-[440px]:text-[13px] xl:text-sm">
                         {displayDate}
                       </p>
                     ) : null}
@@ -204,7 +194,7 @@ function WarningNewsPopup({
         </Swiper>
 
         {/* Dot Indicator */}
-        {warnings.length > 1 ? (
+        {hasMultipleWarnings ? (
           <div
             className="mt-4 flex items-center justify-center gap-2 max-[440px]:mt-[34px] xl:mt-5"
             aria-label="ตัวบอกตำแหน่งประกาศ"
@@ -217,7 +207,6 @@ function WarningNewsPopup({
                   key={`dot-${warning.key}`}
                   type="button"
                   onClick={() => {
-                    setIsSliding(true);
                     swiper?.slideToLoop(index);
                   }}
                   className={[
