@@ -123,10 +123,10 @@ function WarningNewsPopup({
           autoplay={
             hasMultipleWarnings
               ? {
-                  delay: 10000,
-                  disableOnInteraction: false,
-                  pauseOnMouseEnter: true,
-                }
+                delay: 10000,
+                disableOnInteraction: false,
+                pauseOnMouseEnter: true,
+              }
               : false
           }
           onSwiper={(swiperInstance) => setSwiper(swiperInstance)}
