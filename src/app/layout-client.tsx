@@ -3,7 +3,7 @@ import { useEffect, useState, Suspense } from "react";
 import { usePathname } from "next/navigation";
 // Components
 import Navbar from "@/app/components/Navbar";
-import DrawerMenu from "./components/DrawerMenu_Sticky";
+import DrawerMenu from "./components/DrawerMenu";
 import Footer from "./components/Footer";
 import QueryString from "@/app/components/QueryString";
 import { AuthProvider } from "@/app/hooks/auth-hook";
