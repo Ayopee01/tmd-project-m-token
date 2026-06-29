@@ -524,9 +524,9 @@ function DailyPage() {
       <section className="mx-auto max-w-7xl px-4 py-6">
         <h2 className="flex flex-wrap items-baseline gap-2 text-xl font-medium text-gray-900 sm:text-2xl">
           <span>พยากรณ์อากาศรายภาค</span>
-          <span className="whitespace-nowrap text-sm font-medium text-gray-600 sm:text-base">
+          {/* <span className="whitespace-nowrap text-sm font-medium text-gray-600 sm:text-base">
             - 00:00 น. วันนี้ ถึง 00:00 น. วันพรุ่งนี้
-          </span>
+          </span> */}
         </h2>
 
         <div className="mt-8 flex min-w-0 flex-col gap-3 md:hidden">

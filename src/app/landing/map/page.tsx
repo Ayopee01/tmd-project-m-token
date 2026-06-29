@@ -781,7 +781,7 @@ function MapPage() {
 
                     <div className="flex h-full flex-col justify-center pl-2 sm:block">
                       <div className="text-sm font-semibold leading-tight text-gray-900">
-                        จังหวัด {station.title}
+                        {station.title}
                       </div>
                       <div className="mt-1 text-xs font-medium leading-tight text-gray-500">
                         แผนที่หยั่งอากาศ
@@ -804,7 +804,7 @@ function MapPage() {
       {isSoundingApplied && activeSounding?.title ? (
         <section className="mx-auto max-w-7xl px-4 pb-3">
           <h2 className="text-center text-base font-semibold text-gray-900">
-            จังหวัด {activeSounding.title}
+            {activeSounding.title}
           </h2>
         </section>
       ) : null}
